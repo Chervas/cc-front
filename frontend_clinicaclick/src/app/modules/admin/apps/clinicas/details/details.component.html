@@ -1,0 +1,147 @@
+<div class="flex flex-col w-full">
+    <!-- Modo Vista -->
+    <ng-container *ngIf="!editMode">
+        <div class="relative w-full h-40 sm:h-48 px-8 sm:px-12 bg-accent-100 dark:bg-accent-700">
+            <img class="absolute inset-0 object-cover w-full h-full" [src]="clinica.url_fondo">
+            <div class="flex items-center justify-end w-full max-w-3xl mx-auto pt-6">
+                <a mat-icon-button [matTooltip]="'Close'" [routerLink]="['../']">
+                    <mat-icon class="text-white" [svgIcon]="'heroicons_outline:x-mark'"></mat-icon>
+                </a>
+            </div>
+        </div>
+        <div class="relative flex flex-col flex-auto items-center p-6 pt-0 sm:p-12 sm:pt-0">
+            <div class="w-full max-w-3xl">
+                <div class="flex flex-auto items-end -mt-16">
+                    <div class="flex items-center justify-center w-32 h-32 rounded-full overflow-hidden ring-4 ring-bg-card">
+                        <img *ngIf="clinica.url_avatar" [src]="clinica.url_avatar" class="object-cover w-full h-full">
+                        <div *ngIf="!clinica.url_avatar" class="flex items-center justify-center w-full h-full rounded uppercase text-8xl font-bold leading-none bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                            {{ clinica.nombre_clinica?.charAt(0) }}
+                        </div>
+                    </div>
+                    <div class="flex items-center ml-auto mb-1">
+                        <button mat-stroked-button (click)="toggleEditMode(true)">
+                            <mat-icon class="icon-size-5" [svgIcon]="'heroicons_solid:pencil-square'"></mat-icon>
+                            <span class="ml-2">Editar</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-3 text-4xl font-bold truncate">{{ clinica.nombre_clinica }}</div>
+                <div class="flex flex-col mt-4 pt-6 border-t space-y-8">
+                    <!-- Ejemplo: URL Web -->
+                    <div class="flex mt-4" *ngIf="clinica.url_web">
+                        <mat-icon [svgIcon]="'heroicons_outline:link'"></mat-icon>
+                        <a class="ml-6 leading-6 hover:underline text-primary-500" [href]="clinica.url_web" target="_blank">
+                            Ver Website
+                        </a>
+                    </div>
+                    <!-- Otros datos de la clínica... -->
+                </div>
+            </div>
+        </div>
+    </ng-container>
+    
+    <!-- Modo Edición -->
+    <ng-container *ngIf="editMode">
+        <div class="relative w-full h-40 sm:h-48 px-8 sm:px-12 bg-accent-100 dark:bg-accent-700">
+            <div class="flex items-center justify-end w-full max-w-3xl mx-auto pt-6">
+                <a mat-icon-button [matTooltip]="'Close'" [routerLink]="['../']">
+                    <mat-icon class="text-white" [svgIcon]="'heroicons_outline:x-mark'"></mat-icon>
+                </a>
+            </div>
+        </div>
+        <div class="relative flex flex-col flex-auto items-center px-6 sm:px-12">
+            <div class="w-full max-w-3xl">
+                <form [formGroup]="clinicaForm">
+                    <!-- Avatar -->
+                    <div class="flex flex-auto items-end -mt-16">
+                        <div class="relative flex items-center justify-center w-32 h-32 rounded-full overflow-hidden ring-4 ring-bg-card">
+                            <div class="absolute inset-0 bg-black bg-opacity-50 z-10"></div>
+                            <div class="absolute inset-0 flex items-center justify-center z-20">
+                                <input id="avatar-file-input" type="file" class="absolute h-0 w-0 opacity-0 invisible pointer-events-none" [multiple]="false" [accept]="'image/jpeg, image/png'" (change)="uploadAvatar($event.target.files)" #avatarFileInput>
+                                <label for="avatar-file-input" class="flex items-center justify-center w-10 h-10 rounded-full cursor-pointer hover:bg-hover" matRipple>
+                                    <mat-icon class="text-white" [svgIcon]="'heroicons_outline:camera'"></mat-icon>
+                                </label>
+                                <button mat-icon-button (click)="removeAvatar()">
+                                    <mat-icon class="text-white" [svgIcon]="'heroicons_outline:trash'"></mat-icon>
+                                </button>
+                            </div>
+                            <img *ngIf="clinica.url_avatar" [src]="clinica.url_avatar" class="object-cover w-full h-full">
+                            <div *ngIf="!clinica.url_avatar" class="flex items-center justify-center w-full h-full rounded uppercase text-8xl font-bold leading-none bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                                {{ clinica?.nombre_clinica?.charAt(0) }}
+                            </div>
+                        </div>
+                    </div>
+    
+                    <!-- Campos generales -->
+                    <div class="mt-8">
+                        <mat-form-field class="w-full" appearance="fill" [subscriptSizing]="'dynamic'">
+                            <mat-label>Nombre de la Clínica</mat-label>
+                            <input matInput formControlName="nombre_clinica" placeholder="Nombre de la Clínica" spellcheck="false">
+                        </mat-form-field>
+                    </div>
+    
+                    <!-- Datos Fiscales -->
+                    <div class="mt-8">
+                        <mat-form-field class="w-full" appearance="fill" [subscriptSizing]="'dynamic'">
+                            <mat-label>Denominación Social</mat-label>
+                            <input matInput formControlName="denominacion_social" placeholder="Denominación Social">
+                        </mat-form-field>
+                    </div>
+                    <div class="mt-8">
+                        <mat-form-field class="w-full" appearance="fill" [subscriptSizing]="'dynamic'">
+                            <mat-label>CIF/NIF</mat-label>
+                            <input matInput formControlName="cif_nif" placeholder="CIF/NIF">
+                        </mat-form-field>
+                    </div>
+                    <div class="mt-8">
+                        <mat-form-field class="w-full" appearance="fill" [subscriptSizing]="'dynamic'">
+                            <mat-label>Dirección de Facturación</mat-label>
+                            <input matInput formControlName="direccion_facturacion" placeholder="Dirección de Facturación">
+                        </mat-form-field>
+                    </div>
+    
+                    <!-- Selector de Grupo de Clínica y botón para crear grupo -->
+                    <div class="mt-8 flex items-center space-x-2">
+                        <mat-form-field class="w-full" appearance="fill">
+                            <mat-label>Grupo de la Clínica</mat-label>
+                            <mat-select formControlName="grupoClinicaId">
+                                <mat-option *ngFor="let grupo of grupos" [value]="grupo.id_grupo">
+                                    {{ grupo.nombre_grupo }}
+                                </mat-option>
+                                <mat-option [value]="null">Sin grupo</mat-option>
+                            </mat-select>
+                        </mat-form-field>
+                        <button mat-icon-button color="primary" (click)="openCreateGroupDialog()">
+                            <mat-icon>add</mat-icon>
+                        </button>
+                    </div>
+                    
+                    
+    
+                    <!-- Resto de campos (URLs, servicios, etc.) -->
+                    <div class="mt-8">
+                        <mat-form-field class="w-full" appearance="fill" [subscriptSizing]="'dynamic'">
+                            <mat-label>URL Web</mat-label>
+                            <input matInput formControlName="url_web" placeholder="URL Web">
+                        </mat-form-field>
+                    </div>
+                    <!-- (Otros campos se mantienen iguales) -->
+    
+                    <!-- Estado de la clínica -->
+                    <div class="mt-8">
+                        <mat-slide-toggle [formControlName]="'estado_clinica'" color="primary" (change)="onEstadoClinicaChange($event)">
+                            Estado de la clínica
+                        </mat-slide-toggle>
+                    </div>
+    
+                    <!-- Acciones -->
+                    <div class="flex items-center mt-10 -mx-6 sm:-mx-12 py-4 pr-4 pl-1 sm:pr-12 sm:pl-7 border-t bg-gray-50 dark:bg-transparent">
+                        <button mat-button color="warn" matTooltip="Delete" (click)="deleteClinica()">Delete</button>
+                        <button class="ml-auto" mat-button matTooltip="Cancel" (click)="toggleEditMode(false)">Cancel</button>
+                        <button class="ml-2" mat-flat-button color="primary" [disabled]="clinicaForm.invalid" matTooltip="Save" (click)="updateClinica()">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </ng-container>
+</div>

@@ -1,0 +1,228 @@
+<div class="flex flex-col w-full">
+    <!-- Modo Vista -->
+    <ng-container *ngIf="!editMode">
+      <div class="relative w-full h-40 sm:h-48 px-8 sm:px-12 bg-accent-100 dark:bg-accent-700">
+        <ng-container *ngIf="contact.background">
+          <img class="absolute inset-0 object-cover w-full h-full" [src]="contact.background">
+        </ng-container>
+        <div class="flex items-center justify-end w-full max-w-3xl mx-auto pt-6">
+          <a mat-icon-button [matTooltip]="'Close'" [routerLink]="['../']">
+            <mat-icon class="text-white" [svgIcon]="'heroicons_outline:x-mark'"></mat-icon>
+          </a>
+        </div>
+      </div>
+      <div class="relative flex flex-col flex-auto items-center p-6 pt-0 sm:p-12 sm:pt-0">
+        <div class="w-full max-w-3xl">
+          <div class="flex flex-auto items-end -mt-16">
+            <div class="flex items-center justify-center w-32 h-32 rounded-full overflow-hidden ring-4 ring-bg-card">
+              <img *ngIf="contact.avatar" [src]="contact.avatar" class="object-cover w-full h-full">
+              <div *ngIf="!contact.avatar" class="flex items-center justify-center w-full h-full rounded uppercase text-8xl font-bold leading-none bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                {{ contact.nombre?.charAt(0) }}
+              </div>
+            </div>
+            <div class="flex items-center ml-auto mb-1">
+              <button mat-stroked-button (click)="toggleEditMode(true)">
+                <mat-icon class="icon-size-5" [svgIcon]="'heroicons_solid:pencil-square'"></mat-icon>
+                <span class="ml-2">Edit</span>
+              </button>
+            </div>
+          </div>
+          <div class="mt-3 text-4xl font-bold truncate">{{ contact.nombre }} {{ contact.apellidos }}</div>
+          <div class="flex flex-col mt-4 pt-6 border-t space-y-8">
+            <div class="flex mt-4" *ngIf="contact.email_usuario">
+              <mat-icon [svgIcon]="'heroicons_outline:envelope'"></mat-icon>
+              <a class="ml-6 leading-6 hover:underline text-primary-500" [href]="'mailto:' + contact.email_usuario">
+                {{ contact.email_usuario }}
+              </a>
+            </div>
+            <div class="flex mt-4" *ngIf="contact.telefono">
+              <mat-icon [svgIcon]="'heroicons_outline:phone'"></mat-icon>
+              <div class="ml-6">{{ contact.telefono }}</div>
+            </div>
+            <div class="flex sm:items-center mt-4" *ngIf="contact.cargo_usuario">
+              <mat-icon [svgIcon]="'heroicons_outline:briefcase'"></mat-icon>
+              <div class="ml-6 leading-6">{{ contact.cargo_usuario }}</div>
+            </div>
+            <div class="flex sm:items-center mt-4" *ngIf="contact.cumpleanos">
+              <mat-icon [svgIcon]="'heroicons_outline:cake'"></mat-icon>
+              <div class="ml-6 leading-6">{{ contact.cumpleanos | date: 'longDate' }}</div>
+            </div>
+            <div class="flex mt-4" *ngIf="contact.notas_usuario">
+              <mat-icon [svgIcon]="'heroicons_outline:bars-3-bottom-left'"></mat-icon>
+              <div class="ml-6 prose prose-sm" [innerHTML]="contact.notas_usuario"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+    
+    <!-- Modo Edición -->
+    <ng-container *ngIf="editMode">
+      <div class="relative w-full h-40 sm:h-48 px-8 sm:px-12 bg-accent-100 dark:bg-accent-700">
+        <div class="flex items-center justify-end w-full max-w-3xl mx-auto pt-6">
+          <a mat-icon-button [matTooltip]="'Close'" [routerLink]="['../']">
+            <mat-icon class="text-white" [svgIcon]="'heroicons_outline:x-mark'"></mat-icon>
+          </a>
+        </div>
+      </div>
+      <div class="relative flex flex-col flex-auto items-center px-6 sm:px-12">
+        <div class="w-full max-w-3xl">
+          <form [formGroup]="contactForm">
+            <!-- Avatar -->
+            <div class="flex flex-auto items-end -mt-16">
+              <div class="relative flex items-center justify-center w-32 h-32 rounded-full overflow-hidden ring-4 ring-bg-card">
+                <div class="absolute inset-0 bg-black bg-opacity-50 z-10"></div>
+                <div class="absolute inset-0 flex items-center justify-center z-20">
+                  <input id="avatar-file-input" type="file" class="absolute h-0 w-0 opacity-0 invisible pointer-events-none" [multiple]="false" [accept]="'image/jpeg, image/png'" (change)="uploadAvatar($event.target.files)" #avatarFileInput>
+                  <label for="avatar-file-input" class="flex items-center justify-center w-10 h-10 rounded-full cursor-pointer hover:bg-hover" matRipple>
+                    <mat-icon class="text-white" [svgIcon]="'heroicons_outline:camera'"></mat-icon>
+                  </label>
+                  <button mat-icon-button (click)="removeAvatar()">
+                    <mat-icon class="text-white" [svgIcon]="'heroicons_outline:trash'"></mat-icon>
+                  </button>
+                </div>
+                <img *ngIf="contact.avatar" [src]="contact.avatar" class="object-cover w-full h-full">
+                <div *ngIf="!contact.avatar" class="flex items-center justify-center w-full h-full rounded uppercase text-8xl font-bold leading-none bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                  {{ contact?.nombre?.charAt(0) }}
+                </div>
+              </div>
+            </div>
+    
+            <!-- Campos generales -->
+            <div class="mt-8">
+              <mat-form-field class="w-full" appearance="fill" [subscriptSizing]="'dynamic'">
+                <mat-label>Nombre</mat-label>
+                <input matInput formControlName="nombre" placeholder="Nombre" spellcheck="false">
+              </mat-form-field>
+            </div>
+            <div class="mt-8">
+              <mat-form-field class="w-full" appearance="fill" [subscriptSizing]="'dynamic'">
+                <mat-label>Apellidos</mat-label>
+                <input matInput formControlName="apellidos" placeholder="Apellidos">
+              </mat-form-field>
+            </div>
+    
+            <!-- Rol global: Profesional de la salud -->
+            <div class="mt-8">
+              <mat-slide-toggle formControlName="isProfesional" color="primary">
+                Profesional de la salud
+              </mat-slide-toggle>
+            </div>
+    
+            <!-- Asignación de Clínicas con Roles -->
+<div class="mt-8">
+    <div formArrayName="clinicas" class="space-y-4">
+      <div *ngFor="let clinicaCtrl of contactForm.get('clinicas').controls; let i = index" [formGroupName]="i" class="flex flex-col space-y-2">
+        <div class="flex items-center space-x-4">
+          <mat-form-field appearance="fill" class="flex-grow">
+            <mat-label>Seleccionar Clínica</mat-label>
+            <mat-select formControlName="id_clinica">
+              <mat-option *ngFor="let clinica of clinicas" [value]="clinica.id_clinica">
+                {{ clinica.nombre_clinica }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+          <button mat-icon-button color="warn" (click)="removeClinicaField(i)">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+        <div class="flex items-center space-x-4">
+          <!-- Select para el rol principal -->
+          <mat-form-field appearance="fill" class="flex-grow">
+            <mat-label>Rol en la Clínica</mat-label>
+            <mat-select formControlName="rol_clinica">
+              <mat-option value="paciente">Paciente</mat-option>
+              <mat-option value="personaldeclinica">Personal de Clínica</mat-option>
+              <mat-option value="propietario">Propietario</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <!-- Select para el subrol (solo para personal de clínica) -->
+          <mat-form-field appearance="fill" class="flex-grow">
+            <mat-label>Subrol (opcional)</mat-label>
+            <mat-select formControlName="subrol_clinica">
+              <mat-option value="Auxiliares y enfermeros">Auxiliares y enfermeros</mat-option>
+              <mat-option value="Doctores">Doctores</mat-option>
+              <mat-option value="Administrativos">Administrativos</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </div>
+    </div>
+    <button mat-raised-button color="accent" (click)="addClinicaField()" class="mt-4">
+      {{ hasClinicas() ? 'Asignar usuario a más clínicas' : 'Asignar usuario a una clínica' }}
+    </button>
+  </div>
+        
+    
+            <!-- Otros campos generales -->
+            <div class="mt-8">
+              <mat-form-field class="w-full" appearance="fill">
+                <mat-label>ID del Gestor</mat-label>
+                <input matInput formControlName="id_gestor" placeholder="Introduce el ID del gestor" type="number">
+              </mat-form-field>
+            </div>
+            <div class="mt-8">
+              <mat-form-field class="w-full" appearance="fill" [subscriptSizing]="'dynamic'">
+                <mat-label>Email</mat-label>
+                <input matInput formControlName="email_usuario" placeholder="Email">
+              </mat-form-field>
+            </div>
+            <div class="mt-8">
+              <mat-form-field class="w-full" appearance="fill" [subscriptSizing]="'dynamic'">
+                <mat-label>Email de Factura</mat-label>
+                <input matInput formControlName="email_factura" placeholder="Email de Factura">
+              </mat-form-field>
+            </div>
+            <div class="mt-8">
+              <mat-form-field class="w-full" appearance="fill" [subscriptSizing]="'dynamic'">
+                <mat-label>Email de Notificación</mat-label>
+                <input matInput formControlName="email_notificacion" placeholder="Email de Notificación">
+              </mat-form-field>
+            </div>
+            <div class="mt-8">
+              <mat-form-field class="w-full" appearance="fill" [subscriptSizing]="'dynamic'">
+                <mat-label>Teléfono</mat-label>
+                <input matInput formControlName="telefono" placeholder="Teléfono">
+              </mat-form-field>
+            </div>
+            <div class="mt-8">
+              <mat-form-field class="w-full" appearance="fill" [subscriptSizing]="'dynamic'">
+                <mat-label>Cargo</mat-label>
+                <input matInput formControlName="cargo_usuario" placeholder="Cargo Usuario">
+              </mat-form-field>
+            </div>
+    
+            <!-- Cambio de contraseña -->
+            <div class="mt-8">
+              <button mat-stroked-button (click)="togglePasswordChange()">Cambiar contraseña</button>
+              <button mat-button *ngIf="showPasswordChange" (click)="cancelPasswordChange()" color="warn">Cancelar</button>
+            </div>
+            <div *ngIf="showPasswordChange" class="mt-8 w-full">
+              <mat-form-field appearance="fill" class="w-3/6">
+                <mat-label>Nueva Contraseña</mat-label>
+                <input matInput formControlName="newPassword" type="text">
+              </mat-form-field>
+            </div>
+    
+            <!-- Fecha de Creación -->
+            <div class="mt-8">
+              <mat-form-field class="w-full" appearance="fill" [subscriptSizing]="'dynamic'">
+                <mat-label>Fecha de Creación</mat-label>
+                <input matInput formControlName="fecha_creacion" [matDatepicker]="picker" placeholder="Fecha de Creación">
+                <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+                <mat-datepicker #picker></mat-datepicker>
+              </mat-form-field>
+            </div>
+    
+            <!-- Acciones -->
+            <div class="flex items-center mt-10 -mx-6 sm:-mx-12 py-4 pr-4 pl-1 sm:pr-12 sm:pl-7 border-t bg-gray-50 dark:bg-transparent">
+              <button mat-button color="warn" matTooltip="Delete" (click)="deleteContact()">Delete</button>
+              <button class="ml-auto" mat-button matTooltip="Cancel" (click)="toggleEditMode(false)">Cancel</button>
+              <button class="ml-2" mat-flat-button color="primary" [disabled]="contactForm.invalid" matTooltip="Save" (click)="updateContact()">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+  

@@ -1,0 +1,118 @@
+<h1 mat-dialog-title>Nueva Asignación de Servicio</h1>
+<div mat-dialog-content>
+  <form [formGroup]="form" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div>
+      <mat-form-field class="w-full">
+        <mat-label>Clínica</mat-label>
+        <mat-select formControlName="id_clinica">
+          <mat-option *ngFor="let clinica of clinicas$ | async" [value]="clinica.id_clinica">{{ clinica.nombre_clinica }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field class="w-full">
+        <mat-label>Servicio</mat-label>
+        <mat-select formControlName="id_servicio">
+          <mat-option *ngFor="let servicio of servicios$ | async" [value]="servicio.id_servicio">{{ servicio.nombre_servicio }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <fuse-alert [type]="'info'">
+        <span fuseAlertTitle>Info sobre la cantidad a cobrar</span>
+        <span *ngIf="form.value.precio_especial && currentDate.getDate() >= 6 && currentDate.getDate() <= 15">
+          Estas dando de alta este servicio entre el 6 y el 15 de {{ thisMonthFormatted }}, por lo que por defecto se aplicará un precio especial al cliente del 50% para este servicio que se cobrará el próximo 5 de {{ nextMonthFormatted }}. Puedes editarlo manualmente.
+        </span>
+        <span *ngIf="!form.value.precio_especial && currentDate.getDate() <= 5">
+          Estas dando de alta este servicio entre el 1 y el 5 de {{ thisMonthFormatted }}, por lo que por defecto no se aplicará un precio especial al cliente y se le cobrará el mes completo para este servicio el próximo 5 de {{ nextMonthFormatted }}. Puedes editarlo manualmente.
+        </span>
+        <span *ngIf="!form.value.precio_especial && currentDate.getDate() > 15">
+          Estas dando de alta este servicio entre el 16 y el 30 de {{ thisMonthFormatted }}, por lo que por defecto no se aplicará un precio especial al cliente y se le cobrará el mes completo para este servicio el próximo 5 de {{ nextMonthFormatted }}. Puedes editarlo manualmente.
+        </span>
+      </fuse-alert>
+
+      <mat-form-field class="w-full">
+        <mat-label>Fecha de cobro</mat-label>
+        <mat-radio-group formControlName="fecha_cobro_opcion">
+          <mat-radio-button [value]="option1Date">{{ datePipe.transform(option1Date, 'dd/MM/yyyy') }}</mat-radio-button>
+          <mat-radio-button [value]="null">
+            <mat-form-field class="w-full" appearance="fill">
+              <input matInput [matDatepicker]="fechaCobroDatepicker" formControlName="fecha_cobro" [matDatepickerFilter]="filteredDays">
+              <mat-datepicker-toggle matSuffix [for]="fechaCobroDatepicker"></mat-datepicker-toggle>
+              <mat-datepicker #fechaCobroDatepicker></mat-datepicker>
+            </mat-form-field>
+          </mat-radio-button>
+        </mat-radio-group>
+      </mat-form-field>
+
+      <mat-form-field class="w-full">
+        <mat-label>Precio Especial</mat-label>
+        <mat-select formControlName="precio_especial">
+          <mat-option [value]="true">Sí</mat-option>
+          <mat-option [value]="false">No</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div>
+      <mat-form-field class="w-full">
+        <mat-label>Precio</mat-label>
+        <span matSuffix>€</span>
+        <input matInput formControlName="precio_servicio">
+      </mat-form-field>
+
+      <mat-form-field class="w-full">
+        <mat-label>Descripción</mat-label>
+        <textarea matInput formControlName="descripcion_servicio"></textarea>
+      </mat-form-field>
+
+      <mat-form-field class="w-full">
+        <mat-label>Detalle</mat-label>
+        <textarea matInput formControlName="descripcion_detallada_servicio"></textarea>
+      </mat-form-field>
+
+      <mat-form-field class="w-full">
+        <mat-label>¿Recurrente?</mat-label>
+        <mat-select formControlName="servicio_recurrente">
+          <mat-option [value]="true">Sí</mat-option>
+          <mat-option [value]="false">No</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field class="w-full">
+        <mat-label>IVA</mat-label>
+        <span matSuffix>%</span>
+        <input type="number" matInput formControlName="iva_servicio">
+      </mat-form-field>
+
+      <mat-form-field class="w-full">
+        <mat-label>Empresa</mat-label>
+        <mat-select formControlName="empresa_servicio">
+          <mat-option value="La voz medios digitales SL">La voz medios digitales SL</mat-option>
+          <mat-option value="Parallel Campaign OU">Parallel Campaign OU</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-checkbox formControlName="editar_datos_fiscales">¿Editar datos fiscales?</mat-checkbox>
+
+      <div formGroupName="datos_fiscales_clinica" *ngIf="form.get('editar_datos_fiscales').value">
+        <mat-form-field class="w-full">
+          <mat-label>Denominación social</mat-label>
+          <input matInput formControlName="denominacion_social">
+        </mat-form-field>
+
+        <mat-form-field class="w-full">
+          <mat-label>CIF/NIF</mat-label>
+          <input matInput formControlName="cif_nif">
+        </mat-form-field>
+
+        <mat-form-field class="w-full">
+          <mat-label>Dirección de facturación</mat-label>
+          <input matInput formControlName="direccion_facturacion">
+        </mat-form-field>
+      </div>
+    </div>
+  </form>
+</div>
+<div mat-dialog-actions>
+  <button mat-button (click)="onCancel()">Cancelar</button>
+  <button mat-button (click)="onSubmit()" [disabled]="form.invalid">Guardar</button>
+</div>
