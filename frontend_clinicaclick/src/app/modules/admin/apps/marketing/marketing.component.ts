@@ -4,7 +4,7 @@ import { MatDrawer } from '@angular/material/sidenav';
 import { FuseMediaWatcherService } from '@fuse/services/media-watcher';
 import { Subject, takeUntil } from 'rxjs';
 import { MarketingService } from './marketing.service';
-import { ClinicaService } from '../clinicas/clinica.service';
+import { ClinicasService } from '../clinicas/clinicas.service';
 
 @Component({
     selector       : 'marketing',
@@ -43,7 +43,7 @@ export class MarketingComponent implements OnInit, OnDestroy
         private _formBuilder: FormBuilder,
         private _fuseMediaWatcherService: FuseMediaWatcherService,
         private _marketingService: MarketingService,
-        private _clinicaService: ClinicaService
+        private _clinicaService: ClinicasService
     )
     {
         // Initialize form groups
