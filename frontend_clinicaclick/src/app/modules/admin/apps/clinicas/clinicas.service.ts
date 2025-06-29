@@ -9,7 +9,7 @@ import { environment } from 'environments/environment';
 export class ClinicasService
 {
     // URL base del API de usuario
-      private baseUrl = `${environment.apiUrl}/pacientes`;
+      private baseUrl = `${environment.apiUrl}/clinicas`;
 
     // Private
     private _clinicas = new BehaviorSubject<Clinica[]>([]);

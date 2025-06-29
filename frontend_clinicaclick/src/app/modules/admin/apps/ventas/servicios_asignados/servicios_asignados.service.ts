@@ -11,7 +11,7 @@ import { environment } from 'environments/environment';
 @Injectable({ providedIn: 'root' })
 export class ServiciosAsignadosService {
     // URL base del API de servicios asignados
-    private baseUrl = '${environment.apiUrl}/clinicaservicio'; // Ajusta la dirección IP o URL según corresponda
+    private baseUrl = `${environment.apiUrl}/servicios`; // Ajusta la dirección IP o URL según corresponda
 
     // Private
     private _pagination: BehaviorSubject<ServiciosAsignadosPagination | null> = new BehaviorSubject(null);
@@ -160,7 +160,7 @@ export class ServiciosAsignadosService {
 
     getClinicas(): Observable<any[]> {
         console.log('Fetching all clinicas');
-        return this._httpClient.get<any[]>('${environment.apiUrl}/clinicas').pipe(
+        return this._httpClient.get<any[]>(`${environment.apiUrl}/clinicas`).pipe(
             catchError(this.handleError)
         );
     }
@@ -174,7 +174,7 @@ export class ServiciosAsignadosService {
 
     getServicios(): Observable<any[]> {
         console.log('Fetching all servicios');
-        return this._httpClient.get<any[]>('${environment.apiUrl}/servicios').pipe(
+        return this._httpClient.get<any[]>(`${environment.apiUrl}/servicios`).pipe(
             catchError(this.handleError)
         );
     }

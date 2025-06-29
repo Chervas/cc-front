@@ -3,13 +3,14 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { map, tap, catchError } from 'rxjs/operators';
 import { HistorialDeServiciosPagination, HistorialDeServiciosProduct } from './historial_de_servicios.types';
+import { environment } from 'environments/environment';
 
 @Injectable({
     providedIn: 'root'
 })
 export class HistorialDeServiciosService {
     // URL base del API de historial de servicios
-    private baseUrl = '${environment.apiUrl}/historialdeservicios';
+    private baseUrl = `${environment.apiUrl}/historialdeservicios`;
 
     private _pagination: BehaviorSubject<HistorialDeServiciosPagination | null> = new BehaviorSubject(null);
     private _product: BehaviorSubject<HistorialDeServiciosProduct | null> = new BehaviorSubject(null);

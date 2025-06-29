@@ -3,11 +3,12 @@ import { Injectable } from '@angular/core';
 import { ServiciosPagination, ServiciosProduct } from 'app/modules/admin/apps/ventas/servicios/servicios.types';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { switchMap, take, tap, map, filter } from 'rxjs/operators';
+import { environment } from 'environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class ServiciosService {
     // URL base del API de servicios
-    private baseUrl = '${environment.apiUrl}/servicios'; // Ajusta la dirección IP o URL según corresponda
+    private baseUrl = `${environment.apiUrl}/servicios`; // Ajusta la dirección IP o URL según corresponda
 
     // Private
     private _pagination: BehaviorSubject<ServiciosPagination | null> = new BehaviorSubject(null);

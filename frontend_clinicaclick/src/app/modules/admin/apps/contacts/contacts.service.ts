@@ -10,7 +10,7 @@ import { environment } from 'environments/environment';
 export class ContactsService
 {
     // URL base del API de usuario
-      private baseUrl = `${environment.apiUrl}/pacientes`;
+      private baseUrl = `${environment.apiUrl}/users`;
 
     // Private
     private _contacts = new BehaviorSubject<Contact[]>([]);
@@ -172,7 +172,7 @@ export class ContactsService
      */
     getClinicas(): Observable<Clinica[]>
     {
-        return this._httpClient.get<Clinica[]>('${environment.apiUrl}/clinicas').pipe(
+        return this._httpClient.get<Clinica[]>(`${environment.apiUrl}/clinicas`).pipe(
             tap((clinicas) => {
                 // Aquí puedes realizar alguna acción si es necesario
             })

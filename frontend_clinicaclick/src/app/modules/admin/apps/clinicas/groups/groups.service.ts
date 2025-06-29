@@ -8,7 +8,7 @@ import { environment } from 'environments/environment';
 export class GroupsService {
 
   // Usamos la ruta en minúsculas para que coincida
-  private baseUrl = `${environment.apiUrl}/pacientes`;
+  private baseUrl = `${environment.apiUrl}/gruposclinicas`;
 
   constructor(private _httpClient: HttpClient) {}
 

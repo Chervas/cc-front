@@ -126,29 +126,43 @@ export class ContactsDetailsComponent implements OnInit, OnDestroy {
         this._contactsService.contact$
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe((contact: Contact) => {
+                // Abrir el drawer en caso de que esté cerrado
                 this._contactsListComponent.matDrawer.open();
+                
+                // Obtener el contacto
                 this.contact = contact;
-                // Actualizar el formulario con los datos generales, incluyendo isProfesional
-                this.contactForm.patchValue({
-                    id_usuario: contact.id_usuario,
-                    id_gestor: contact.id_gestor,
-                    avatar: contact.avatar,
-                    nombre: contact.nombre,
-                    apellidos: contact.apellidos,
-                    email_usuario: contact.email_usuario,
-                    email_factura: contact.email_factura,
-                    email_notificacion: contact.email_notificacion,
-                    cargo_usuario: contact.cargo_usuario,
-                    cumpleanos: contact.cumpleanos,
-                    notas_usuario: contact.notas_usuario,
-                    telefono: contact.telefono,
-                    password_usuario: contact.password_usuario,
-                    isProfesional: contact.isProfesional,
-                    selectedClinicaId: (contact.clinicas && contact.clinicas.length > 0) ? contact.clinicas[0].id_clinica : ''
-                });
-                console.log('Datos del contacto obtenido:', contact);
-                // Llenar el FormArray "clinicas" con las asignaciones actuales
-                this.loadUserClinicas(contact);
+                
+                // ✅ VERIFICACIÓN AGREGADA: Solo procesar si contact no es null
+                if (contact) {
+                    // Limpiar el FormArray de clínicas
+                    (this.contactForm.get('clinicas') as UntypedFormArray).clear();
+                    
+                    // Actualizar el formulario con los datos generales, incluyendo isProfesional
+                    this.contactForm.patchValue({
+                        id_usuario: contact.id_usuario,
+                        id_gestor: contact.id_gestor,
+                        avatar: contact.avatar,
+                        nombre: contact.nombre,
+                        apellidos: contact.apellidos,
+                        email_usuario: contact.email_usuario,
+                        email_factura: contact.email_factura,
+                        email_notificacion: contact.email_notificacion,
+                        cargo_usuario: contact.cargo_usuario,
+                        cumpleanos: contact.cumpleanos,
+                        notas_usuario: contact.notas_usuario,
+                        telefono: contact.telefono,
+                        password_usuario: contact.password_usuario,
+                        isProfesional: contact.isProfesional,
+                        selectedClinicaId: (contact.clinicas && contact.clinicas.length > 0) ? contact.clinicas[0].id_clinica : ''
+                    });
+                    
+                    console.log('Datos del contacto obtenido:', contact);
+                    
+                    // Llenar el FormArray "clinicas" con las asignaciones actuales
+                    this.loadUserClinicas(contact);
+                }
+                
+                // Marcar para verificación de cambios
                 this._changeDetectorRef.markForCheck();
             });
     }
@@ -267,21 +281,59 @@ export class ContactsDetailsComponent implements OnInit, OnDestroy {
         });
     }
     
+    // ✅ MÉTODO DELETECONTACT CORREGIDO SIGUIENDO PRÁCTICAS DE FUSE
     deleteContact(): void {
+        // Abrir el diálogo de confirmación
         const confirmation = this._fuseConfirmationService.open({
             title: 'Delete contact',
             message: 'Are you sure you want to delete this contact? This action cannot be undone!',
             actions: { confirm: { label: 'Delete' } },
         });
+        
+        // Suscribirse al cierre del diálogo de confirmación
         confirmation.afterClosed().subscribe((result) => {
+            // Si se presionó el botón confirmar...
             if (result === 'confirmed') {
+                // Obtener el ID del contacto actual
                 const id_usuario = this.contact.id_usuario;
+                
+                // Obtener el índice del contacto actual y calcular el siguiente
+                const currentContactIndex = this.contacts.findIndex(
+                    (item) => item.id_usuario === id_usuario
+                );
+                const nextContactIndex =
+                    currentContactIndex +
+                    (currentContactIndex === this.contacts.length - 1 ? -1 : 1);
+                const nextContactId =
+                    this.contacts.length === 1 && this.contacts[0].id_usuario === id_usuario
+                        ? null
+                        : this.contacts[nextContactIndex].id_usuario;
+                
+                // Eliminar el contacto
                 this._contactsService.deleteContact(id_usuario).subscribe((isDeleted) => {
+                    // Retornar si el contacto no fue eliminado...
                     if (!isDeleted) {
                         return;
                     }
+                    
+                    // Navegar al siguiente contacto si está disponible
+                    if (nextContactId) {
+                        this._router.navigate(['../', nextContactId], {
+                            relativeTo: this._activatedRoute,
+                        });
+                    }
+                    // De lo contrario, navegar al padre
+                    else {
+                        this._router.navigate(['../'], {
+                            relativeTo: this._activatedRoute,
+                        });
+                    }
+                    
+                    // Desactivar el modo de edición
                     this.toggleEditMode(false);
                 });
+                
+                // Marcar para verificación de cambios
                 this._changeDetectorRef.markForCheck();
             }
         });

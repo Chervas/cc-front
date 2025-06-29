@@ -60,6 +60,11 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
   navigation: Navigation;
   private _unsubscribeAll: Subject<any> = new Subject<any>();
 
+  // ✅ CONFIGURACIÓN DE ADMINISTRADORES
+  // 📋 INSTRUCCIONES: Para agregar/quitar administradores, modifica este array con los IDs de usuario
+  // Ejemplo: [1, 5, 10] - Los usuarios con ID 1, 5 y 10 serán administradores
+  private readonly ADMIN_USER_IDS: number[] = [1]; // 👈 MODIFICAR AQUÍ PARA AGREGAR MÁS ADMINS
+
   // Todas las clínicas del usuario
   allClinics: any[] = [];
   // Clínicas filtradas según el rol del header
@@ -88,6 +93,16 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
     return new Date().getFullYear();
   }
 
+  // ✅ MÉTODO PARA DETECTAR ADMINISTRADORES
+  // 📋 Este método verifica si el usuario actual es administrador basándose en su ID
+  // Los IDs de administradores se configuran en el array ADMIN_USER_IDS arriba
+  private isAdmin(): boolean {
+    if (!this.currentUser?.id_usuario) {
+      return false;
+    }
+    return this.ADMIN_USER_IDS.includes(this.currentUser.id_usuario);
+  }
+
   ngOnInit(): void {
     // Suscribirse a la navegación
     this._navigationService.navigation$.pipe(takeUntil(this._unsubscribeAll))
@@ -103,51 +118,71 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
     this.authService.getCurrentUser().subscribe(user => {
       this.currentUser = user;
       if (user && user.id_usuario) {
-        this.contactsService.getClinicasByUser(user.id_usuario).subscribe((response: any) => {
-          let clinicsArray = [];
-          if (Array.isArray(response)) {
-            clinicsArray = response;
-          } else if (response.Clinicas) {
-            clinicsArray = response.Clinicas;
-          } else {
-            clinicsArray = response.clinicas || [];
-          }
-          this.allClinics = clinicsArray;
-
-          // Cargar el rol almacenado (o usar el primer rol disponible)
-          const storedRole = localStorage.getItem('selectedRole');
-          this.updateRolesFromClinics();
-          if (storedRole && this.roles.includes(storedRole)) {
-            this.selectedRole = storedRole;
-          } else {
-            this.selectedRole = this.roles[0] || '';
-            localStorage.setItem('selectedRole', this.selectedRole);
-          }
-
-          // Filtrar clínicas según el rol
-          this.filterClinicsByRole();
-          this.updateGroupedClinics();
-
-          // Recuperar la selección de clínica del localStorage
-          const storedClinic = localStorage.getItem('selectedClinicId');
-          if (storedClinic) {
-            if (storedClinic.includes(',')) {
-              this.selectedClinic = {
-                isGroup: true,
-                clinicasIds: storedClinic.split(',').map(id => parseInt(id, 10))
-              };
+        // ✅ LÓGICA DE ADMINISTRADOR
+        // Si el usuario es administrador (ID está en ADMIN_USER_IDS), obtener todas las clínicas
+        // Si es usuario normal, obtener solo sus clínicas asignadas
+        if (this.isAdmin()) {
+          console.log('🔑 Usuario administrador detectado (ID:', user.id_usuario, ')');
+          // Para el admin, obtener todas las clínicas del sistema
+          this.contactsService.getClinicas().subscribe((allClinics: any[]) => {
+            this.allClinics = allClinics;
+            console.log('📋 Admin: Cargadas', allClinics.length, 'clínicas del sistema');
+            this.setupUserInterface();
+          });
+        } else {
+          console.log('👤 Usuario normal detectado (ID:', user.id_usuario, ')');
+          // Para usuarios normales, obtener solo sus clínicas asignadas
+          this.contactsService.getClinicasByUser(user.id_usuario).subscribe((response: any) => {
+            let clinicsArray = [];
+            if (Array.isArray(response)) {
+              clinicsArray = response;
+            } else if (response.Clinicas) {
+              clinicsArray = response.Clinicas;
             } else {
-              const found = this.allClinics.find(c => String(c.id_clinica) === storedClinic);
-              if (found) {
-                this.selectedClinic = found;
-              }
+              clinicsArray = response.clinicas || [];
             }
-          }
-          // Si la selección actual no es válida para el rol, se actualizará en updateFinalClinicsAndPatients
-          this.updateFinalClinicsAndPatients();
-        });
+            this.allClinics = clinicsArray;
+            console.log('📋 Usuario: Cargadas', clinicsArray.length, 'clínicas asignadas');
+            this.setupUserInterface();
+          });
+        }
       }
     });
+  }
+
+  // ✅ MÉTODO PARA CONFIGURAR LA INTERFAZ
+  private setupUserInterface(): void {
+    // Cargar el rol almacenado (o usar el primer rol disponible)
+    const storedRole = localStorage.getItem('selectedRole');
+    this.updateRolesFromClinics();
+    if (storedRole && this.roles.includes(storedRole)) {
+      this.selectedRole = storedRole;
+    } else {
+      this.selectedRole = this.roles[0] || '';
+      localStorage.setItem('selectedRole', this.selectedRole);
+    }
+
+    // Filtrar clínicas según el rol
+    this.filterClinicsByRole();
+    this.updateGroupedClinics();
+
+    // Recuperar la selección de clínica del localStorage
+    const storedClinic = localStorage.getItem('selectedClinicId');
+    if (storedClinic) {
+      if (storedClinic.includes(',')) {
+        this.selectedClinic = {
+          isGroup: true,
+          clinicasIds: storedClinic.split(',').map(id => parseInt(id, 10))
+        };
+      } else {
+        const found = this.allClinics.find(c => String(c.id_clinica) === storedClinic);
+        if (found) {
+          this.selectedClinic = found;
+        }
+      }
+    }
+    // Si la selección actual no es válida para el rol, se actualizará en updateFinalClinicsAndPatients
+    this.updateFinalClinicsAndPatients();
   }
 
   ngOnDestroy(): void {
@@ -188,9 +223,44 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
     this.updateFinalClinicsAndPatients();
   }
 
-  // Combina el filtro por rol y la selección actual para obtener la lista final
+  // ✅ MÉTODO CORREGIDO: Combina el filtro por rol y la selección actual para obtener la lista final
   private updateFinalClinicsAndPatients(): void {
     let finalClinics: any[] = [];
+    
+    // ✅ LÓGICA DE ADMINISTRADOR CORREGIDA
+    // Si es admin con rol "admin", mostrar todas las clínicas sin filtros
+    if (this.isAdmin() && this.selectedRole === 'admin') {
+      finalClinics = [...this.allClinics];
+      console.log('🔑 Admin: Mostrando todas las clínicas (', finalClinics.length, ')');
+      
+      // ✅ CORRECCIÓN: Para admin, siempre publicar todas las clínicas
+      this._pacientesService.filteredClinics$.next(finalClinics);
+      
+      // ✅ CORRECCIÓN: Para admin, determinar filtro basado en selección lateral
+      let clinicFilter: string | null = null;
+      
+      if (this.selectedClinic) {
+        if (this.selectedClinic.isGroup) {
+          // Si seleccionó un grupo, filtrar por esas clínicas
+          clinicFilter = this.selectedClinic.clinicasIds.join(',');
+          console.log('🔑 Admin: Filtrando por grupo con IDs:', clinicFilter);
+        } else {
+          // Si seleccionó una clínica específica, filtrar por esa clínica
+          clinicFilter = String(this.selectedClinic.id_clinica);
+          console.log('🔑 Admin: Filtrando por clínica ID:', clinicFilter);
+        }
+      } else {
+        // Si no seleccionó nada específico, mostrar todos los pacientes
+        clinicFilter = null;
+        console.log('🔑 Admin: Sin filtro (todos los pacientes)');
+      }
+      
+      this._pacientesService.selectedClinicId$.next(clinicFilter);
+      this._pacientesService.getPacientes(clinicFilter).subscribe();
+      return; // ✅ IMPORTANTE: Salir aquí para evitar la lógica normal
+    }
+
+    // ✅ LÓGICA NORMAL PARA USUARIOS NO-ADMIN
     if (!this.selectedClinic) {
       finalClinics = [...this.roleFilteredClinics];
     } else if (this.selectedClinic.isGroup) {
@@ -234,12 +304,22 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
         clinicFilter = String(this.selectedClinic.id_clinica);
       }
     }
+    
     this._pacientesService.selectedClinicId$.next(clinicFilter);
     this._pacientesService.getPacientes(clinicFilter).subscribe();
   }
 
-  // Filtra las clínicas según el rol seleccionado
+  // ✅ MÉTODO CORREGIDO: Filtra las clínicas según el rol seleccionado
   filterClinicsByRole(): void {
+    // ✅ LÓGICA DE ADMINISTRADOR CORREGIDA
+    // Si es admin y tiene rol admin seleccionado, mostrar todas las clínicas
+    if (this.isAdmin() && this.selectedRole === 'admin') {
+      this.roleFilteredClinics = [...this.allClinics];
+      console.log('🔑 Admin: Mostrando todas las clínicas en selector (', this.allClinics.length, ')');
+      return;
+    }
+
+    // Lógica normal para usuarios no-admin o admin con otros roles
     if (!this.selectedRole) {
       this.roleFilteredClinics = [...this.allClinics];
     } else {
@@ -259,8 +339,18 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
     return 'personal de clínica';
   }
 
+  // ✅ ACTUALIZAR ROLES INCLUYENDO ADMIN
   updateRolesFromClinics(): void {
     let allRoles: string[] = [];
+    
+    // ✅ LÓGICA DE ADMINISTRADOR
+    // Si el usuario es administrador, agregar el rol "admin"
+    if (this.isAdmin()) {
+      allRoles.push('admin');
+      console.log('🔑 Rol "admin" agregado para usuario ID:', this.currentUser.id_usuario);
+    }
+    
+    // Agregar roles normales basados en clínicas
     this.allClinics.forEach(clinic => {
       const pivot = clinic.UsuarioClinica || clinic.usuarioClinica;
       if (pivot) {
@@ -272,11 +362,15 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
         }
       }
     });
-    if (!this.currentUser?.isProfesional) {
+    
+    // Si no es profesional y no es admin, solo rol paciente
+    if (!this.currentUser?.isProfesional && !this.isAdmin()) {
       allRoles = ['paciente'];
     }
+    
     allRoles = Array.from(new Set(allRoles));
     this.roles = allRoles;
+    console.log('📋 Roles disponibles:', allRoles);
   }
 
   updateGroupedClinics(): void {
