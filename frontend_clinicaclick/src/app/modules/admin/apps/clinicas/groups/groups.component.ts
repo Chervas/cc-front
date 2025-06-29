@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { GroupsService } from 'app/modules/admin/apps/clinicas/groups/groups.service.ts';
+import { GroupsService } from 'app/modules/admin/apps/clinicas/groups/groups.service';
 import { GroupClinica } from 'app/modules/admin/apps/clinicas/clinicas.types';
 
 @Component({

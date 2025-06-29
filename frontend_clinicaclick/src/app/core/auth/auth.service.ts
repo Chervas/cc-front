@@ -41,7 +41,7 @@ export class AuthService {
             return throwError('User is already logged in.');
         }
 
-        return this._httpClient.post('http://13.38.102.65/api/auth/sign-in', credentials).pipe(
+        return this._httpClient.post('${environment.apiUrl}/auth/sign-in', credentials).pipe(
             switchMap((response: any) => {
                 console.log("Response from signIn:", response);
                 this.accessToken = response.token;
@@ -53,7 +53,7 @@ export class AuthService {
     }
 
     signInUsingToken(): Observable<any> {
-        return this._httpClient.post('http://13.38.102.65/api/auth/sign-in-with-token', {
+        return this._httpClient.post('${environment.apiUrl}/auth/sign-in-with-token', {
             accessToken: this.accessToken,
         }).pipe(
             catchError(() => of(false)),
@@ -94,11 +94,11 @@ export class AuthService {
     }
 
     signUp(user: { name: string; email: string; password: string; company: string }): Observable<any> {
-        return this._httpClient.post('http://13.38.102.65/api/auth/sign-up', user);
+        return this._httpClient.post('${environment.apiUrl}/auth/sign-up', user);
     }
 
     unlockSession(credentials: { email: string; password: string }): Observable<any> {
-        return this._httpClient.post('http://13.38.102.65/api/auth/unlock-session', credentials);
+        return this._httpClient.post('${environment.apiUrl}/auth/unlock-session', credentials);
     }
 
     check(): Observable<boolean> {

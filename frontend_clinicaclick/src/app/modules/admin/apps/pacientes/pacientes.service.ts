@@ -3,10 +3,12 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 import { Paciente } from './pacientes.types';
+import { environment } from 'environments/environment';
+
 
 @Injectable({ providedIn: 'root' })
 export class PacientesService {
-  private baseUrl = 'http://13.38.102.65/api/pacientes';
+  private baseUrl = `${environment.apiUrl}/pacientes`;
   private _pacientes = new BehaviorSubject<Paciente[]>([]);
   private _paciente = new BehaviorSubject<Paciente | null>(null);
 

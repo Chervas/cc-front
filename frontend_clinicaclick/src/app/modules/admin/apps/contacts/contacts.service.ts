@@ -4,12 +4,13 @@ import { Contact } from 'app/modules/admin/apps/contacts/contacts.types';
 import { BehaviorSubject, filter, map, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
 import { CreateUserResponse } from 'app/modules/admin/apps/contacts/contacts.types'; 
 import { Clinica } from 'app/modules/admin/apps/clinicas/clinicas.types';
+import { environment } from 'environments/environment';
 
 @Injectable({providedIn: 'root'})
 export class ContactsService
 {
     // URL base del API de usuario
-    private baseUrl = 'http://13.38.102.65/api/users'; // Ajusta la dirección IP o URL según corresponda
+      private baseUrl = `${environment.apiUrl}/pacientes`;
 
     // Private
     private _contacts = new BehaviorSubject<Contact[]>([]);
@@ -171,7 +172,7 @@ export class ContactsService
      */
     getClinicas(): Observable<Clinica[]>
     {
-        return this._httpClient.get<Clinica[]>('http://13.38.102.65/api/clinicas').pipe(
+        return this._httpClient.get<Clinica[]>('${environment.apiUrl}/clinicas').pipe(
             tap((clinicas) => {
                 // Aquí puedes realizar alguna acción si es necesario
             })

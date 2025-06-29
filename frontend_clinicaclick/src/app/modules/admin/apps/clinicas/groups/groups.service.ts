@@ -2,11 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { GroupClinica } from 'app/modules/admin/apps/clinicas/clinicas.types';
+import { environment } from 'environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class GroupsService {
+
   // Usamos la ruta en minúsculas para que coincida
-  private baseUrl = 'http://13.38.102.65/api/gruposclinicas';
+  private baseUrl = `${environment.apiUrl}/pacientes`;
 
   constructor(private _httpClient: HttpClient) {}
 

@@ -9,7 +9,7 @@ import { switchMap, take, tap, map, filter, catchError } from 'rxjs/operators';
 @Injectable({ providedIn: 'root' })
 export class ServiciosAsignadosService {
     // URL base del API de servicios asignados
-    private baseUrl = 'http://13.38.102.65/api/clinicaservicio'; // Ajusta la dirección IP o URL según corresponda
+    private baseUrl = '${environment.apiUrl}/clinicaservicio'; // Ajusta la dirección IP o URL según corresponda
 
     // Private
     private _pagination: BehaviorSubject<ServiciosAsignadosPagination | null> = new BehaviorSubject(null);
@@ -158,28 +158,28 @@ export class ServiciosAsignadosService {
 
     getClinicas(): Observable<any[]> {
         console.log('Fetching all clinicas');
-        return this._httpClient.get<any[]>('http://13.38.102.65/api/clinicas').pipe(
+        return this._httpClient.get<any[]>('${environment.apiUrl}/clinicas').pipe(
             catchError(this.handleError)
         );
     }
 
     getClinicaById(id: number): Observable<any> {
         console.log('Fetching clinica by ID:', id);
-        return this._httpClient.get<any>(`http://13.38.102.65/api/clinicas/${id}`).pipe(
+        return this._httpClient.get<any>(`${environment.apiUrl}/clinicas/${id}`).pipe(
             catchError(this.handleError)
         );
     }
 
     getServicios(): Observable<any[]> {
         console.log('Fetching all servicios');
-        return this._httpClient.get<any[]>('http://13.38.102.65/api/servicios').pipe(
+        return this._httpClient.get<any[]>('${environment.apiUrl}/servicios').pipe(
             catchError(this.handleError)
         );
     }
 
     getServicioById(id: number): Observable<any> {
         console.log('Fetching servicio by ID:', id);
-        return this._httpClient.get<any>(`http://13.38.102.65/api/servicios/${id}`).pipe(
+        return this._httpClient.get<any>(`${environment.apiUrl}/servicios/${id}`).pipe(
             catchError(this.handleError)
         );
     }

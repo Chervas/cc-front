@@ -3,12 +3,13 @@ import { Injectable } from '@angular/core';
 import { Clinica } from 'app/modules/admin/apps/clinicas/clinicas.types';
 import { BehaviorSubject, filter, map, Observable, of, switchMap, take, tap, throwError } from 'rxjs';
 import { CreateClinicaResponse } from 'app/modules/admin/apps/clinicas/clinicas.types'; 
+import { environment } from 'environments/environment';
 
 @Injectable({providedIn: 'root'})
 export class ClinicasService
 {
     // URL base del API de usuario
-    private baseUrl = 'http://13.38.102.65/api/clinicas'; // Ajusta la dirección IP o URL según corresponda
+      private baseUrl = `${environment.apiUrl}/pacientes`;
 
     // Private
     private _clinicas = new BehaviorSubject<Clinica[]>([]);

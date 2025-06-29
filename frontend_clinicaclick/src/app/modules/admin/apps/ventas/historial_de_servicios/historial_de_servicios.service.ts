@@ -9,7 +9,7 @@ import { HistorialDeServiciosPagination, HistorialDeServiciosProduct } from './h
 })
 export class HistorialDeServiciosService {
     // URL base del API de historial de servicios
-    private baseUrl = 'http://13.38.102.65/api/historialdeservicios';
+    private baseUrl = '${environment.apiUrl}/historialdeservicios';
 
     private _pagination: BehaviorSubject<HistorialDeServiciosPagination | null> = new BehaviorSubject(null);
     private _product: BehaviorSubject<HistorialDeServiciosProduct | null> = new BehaviorSubject(null);
