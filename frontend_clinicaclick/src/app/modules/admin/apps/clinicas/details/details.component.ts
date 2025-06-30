@@ -1,359 +1,323 @@
-import { Overlay, OverlayRef } from '@angular/cdk/overlay';
-import { TemplatePortal } from '@angular/cdk/portal';
-import { TextFieldModule } from '@angular/cdk/text-field';
-import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, Renderer2, ViewChild, ViewContainerRef, ViewEncapsulation } from '@angular/core';
-import { FormsModule, ReactiveFormsModule, UntypedFormArray, UntypedFormBuilder, UntypedFormGroup, Validators } from '@angular/forms';
+import { AsyncPipe, DatePipe, NgClass, NgFor, NgIf, TitleCasePipe } from '@angular/common';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatOptionModule, MatRippleModule } from '@angular/material/core';
-import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatDrawerToggleResult } from '@angular/material/sidenav';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { FuseFindByKeyPipe } from '@fuse/pipes/find-by-key/find-by-key.pipe';
-import { FuseConfirmationService } from '@fuse/services/confirmation';
 import { ClinicasService } from 'app/modules/admin/apps/clinicas/clinicas.service';
-import { Clinica, GroupClinica } from 'app/modules/admin/apps/clinicas/clinicas.types';
-import { ClinicasListComponent } from 'app/modules/admin/apps/clinicas/list/list.component';
+import { Clinica, ClinicaFormData } from 'app/modules/admin/apps/clinicas/clinicas.types';
 import { Subject, takeUntil } from 'rxjs';
-import { MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatSlideToggleModule, MatSlideToggleChange } from '@angular/material/slide-toggle';
-import { MatDialog } from '@angular/material/dialog';
-// Importa el servicio de grupos
-import { GroupsService } from 'app/modules/admin/apps/clinicas/groups/groups.service';
-// Importa el componente del diálogo para crear grupo
-import { GroupDialogComponent } from 'app/modules/admin/apps/clinicas/groups/group-dialog.component';
 
 @Component({
-    selector: 'clinicas-details',
-    templateUrl: './details.component.html',
-    encapsulation: ViewEncapsulation.None,
+    selector       : 'clinicas-details',
+    templateUrl    : './details.component.html',
+    encapsulation  : ViewEncapsulation.None,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    standalone: true,
-    imports: [
-        NgIf,
+    standalone     : true,
+    imports        : [
         MatButtonModule,
-        MatTooltipModule,
-        RouterLink,
         MatIconModule,
-        NgFor,
-        FormsModule,
-        ReactiveFormsModule,
-        MatRippleModule,
+        RouterLink,
         MatFormFieldModule,
         MatInputModule,
+        FormsModule,
+        ReactiveFormsModule,
         MatCheckboxModule,
-        NgClass,
+        NgIf,
         MatSelectModule,
         MatOptionModule,
-        MatDatepickerModule,
-        TextFieldModule,
-        FuseFindByKeyPipe,
+        NgFor,
+        NgClass,
+        MatTooltipModule,
+        MatRippleModule,
+        AsyncPipe,
         DatePipe,
-        MatSnackBarModule,
-        MatSlideToggleModule
+        TitleCasePipe,
     ],
 })
-export class ClinicasDetailsComponent implements OnInit, OnDestroy {
-    @ViewChild('avatarFileInput') private _avatarFileInput: ElementRef;
-
+export class ClinicasDetailsComponent implements OnInit, OnDestroy
+{
     editMode: boolean = false;
     clinica: Clinica;
-    clinicaForm: UntypedFormGroup;
-    clinicas: Clinica[];
-    showPasswordChange = false;
-    grupos: GroupClinica[] = []; // Aquí se almacenan los grupos disponibles
+    clinicaForm: FormGroup;
+
     private _unsubscribeAll: Subject<any> = new Subject<any>();
 
+    /**
+     * Constructor
+     */
     constructor(
-        private _snackBar: MatSnackBar,
         private _activatedRoute: ActivatedRoute,
         private _changeDetectorRef: ChangeDetectorRef,
-        private _clinicasListComponent: ClinicasListComponent,
         private _clinicasService: ClinicasService,
-        private _formBuilder: UntypedFormBuilder,
-        private _fuseConfirmationService: FuseConfirmationService,
-        private _renderer2: Renderer2,
+        private _formBuilder: FormBuilder,
         private _router: Router,
-        private _overlay: Overlay,
-        private _viewContainerRef: ViewContainerRef,
-        private _groupsService: GroupsService, // Inyectamos el servicio de grupos
-        private _dialog: MatDialog // Inyectamos MatDialog para el modal de grupo
-    ) { }
-
-    ngOnInit(): void {
-        // Abrir el drawer
-        this._clinicasListComponent.matDrawer.open();
-
-        // Crear el formulario, agregando el control para grupoClinicaId
-        this.clinicaForm = this._formBuilder.group({
-            id_clinica: [''],
-            avatar: [null],
-            nombre_clinica: ['', Validators.required],
-            url_web: [''],
-            url_avatar: [''],
-            url_fondo: [''],
-            url_ficha_local: [''],
-            fecha_creacion: [new Date()],
-            id_publicidad_meta: [''],
-            filtro_pc_meta: [''],
-            url_publicidad_meta: [''],
-            id_publicidad_google: [''],
-            filtro_pc_google: [''],
-            url_publicidad_google: [''],
-            servicios: [''],
-            checklist: [''],
-            estado_clinica: [true],
-            denominacion_social: [''],
-            cif_nif: [''],
-            direccion_facturacion: [''],
-            grupoClinicaId: [null]
-        });
-
-        // Obtener la lista de clínicas (si es necesaria en este componente)
-        this._clinicasService.clinicas$
-            .pipe(takeUntil(this._unsubscribeAll))
-            .subscribe((clinicas: Clinica[]) => {
-                this.clinicas = clinicas;
-                this._changeDetectorRef.markForCheck();
-            });
-
-        // Obtener la clínica actual
-        this._clinicasService.clinica$
-            .pipe(takeUntil(this._unsubscribeAll))
-            .subscribe((clinica: Clinica) => {
-                this._clinicasListComponent.matDrawer.open();
-                this.clinica = clinica;
-                this.clinicaForm.patchValue({
-                    id_clinica: clinica.id_clinica,
-                    nombre_clinica: clinica.nombre_clinica,
-                    url_web: clinica.url_web,
-                    url_avatar: clinica.url_avatar,
-                    url_fondo: clinica.url_fondo,
-                    url_ficha_local: clinica.url_ficha_local,
-                    fecha_creacion: clinica.fecha_creacion,
-                    id_publicidad_meta: clinica.id_publicidad_meta,
-                    filtro_pc_meta: clinica.filtro_pc_meta,
-                    url_publicidad_meta: clinica.url_publicidad_meta,
-                    id_publicidad_google: clinica.id_publicidad_google,
-                    filtro_pc_google: clinica.filtro_pc_google,
-                    url_publicidad_google: clinica.url_publicidad_google,
-                    servicios: clinica.servicios,
-                    checklist: clinica.checklist,
-                    estado_clinica: clinica.estado_clinica, 
-                    denominacion_social: clinica.datos_fiscales_clinica?.denominacion_social || '',
-                    cif_nif: clinica.datos_fiscales_clinica?.cif_nif || '',
-                    direccion_facturacion: clinica.datos_fiscales_clinica?.direccion_facturacion || '',
-                    grupoClinicaId: clinica.grupoClinica ? clinica.grupoClinica.id_grupo : null
-                });
-                console.log('Datos de la clínica obtenido:', clinica);
-                this._changeDetectorRef.markForCheck();
-            });
-
-        // Cargar los grupos disponibles
-        this._groupsService.getAllGroups().subscribe(grupos => {
-            this.grupos = grupos;
-            console.log('Grupos recuperados en details:', this.grupos);
-            this._changeDetectorRef.markForCheck();
-        });
+    )
+    {
     }
 
-    ngOnDestroy(): void {
+    // -----------------------------------------------------------------------------------------------------
+    // @ Lifecycle hooks
+    // -----------------------------------------------------------------------------------------------------
+
+    /**
+     * On init
+     */
+    ngOnInit(): void
+    {
+        // Open the drawer
+        this._clinicasService.clinica$
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((clinica: Clinica) =>
+            {
+                // Open the drawer in case it is closed
+                // this._clinicasListComponent.matDrawer.open();
+
+                // Get the clinica
+                this.clinica = clinica;
+
+                // Create the clinica form
+                this.createForm();
+
+                // Mark for check
+                this._changeDetectorRef.markForCheck();
+            });
+    }
+
+    /**
+     * On destroy
+     */
+    ngOnDestroy(): void
+    {
+        // Unsubscribe from all subscriptions
         this._unsubscribeAll.next(null);
         this._unsubscribeAll.complete();
     }
 
-    toggleEditMode(editMode: boolean | null = null): void {
-        if (editMode === null) {
+    // -----------------------------------------------------------------------------------------------------
+    // @ Public methods
+    // -----------------------------------------------------------------------------------------------------
+
+    /**
+     * Close the drawer
+     */
+    closeDrawer(): Promise<boolean>
+    {
+        return this._router.navigate(['../'], {relativeTo: this._activatedRoute});
+    }
+
+    /**
+     * Toggle edit mode
+     *
+     * @param editMode
+     */
+    toggleEditMode(editMode: boolean | null = null): void
+    {
+        if ( editMode === null )
+        {
             this.editMode = !this.editMode;
-            this.showPasswordChange = false;
-        } else {
+        }
+        else
+        {
             this.editMode = editMode;
         }
+
+        // Mark for check
         this._changeDetectorRef.markForCheck();
     }
 
-    togglePasswordChange(): void {
-        this.showPasswordChange = !this.showPasswordChange;
+    /**
+     * Create the clinica form
+     */
+    createForm(): void
+    {
+        this.clinicaForm = this._formBuilder.group({
+            // Información básica
+            nombre_clinica: [this.clinica?.nombre_clinica || '', [Validators.required]],
+            telefono: [this.clinica?.telefono || ''],
+            email: [this.clinica?.email || '', [Validators.email]],
+            url_web: [this.clinica?.url_web || ''],
+            descripcion: [this.clinica?.descripcion || ''],
+            
+            // Dirección
+            direccion: [this.clinica?.direccion || ''],
+            codigo_postal: [this.clinica?.codigo_postal || ''],
+            ciudad: [this.clinica?.ciudad || ''],
+            provincia: [this.clinica?.provincia || ''],
+            pais: [this.clinica?.pais || 'España'],
+            
+            // Horarios y servicios
+            horario_atencion: [this.clinica?.horario_atencion || ''],
+            servicios: [this.clinica?.servicios || ''],
+            
+            // Estado
+            estado_clinica: [this.clinica?.estado_clinica ?? true],
+            
+            // URLs e imágenes
+            url_avatar: [this.clinica?.url_avatar || ''],
+            url_fondo: [this.clinica?.url_fondo || ''],
+            url_ficha_local: [this.clinica?.url_ficha_local || ''],
+            
+            // Redes sociales
+            instagram: [this.clinica?.redes_sociales?.instagram || ''],
+            facebook: [this.clinica?.redes_sociales?.facebook || ''],
+            tiktok: [this.clinica?.redes_sociales?.tiktok || ''],
+            linkedin: [this.clinica?.redes_sociales?.linkedin || ''],
+            doctoralia: [this.clinica?.redes_sociales?.doctoralia || ''],
+            
+            // Configuración
+            citas_online: [this.clinica?.configuracion?.citas_online ?? false],
+            notificaciones_email: [this.clinica?.configuracion?.notificaciones_email ?? true],
+            notificaciones_sms: [this.clinica?.configuracion?.notificaciones_sms ?? false],
+            
+            // Marketing
+            id_publicidad_meta: [this.clinica?.id_publicidad_meta || null],
+            url_publicidad_meta: [this.clinica?.url_publicidad_meta || null],
+            filtro_pc_meta: [this.clinica?.filtro_pc_meta || null],
+            id_publicidad_google: [this.clinica?.id_publicidad_google || null],
+            url_publicidad_google: [this.clinica?.url_publicidad_google || null],
+            filtro_pc_google: [this.clinica?.filtro_pc_google || null],
+        });
     }
 
-    cancelPasswordChange(): void {
-        this.showPasswordChange = false;
-        this.clinicaForm.get('newPassword').reset();
-    }
-
-    updateClinica(): void {
-        const clinicaFormValue = this.clinicaForm.getRawValue();
-        const datos_fiscales_clinica = {
-            denominacion_social: clinicaFormValue.denominacion_social,
-            cif_nif: clinicaFormValue.cif_nif,
-            direccion_facturacion: clinicaFormValue.direccion_facturacion
-        };
-        const clinicaData = {
-            ...clinicaFormValue,
-            datos_fiscales_clinica: datos_fiscales_clinica
-        };
-        console.log('Enviando datos para actualizar:', clinicaData);
-        if (this.showPasswordChange && clinicaData.newPassword) {
-            clinicaData.password_usuario = clinicaData.newPassword;
+    /**
+     * ✅ CORRECCIÓN: Save the clinica con mejor manejo de errores y refresco
+     */
+    saveClinica(): void
+    {
+        // ✅ CORRECCIÓN: Validar que el formulario sea válido
+        if (!this.clinicaForm.valid) {
+            console.error('Formulario inválido:', this.clinicaForm.errors);
+            return;
         }
-        this._clinicasService.updateClinica(clinicaData.id_clinica, clinicaData).subscribe({
+
+        // ✅ CORRECCIÓN: Validar que la clínica existe
+        if (!this.clinica || !this.clinica.id_clinica) {
+            console.error('No hay clínica seleccionada para actualizar');
+            return;
+        }
+
+        // Get the clinica object
+        const formValue = this.clinicaForm.getRawValue();
+        
+        // ✅ CORRECCIÓN: Estructurar los datos correctamente
+        const updateData: ClinicaFormData = {
+            nombre_clinica: formValue.nombre_clinica,
+            telefono: formValue.telefono,
+            email: formValue.email,
+            url_web: formValue.url_web,
+            descripcion: formValue.descripcion,
+            direccion: formValue.direccion,
+            codigo_postal: formValue.codigo_postal,
+            ciudad: formValue.ciudad,
+            provincia: formValue.provincia,
+            pais: formValue.pais,
+            horario_atencion: formValue.horario_atencion,
+            servicios: formValue.servicios,
+            estado_clinica: formValue.estado_clinica,
+            url_avatar: formValue.url_avatar,
+            url_fondo: formValue.url_fondo,
+            url_ficha_local: formValue.url_ficha_local,
+            
+            // ✅ CORRECCIÓN: Estructurar redes sociales
+            redes_sociales: {
+                instagram: formValue.instagram,
+                facebook: formValue.facebook,
+                tiktok: formValue.tiktok,
+                linkedin: formValue.linkedin,
+                doctoralia: formValue.doctoralia
+            },
+            
+            // ✅ CORRECCIÓN: Estructurar configuración
+            configuracion: {
+                citas_online: formValue.citas_online,
+                notificaciones_email: formValue.notificaciones_email,
+                notificaciones_sms: formValue.notificaciones_sms
+            },
+            
+            // Marketing
+            id_publicidad_meta: formValue.id_publicidad_meta,
+            url_publicidad_meta: formValue.url_publicidad_meta,
+            filtro_pc_meta: formValue.filtro_pc_meta,
+            id_publicidad_google: formValue.id_publicidad_google,
+            url_publicidad_google: formValue.url_publicidad_google,
+            filtro_pc_google: formValue.filtro_pc_google,
+        };
+
+        console.log('Enviando datos de actualización:', updateData);
+
+        // ✅ CORRECCIÓN: Actualizar la clínica con mejor manejo de errores
+        this._clinicasService.updateClinica(this.clinica.id_clinica, updateData).subscribe({
             next: (updatedClinica) => {
-                console.log('Clínica actualizada con éxito:', updatedClinica);
+                console.log('Clínica actualizada exitosamente:', updatedClinica);
+                
+                // ✅ CORRECCIÓN: Actualizar la clínica local con datos del servidor
                 this.clinica = updatedClinica;
-                this.clinicaForm.patchValue(updatedClinica);
-                this._changeDetectorRef.detectChanges();
+                
+                // ✅ CORRECCIÓN: Recrear el formulario con los nuevos datos
+                this.createForm();
+                
+                // ✅ CORRECCIÓN: Salir del modo edición
                 this.toggleEditMode(false);
-                this._snackBar.open('Clinic updated', 'Close', { duration: 3000 });
+                
+                // ✅ CORRECCIÓN: Forzar detección de cambios
+                this._changeDetectorRef.detectChanges();
+                
+                console.log('Vista actualizada correctamente');
             },
             error: (error) => {
-                console.error('Error updating clinic:', error);
-                let errorMessage = 'Error updating clinic';
-                if (error.error && error.error.sqlMessage) {
-                    errorMessage = error.error.sqlMessage;
-                }
-                this._snackBar.open(errorMessage, 'Close', { duration: 5000 });
-            }
-        });
-    }
-
-    deleteClinica(): void {
-        const confirmation = this._fuseConfirmationService.open({
-            title: 'Delete clinic',
-            message: 'Are you sure you want to delete this clinic? This action cannot be undone!',
-            actions: { confirm: { label: 'Delete' } },
-        });
-        confirmation.afterClosed().subscribe((result) => {
-            if (result === 'confirmed') {
-                const id_clinica = this.clinica.id_clinica;
-                const currentIndex = this.clinicas.findIndex(item => item.id_clinica === id_clinica);
-                const nextIndex = currentIndex + ((currentIndex === (this.clinicas.length - 1)) ? -1 : 1);
-                const nextClinicaId = (this.clinicas.length === 1 && this.clinicas[0].id_clinica === id_clinica) ? null : this.clinicas[nextIndex].id_clinica;
-                this._clinicasService.deleteClinica(id_clinica).subscribe((isDeleted) => {
-                    if (!isDeleted) {
-                        return;
-                    }
-                    if (nextClinicaId) {
-                        this._router.navigate(['../', nextClinicaId], { relativeTo: this._activatedRoute });
-                    } else {
-                        this._router.navigate(['../'], { relativeTo: this._activatedRoute });
-                    }
-                    this.toggleEditMode(false);
+                console.error('Error al actualizar clínica:', error);
+                console.error('Detalles del error:', {
+                    status: error.status,
+                    statusText: error.statusText,
+                    url: error.url,
+                    message: error.message
                 });
-                this._changeDetectorRef.markForCheck();
+                
+                // ✅ CORRECCIÓN: Mostrar mensaje de error al usuario
+                // Aquí podrías agregar un snackbar o toast para mostrar el error
+                alert(`Error al guardar los cambios: ${error.status} - ${error.statusText}`);
             }
         });
     }
 
-    onEstadoClinicaChange(event: MatSlideToggleChange): void {
-        if (!event.checked) {
-            const confirmation = this._fuseConfirmationService.open({
-                title: 'Deactivate Clinic',
-                message: 'Si desactivas esta clínica no se le generarán facturas hasta que se vuelva a activar. ¿Quieres desactivar esta clínica?',
-                actions: {
-                    confirm: { label: 'Yes', color: 'warn' },
-                    cancel: { label: 'No' }
-                },
-            });
-            confirmation.afterClosed().subscribe((result) => {
-                if (result === 'confirmed') {
-                    this.clinicaForm.get('estado_clinica').setValue(false);
-                    this.updateClinica();
-                } else {
-                    this.clinicaForm.get('estado_clinica').setValue(true);
-                }
-                this._changeDetectorRef.markForCheck();
-            });
-        } else {
-            this.clinicaForm.get('estado_clinica').setValue(true);
-            this.updateClinica();
-            this._changeDetectorRef.markForCheck();
-        }
-    }
+    /**
+     * Delete the clinica
+     */
+    deleteClinica(): void
+    {
+        // Open the confirmation dialog
+        const confirmation = confirm('¿Estás seguro de que quieres eliminar esta clínica?');
 
-    uploadAvatar(fileList: FileList): void {
-        if (!fileList.length) {
+        // Return if the user canceled the confirmation
+        if ( !confirmation )
+        {
             return;
         }
-        const allowedTypes = ['image/jpeg', 'image/png'];
-        const file = fileList[0];
-        if (!allowedTypes.includes(file.type)) {
-            return;
-        }
-        this._clinicasService.uploadAvatar(this.clinica.id_clinica, file).subscribe();
-    }
 
-    removeAvatar(): void {
-        const avatarControl = this.clinicaForm.get('avatar');
-        avatarControl.setValue(null);
-        this._avatarFileInput.nativeElement.value = null;
-        this.clinica.url_avatar = null;
-    }
-
-    addEmailField(): void {
-        const emailGroup = this._formBuilder.group({
-            email_usuario: [''],
-            label: [''],
+        // Delete the clinica on the server
+        this._clinicasService.deleteClinica(this.clinica.id_clinica).subscribe(() =>
+        {
+            // Close the details
+            this.closeDrawer();
         });
-        (this.clinicaForm.get('emails') as UntypedFormArray).push(emailGroup);
-        this._changeDetectorRef.markForCheck();
     }
 
-    removeEmailField(index: number): void {
-        const emailsArray = this.clinicaForm.get('emails') as UntypedFormArray;
-        emailsArray.removeAt(index);
-        this._changeDetectorRef.markForCheck();
-    }
-
-    addPhoneNumberField(): void {
-        const phoneGroup = this._formBuilder.group({
-            phoneNumber: [''],
-            label: [''],
-        });
-        (this.clinicaForm.get('phoneNumbers') as UntypedFormArray).push(phoneGroup);
-        this._changeDetectorRef.markForCheck();
-    }
-
-    removePhoneNumberField(index: number): void {
-        const phoneNumbersArray = this.clinicaForm.get('phoneNumbers') as UntypedFormArray;
-        phoneNumbersArray.removeAt(index);
-        this._changeDetectorRef.markForCheck();
-    }
-
-    trackByFn(index: number, item: any): any {
-        return item.id_clinica || index;
-    }
-
-    // Agregamos un método closeDrawer para compatibilidad con las rutas
-    closeDrawer(): Promise<MatDrawerToggleResult> {
-        return Promise.resolve({} as MatDrawerToggleResult);
-    }
-
-    // Método para abrir el diálogo y crear un grupo nuevo
-    openCreateGroupDialog(): void {
-        const dialogRef = this._dialog.open(GroupDialogComponent, {
-            width: '400px',
-            data: {}
-        });
-
-        dialogRef.afterClosed().subscribe(result => {
-            if (result) {
-                this._groupsService.createGroup(result).subscribe(newGroup => {
-                    this._snackBar.open('Grupo creado', 'Cerrar', { duration: 3000 });
-                    // Recargar la lista de grupos
-                    this._groupsService.getAllGroups().subscribe(grupos => {
-                        this.grupos = grupos;
-                        console.log('Grupos actualizados:', this.grupos);
-                        this._changeDetectorRef.markForCheck();
-                    });
-                });
-            }
-        });
+    /**
+     * Track by function for ngFor loops
+     *
+     * @param index
+     * @param item
+     */
+    trackByFn(index: number, item: any): any
+    {
+        return item.id || index;
     }
 }
+

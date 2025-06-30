@@ -83,7 +83,7 @@ export default [
         path     : '',
         component: ClinicasComponent,
         resolve  : {
-           
+            // Resolver para cargar datos iniciales si es necesario
         },
         children : [
             {
@@ -91,7 +91,6 @@ export default [
                 component: ClinicasListComponent,
                 resolve  : {
                     clinicas : () => inject(ClinicasService).getClinicas(),
-                  
                 },
                 children : [
                     {
@@ -107,3 +106,4 @@ export default [
         ],
     },
 ] as Routes;
+

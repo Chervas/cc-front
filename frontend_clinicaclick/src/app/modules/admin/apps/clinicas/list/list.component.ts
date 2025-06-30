@@ -1,5 +1,5 @@
-import { AsyncPipe, DOCUMENT, I18nPluralPipe, NgClass, NgFor, NgIf } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
+import { AsyncPipe, DOCUMENT, NgClass, NgFor, NgIf, I18nPluralPipe } from '@angular/common';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject, OnDestroy, OnInit, ViewChild, ViewEncapsulation, AfterViewInit } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -12,26 +12,39 @@ import { ClinicasService } from 'app/modules/admin/apps/clinicas/clinicas.servic
 import { Clinica } from 'app/modules/admin/apps/clinicas/clinicas.types';
 import { filter, fromEvent, Observable, Subject, switchMap, takeUntil } from 'rxjs';
 
-
 @Component({
     selector       : 'clinicas-list',
     templateUrl    : './list.component.html',
     encapsulation  : ViewEncapsulation.None,
     changeDetection: ChangeDetectionStrategy.OnPush,
     standalone     : true,
-    imports        : [MatSidenavModule, RouterOutlet, NgIf, MatFormFieldModule, MatIconModule, MatInputModule, FormsModule, ReactiveFormsModule, MatButtonModule, NgFor, NgClass, RouterLink, AsyncPipe, I18nPluralPipe],
+    imports        : [
+        MatSidenavModule,
+        RouterOutlet,
+        NgIf,
+        MatFormFieldModule,
+        MatIconModule,
+        MatInputModule,
+        FormsModule,
+        ReactiveFormsModule,
+        MatButtonModule,
+        NgFor,
+        NgClass,
+        RouterLink,
+        AsyncPipe,
+        I18nPluralPipe
+    ],
 })
-export class ClinicasListComponent implements OnInit, OnDestroy
+export class ClinicasListComponent implements OnInit, AfterViewInit, OnDestroy
 {
-    @ViewChild('matDrawer', {static: true}) matDrawer: MatDrawer;
+    @ViewChild('matDrawer', { static: true }) matDrawer: MatDrawer;
 
     clinicas$: Observable<Clinica[]>;
-
     clinicasCount: number = 0;
-    clinicasTableColumns: string[] = ['nombre', 'email', 'phoneNumber', 'job'];
     drawerMode: 'side' | 'over';
     searchInputControl: UntypedFormControl = new UntypedFormControl();
     selectedClinica: Clinica;
+
     private _unsubscribeAll: Subject<any> = new Subject<any>();
 
     /**
@@ -60,82 +73,98 @@ export class ClinicasListComponent implements OnInit, OnDestroy
         // Get the clinicas
         this.clinicas$ = this._clinicasService.clinicas$;
         this.clinicas$.pipe(takeUntil(this._unsubscribeAll))
-        .subscribe((clinicas: Clinica[]) => {
-            this.clinicasCount = clinicas.length;
-            this._changeDetectorRef.markForCheck(); // Forzar la detección de cambios después de actualizar la lista
-        });
-
+            .subscribe((clinicas: Clinica[]) => {
+                this.clinicasCount = clinicas.length;
+                this._changeDetectorRef.markForCheck();
+            });
 
         // Get the clinica
         this._clinicasService.clinica$
             .pipe(takeUntil(this._unsubscribeAll))
-            .subscribe((clinica: Clinica) =>
-            {
-                // Update the selected clinica
+            .subscribe((clinica: Clinica) => {
                 this.selectedClinica = clinica;
-
-                // Mark for check
+                
+                // ✅ CORRECCIÓN: Abrir drawer automáticamente cuando hay una clínica seleccionada
+                if (clinica && this.matDrawer) {
+                    this.matDrawer.open();
+                }
+                
                 this._changeDetectorRef.markForCheck();
             });
-
-        
 
         // Subscribe to search input field value changes
         this.searchInputControl.valueChanges
             .pipe(
                 takeUntil(this._unsubscribeAll),
-                switchMap(query =>
-
-                    // Search
-                    this._clinicasService.searchClinicas(query),
-                ),
+                switchMap(query => this._clinicasService.searchClinicas(query))
             )
             .subscribe();
 
-        // Subscribe to MatDrawer opened change
-        this.matDrawer.openedChange.subscribe((opened) =>
-        {
-            if ( !opened )
-            {
-                // Remove the selected clinica when drawer closed
-                this.selectedClinica = null;
+        // ✅ CORRECCIÓN: Cerrar el drawer si se hace click en el backdrop
+        this.matDrawer.openedChange
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((opened) => {
+                if (!opened) {
+                    this.selectedClinica = null;
+                    this._changeDetectorRef.markForCheck();
+                }
+            });
 
-                // Mark for check
-                this._changeDetectorRef.markForCheck();
-            }
-        });
-
-        // Subscribe to media changes
+        // ✅ CORRECCIÓN: Cambiar el modo del drawer según el breakpoint
         this._fuseMediaWatcherService.onMediaChange$
             .pipe(takeUntil(this._unsubscribeAll))
-            .subscribe(({matchingAliases}) =>
-            {
-                // Set the drawerMode if the given breakpoint is active
-                if ( matchingAliases.includes('lg') )
-                {
-                    this.drawerMode = 'side';
-                }
-                else
-                {
-                    this.drawerMode = 'over';
-                }
-
-                // Mark for check
+            .subscribe(({ matchingAliases }) => {
+                this.drawerMode = matchingAliases.includes('lg') ? 'side' : 'over';
                 this._changeDetectorRef.markForCheck();
             });
 
-        // Listen for shortcuts
+        // ✅ CORRECCIÓN: Atajo de teclado para crear clínica
         fromEvent(this._document, 'keydown')
             .pipe(
                 takeUntil(this._unsubscribeAll),
                 filter<KeyboardEvent>(event =>
-                    (event.ctrlKey === true || event.metaKey) // Ctrl or Cmd
-                    && (event.key === '/'), // '/'
-                ),
+                    (event.ctrlKey === true || event.metaKey === true) && (event.key === '/')
+                )
             )
-            .subscribe(() =>
-            {
+            .subscribe(() => {
                 this.createClinica();
+            });
+    }
+
+    /**
+     * ✅ CORRECCIÓN: After view init - Detectar ruta inicial y abrir drawer
+     */
+    ngAfterViewInit(): void
+    {
+        // ✅ CORRECCIÓN: Suscribirse a cambios en la ruta para detectar cuando hay un ID
+        this._activatedRoute.firstChild?.params
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe(params => {
+                if (params['id'] && this.matDrawer) {
+                    // Hay un ID en la ruta, abrir el drawer
+                    setTimeout(() => {
+                        this.matDrawer.open();
+                        this._changeDetectorRef.markForCheck();
+                    }, 100);
+                }
+            });
+
+        // ✅ CORRECCIÓN: También detectar cambios en la URL completa
+        this._router.events
+            .pipe(
+                takeUntil(this._unsubscribeAll),
+                filter(event => event.constructor.name === 'NavigationEnd')
+            )
+            .subscribe(() => {
+                const hasId = this._activatedRoute.firstChild?.snapshot.params['id'];
+                if (hasId && this.matDrawer && !this.matDrawer.opened) {
+                    setTimeout(() => {
+                        this.matDrawer.open();
+                        this._changeDetectorRef.markForCheck();
+                    }, 100);
+                } else if (!hasId && this.matDrawer && this.matDrawer.opened) {
+                    this.matDrawer.close();
+                }
             });
     }
 
@@ -144,7 +173,6 @@ export class ClinicasListComponent implements OnInit, OnDestroy
      */
     ngOnDestroy(): void
     {
-        // Unsubscribe from all subscriptions
         this._unsubscribeAll.next(null);
         this._unsubscribeAll.complete();
     }
@@ -154,54 +182,52 @@ export class ClinicasListComponent implements OnInit, OnDestroy
     // -----------------------------------------------------------------------------------------------------
 
     /**
-     * On backdrop clicked
+     * ✅ CORRECCIÓN: On backdrop clicked
      */
     onBackdropClicked(): void
     {
-        // Go back to the list
-        this._router.navigate(['./'], {relativeTo: this._activatedRoute});
-
-        // Mark for check
+        // Volver a la lista
+        this._router.navigate(['./'], { relativeTo: this._activatedRoute });
         this._changeDetectorRef.markForCheck();
     }
 
     /**
      * Create clinica
      */
-    
-    createClinica(): void {
-        this._clinicasService.createClinica().subscribe({
-            next: (response) => {
-                console.log('Clinica creada:', response);
-                if (response && response.clinica && response.clinica.id_clinica) {  // Asegúrate de usar id_clinica si ese es el nombre correcto del campo ID
-                    console.log('Navigating to clinica with ID:', response.clinica.id_clinica);
-                    this._router.navigate(['./', response.clinica.id_clinica], {relativeTo: this._activatedRoute});
-                    this._changeDetectorRef.detectChanges(); // Asegúrate de que Angular detecte los cambios
-                } else {
-                    console.error('ID del nuevo clinicao no definido:', response);
-                }
-            },
-            error: (error) => {
-                console.error('Failed to create clinica:', error);
-            }
+    createClinica(): void
+    {
+        // Create the clinica
+        this._clinicasService.createClinica().subscribe((newClinica) => {
+            // Go to the new clinica
+            this._router.navigate(['./', newClinica.id_clinica], { relativeTo: this._activatedRoute });
+            // Mark for check
+            this._changeDetectorRef.markForCheck();
         });
     }
-    
-    
-    /** manejador de evento sdel campo search */
-    onSearch(value: string): void {
-        console.log('Searching for:', value);  // Esto te permitirá ver qué se está enviando desde el campo de búsqueda
-    }
 
+    /**
+     * ✅ CORRECCIÓN: On clinica select
+     */
+    onClinicaSelect(clinica: Clinica): void
+    {
+        this._router.navigate(['./', clinica.id_clinica], { relativeTo: this._activatedRoute });
+        this._changeDetectorRef.markForCheck();
+    }
 
     /**
      * Track by function for ngFor loops
-     *
-     * @param index
-     * @param item
      */
     trackByFn(index: number, item: any): any
     {
         return item.id_clinica || index;
     }
+
+    /**
+     * ✅ CORRECCIÓN: On search
+     */
+    onSearch(value: string): void
+    {
+        console.log('Buscando clínicas:', value);
+    }
 }
+
