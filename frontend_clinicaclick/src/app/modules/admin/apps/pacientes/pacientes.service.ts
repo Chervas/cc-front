@@ -4,6 +4,7 @@ import { tap, map } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 import { Paciente } from './pacientes.types';
 import { environment } from 'environments/environment';
+import { ClinicFilterService } from 'app/core/services/clinic-filter-service';
 
 
 @Injectable({ providedIn: 'root' })
@@ -12,12 +13,25 @@ export class PacientesService {
   private _pacientes = new BehaviorSubject<Paciente[]>([]);
   private _paciente = new BehaviorSubject<Paciente | null>(null);
 
-  // Subject para el filtro de clínica seleccionado
+  // ✅ MANTENER BEHAVIORSUBJECTS PARA COMPATIBILIDAD
+  // Estos se mantienen para que el código existente siga funcionando
   public selectedClinicId$ = new BehaviorSubject<string | null>(null);
-  // Subject para la lista final de clínicas filtradas (rol + clínica/grupo)
   public filteredClinics$ = new BehaviorSubject<any[]>([]);
 
-  constructor(private _httpClient: HttpClient) {}
+  constructor(
+    private _httpClient: HttpClient,
+    private _clinicFilterService: ClinicFilterService
+  ) {
+    // ✅ SINCRONIZAR CON EL SERVICIO CENTRALIZADO
+    // Cuando el servicio centralizado cambie, actualizar los BehaviorSubjects locales
+    this._clinicFilterService.selectedClinicId$.subscribe(value => {
+      this.selectedClinicId$.next(value);
+    });
+    
+    this._clinicFilterService.filteredClinics$.subscribe(value => {
+      this.filteredClinics$.next(value);
+    });
+  }
 
   get pacientes$(): Observable<Paciente[]> {
     return this._pacientes.asObservable();
@@ -38,7 +52,7 @@ export class PacientesService {
   }
 
   searchPacientes(query: string): Observable<Paciente[]> {
-    const clinicFilter = this.selectedClinicId$.getValue();
+    const clinicFilter = this._clinicFilterService.getCurrentClinicFilter();
     const params: any = { query };
     if (clinicFilter) {
       params.clinica_id = clinicFilter;
@@ -89,3 +103,4 @@ export class PacientesService {
     );
   }
 }
+

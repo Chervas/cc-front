@@ -25,6 +25,7 @@ import { ContactsService } from 'app/modules/admin/apps/contacts/contacts.servic
 import { PacientesService } from 'app/modules/admin/apps/pacientes/pacientes.service';
 import { ClinicSelectorComponent } from 'app/modules/admin/apps/clinicas/clinic-selector-component';
 import { FuseNavigationService } from '@fuse/components/navigation';
+import { ClinicFilterService } from 'app/core/services/clinic-filter-service';
 
 @Component({
   selector: 'thin-layout',
@@ -86,7 +87,8 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private contactsService: ContactsService,
     private _pacientesService: PacientesService,
-    private _fuseNavigationService: FuseNavigationService
+    private _fuseNavigationService: FuseNavigationService,
+    private _clinicFilterService: ClinicFilterService
   ) {}
 
   get currentYear(): number {
@@ -205,12 +207,17 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
   // Se invoca cuando se selecciona una clínica o grupo en el menú lateral
   onClinicChange(selected: any): void {
     this.selectedClinic = selected;
-    if (selected.isGroup) {
+    
+    if (selected === null) {
+      // "Sin grupo" seleccionado - mostrar todas las clínicas del rol
+      localStorage.removeItem('selectedClinicId');
+    } else if (selected.isGroup) {
       const ids = selected.clinicasIds ? selected.clinicasIds.join(',') : null;
       localStorage.setItem('selectedClinicId', ids || '');
     } else {
       localStorage.setItem('selectedClinicId', String(selected.id_clinica));
     }
+    
     this.updateFinalClinicsAndPatients();
   }
 
@@ -234,7 +241,7 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
       console.log('🔑 Admin: Mostrando todas las clínicas (', finalClinics.length, ')');
       
       // ✅ CORRECCIÓN: Para admin, siempre publicar todas las clínicas
-      this._pacientesService.filteredClinics$.next(finalClinics);
+      this._clinicFilterService.setFilteredClinics(finalClinics);
       
       // ✅ CORRECCIÓN: Para admin, determinar filtro basado en selección lateral
       let clinicFilter: string | null = null;
@@ -255,57 +262,49 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
         console.log('🔑 Admin: Sin filtro (todos los pacientes)');
       }
       
-      this._pacientesService.selectedClinicId$.next(clinicFilter);
+      this._clinicFilterService.setSelectedClinicId(clinicFilter);
       this._pacientesService.getPacientes(clinicFilter).subscribe();
       return; // ✅ IMPORTANTE: Salir aquí para evitar la lógica normal
     }
 
-    // ✅ LÓGICA NORMAL PARA USUARIOS NO-ADMIN
+    // ✅ LÓGICA CORREGIDA PARA USUARIOS NO-ADMIN
+    // Siempre publicar todas las clínicas filtradas por rol para el desplegable
+    this._clinicFilterService.setFilteredClinics([...this.roleFilteredClinics]);
+    
+    // Determinar el filtro de pacientes basado en la selección lateral
+    let clinicFilter: string | null = null;
+    
     if (!this.selectedClinic) {
-      finalClinics = [...this.roleFilteredClinics];
+      // ✅ CORRECCIÓN PRINCIPAL: Si no hay selección específica (ej: "Sin grupo"), 
+      // mostrar pacientes de TODAS las clínicas del rol actual
+      const allClinicIds = this.roleFilteredClinics.map(c => c.id_clinica);
+      clinicFilter = allClinicIds.length > 0 ? allClinicIds.join(',') : null;
+      console.log('👤 Usuario: Sin selección específica - mostrando pacientes de todas las clínicas del rol:', clinicFilter);
     } else if (this.selectedClinic.isGroup) {
-      finalClinics = this.roleFilteredClinics.filter(c =>
-        this.selectedClinic.clinicasIds.includes(c.id_clinica)
+      // Si seleccionó un grupo específico, filtrar por esas clínicas
+      const validClinicIds = this.selectedClinic.clinicasIds.filter(id => 
+        this.roleFilteredClinics.some(c => c.id_clinica === id)
       );
+      clinicFilter = validClinicIds.length > 0 ? validClinicIds.join(',') : null;
+      console.log('👤 Usuario: Filtrando por grupo con IDs:', clinicFilter);
     } else {
-      finalClinics = this.roleFilteredClinics.filter(c =>
-        c.id_clinica === this.selectedClinic.id_clinica
-      );
-    }
-
-    // Validar la selección actual: si no está en finalClinics, se actualiza
-    let isValidSelection = false;
-    if (this.selectedClinic) {
-      if (this.selectedClinic.isGroup) {
-        isValidSelection = finalClinics.length > 0;
+      // Si seleccionó una clínica específica, verificar que esté en las clínicas del rol
+      const isValidClinic = this.roleFilteredClinics.some(c => c.id_clinica === this.selectedClinic.id_clinica);
+      if (isValidClinic) {
+        clinicFilter = String(this.selectedClinic.id_clinica);
+        console.log('👤 Usuario: Filtrando por clínica ID:', clinicFilter);
       } else {
-        isValidSelection = finalClinics.some(c => c.id_clinica === this.selectedClinic.id_clinica);
-      }
-    }
-    if (!isValidSelection) {
-      if (finalClinics.length > 0) {
-        this.selectedClinic = finalClinics[0];
-        localStorage.setItem('selectedClinicId', String(this.selectedClinic.id_clinica));
-      } else {
+        // Si la clínica seleccionada no es válida para el rol actual, mostrar todas
+        const allClinicIds = this.roleFilteredClinics.map(c => c.id_clinica);
+        clinicFilter = allClinicIds.length > 0 ? allClinicIds.join(',') : null;
+        console.log('👤 Usuario: Clínica seleccionada no válida para el rol - mostrando todas:', clinicFilter);
+        // Resetear la selección
         this.selectedClinic = null;
         localStorage.removeItem('selectedClinicId');
       }
     }
-
-    // Publicar la lista final para que el diálogo la use
-    this._pacientesService.filteredClinics$.next(finalClinics);
-
-    // Determinar el filtro a usar: si es grupo, se unen los IDs; si es individual, se usa el ID
-    let clinicFilter: string | null = null;
-    if (this.selectedClinic) {
-      if (this.selectedClinic.isGroup) {
-        clinicFilter = this.selectedClinic.clinicasIds.join(',');
-      } else {
-        clinicFilter = String(this.selectedClinic.id_clinica);
-      }
-    }
     
-    this._pacientesService.selectedClinicId$.next(clinicFilter);
+    this._clinicFilterService.setSelectedClinicId(clinicFilter);
     this._pacientesService.getPacientes(clinicFilter).subscribe();
   }
 
@@ -387,3 +386,4 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
     this.groupedClinics = grouped;
   }
 }
+

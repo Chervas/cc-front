@@ -17,7 +17,14 @@ export class ClinicSelectorComponent {
 
   getInitials(name: string, isGroup?: boolean): string {
     if (!name) return '';
-    const initials = this.basicInitials(name);
+    
+    // Si es un grupo, quitar el prefijo "Grupo:" antes de calcular las iniciales
+    let cleanName = name;
+    if (isGroup && name.startsWith('Grupo: ')) {
+      cleanName = name.replace('Grupo: ', '');
+    }
+    
+    const initials = this.basicInitials(cleanName);
     return isGroup ? 'G:' + initials : initials;
   }
   
@@ -41,8 +48,15 @@ export class ClinicSelectorComponent {
   /**
    * Se llama cuando se selecciona un grupo completo.
    * Se emite un objeto que incluye la propiedad `clinicasIds`, que es un arreglo con los IDs de las clínicas de ese grupo.
+   * Para "Sin grupo", se emite null para indicar que se deben mostrar todas las clínicas del rol.
    */
   onSelectGroup(groupName: string): void {
+    // Si se selecciona "Sin grupo", emitir null para mostrar todas las clínicas del rol
+    if (groupName === 'Sin grupo') {
+      this.clinicSelected.emit(null);
+      return;
+    }
+    
     const clinicsInGroup = this.clinicsGrouped[groupName] || [];
     const groupObject = {
       isGroup: true,
@@ -52,3 +66,4 @@ export class ClinicSelectorComponent {
     this.clinicSelected.emit(groupObject);
   }
 }
+
