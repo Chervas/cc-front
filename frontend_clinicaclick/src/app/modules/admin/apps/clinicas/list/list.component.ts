@@ -192,14 +192,18 @@ export class ClinicasListComponent implements OnInit, AfterViewInit, OnDestroy
     }
 
     /**
-     * Create clinica
+     * ✅ CORREGIDO: Create clinica
      */
     createClinica(): void
     {
-        // Create the clinica
-        this._clinicasService.createClinica().subscribe((newClinica) => {
-            // Go to the new clinica
-            this._router.navigate(['./', newClinica.id_clinica], { relativeTo: this._activatedRoute });
+        // ✅ CORRECCIÓN: Pasar datos mínimos requeridos
+        this._clinicasService.createClinica({
+            nombre_clinica: 'Nueva Clínica',
+            url_web: '',
+            servicios: ''
+        }).subscribe((response) => {
+            // ✅ CORRECCIÓN: Usar response.clinica.id_clinica
+            this._router.navigate(['./', response.clinica.id_clinica], { relativeTo: this._activatedRoute });
             // Mark for check
             this._changeDetectorRef.markForCheck();
         });

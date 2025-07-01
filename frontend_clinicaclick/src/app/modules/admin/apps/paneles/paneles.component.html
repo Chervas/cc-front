@@ -1,0 +1,352 @@
+<div class="flex min-w-0 flex-auto flex-col">
+    <!-- Header -->
+    <div class="bg-card">
+        <div class="mx-auto flex w-full max-w-screen-xl flex-col px-6 sm:px-8">
+            <div
+                class="my-8 flex min-w-0 flex-auto flex-col sm:my-12 sm:flex-row sm:items-center"
+            >
+                <!-- Avatar and name -->
+                <div class="flex min-w-0 flex-auto items-center">
+                    <div class="h-16 w-16 flex-0 overflow-hidden rounded-full">
+                        <img
+                            class="h-full w-full object-cover"
+                            src="images/avatars/brian-hughes.jpg"
+                        />
+                    </div>
+                    <div class="ml-4 flex min-w-0 flex-col">
+                        <ng-container *transloco="let t">
+                            <div
+                                class="truncate text-2xl font-semibold leading-7 tracking-tight md:text-5xl md:leading-snug"
+                            >
+                                {{ t('welcome-back') }}, Brian!
+                            </div>
+                        </ng-container>
+                        <div class="flex items-center">
+                            <mat-icon
+                                class="icon-size-5"
+                                [svgIcon]="'heroicons_solid:bell'"
+                            ></mat-icon>
+                            <div
+                                class="text-secondary ml-1.5 truncate leading-6"
+                            >
+                                You have 2 new messages and 15 new tasks
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Actions -->
+                <div class="mt-6 flex items-center space-x-3 sm:ml-2 sm:mt-0">
+                    <button
+                        class="bg-accent"
+                        mat-flat-button
+                        [color]="'accent'"
+                    >
+                        <mat-icon
+                            class="icon-size-5"
+                            [svgIcon]="'heroicons_solid:envelope'"
+                        ></mat-icon>
+                        <span class="ml-2">Messages</span>
+                    </button>
+                    <button mat-flat-button [color]="'primary'">
+                        <mat-icon
+                            class="icon-size-5"
+                            [svgIcon]="'heroicons_solid:cog-6-tooth'"
+                        ></mat-icon>
+                        <span class="ml-2">Settings</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main -->
+    <div class="flex-auto">
+        <div class="mx-auto w-full max-w-screen-xl p-6 sm:p-8">
+            <!-- Project selection -->
+            <div class="flex flex-col items-start space-y-3 sm:flex-row sm:items-center sm:space-x-3 sm:space-y-0">
+                <mat-button-toggle-group
+                    class="fuse-mat-button-toggle-appearance-standard"
+                    value="{{selectedProject}}"
+                >
+                    <mat-button-toggle value="ACME Corp. Backend App">
+                        ACME Corp. Backend App
+                    </mat-button-toggle>
+                </mat-button-toggle-group>
+                <div class="text-secondary text-md font-medium">
+                    22 members, 1 year 2 months
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="mt-8 grid grid-cols-1 gap-8 sm:mt-12 lg:grid-cols-3 xl:grid-cols-4">
+                <!-- Summary -->
+                <div class="lg:col-span-2 xl:col-span-3">
+                    <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4">
+                        <!-- Budget -->
+                        <div class="flex flex-col flex-auto p-6 bg-card shadow rounded-2xl overflow-hidden">
+                            <div class="flex items-start justify-between">
+                                <div class="text-lg font-medium tracking-tight leading-6 truncate">Budget</div>
+                                <div class="ml-2">
+                                    <mat-icon
+                                        class="icon-size-5 text-hint"
+                                        [svgIcon]="'heroicons_solid:banknotes'"
+                                    ></mat-icon>
+                                </div>
+                            </div>
+                            <div class="flex items-center mt-2">
+                                <div class="text-3xl font-bold tracking-tight leading-none">
+                                    {{data.summary.budget | currency:'USD':'symbol':'1.0-0'}}
+                                </div>
+                                <div class="flex items-center ml-2">
+                                    <mat-icon
+                                        class="icon-size-4 text-green-500"
+                                        [svgIcon]="'heroicons_solid:arrow-trending-up'"
+                                    ></mat-icon>
+                                    <div class="ml-1 text-md font-medium text-green-500">2%</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Spent -->
+                        <div class="flex flex-col flex-auto p-6 bg-card shadow rounded-2xl overflow-hidden">
+                            <div class="flex items-start justify-between">
+                                <div class="text-lg font-medium tracking-tight leading-6 truncate">Spent</div>
+                                <div class="ml-2">
+                                    <mat-icon
+                                        class="icon-size-5 text-hint"
+                                        [svgIcon]="'heroicons_solid:credit-card'"
+                                    ></mat-icon>
+                                </div>
+                            </div>
+                            <div class="flex items-center mt-2">
+                                <div class="text-3xl font-bold tracking-tight leading-none">
+                                    {{data.summary.spent | currency:'USD':'symbol':'1.0-0'}}
+                                </div>
+                                <div class="flex items-center ml-2">
+                                    <mat-icon
+                                        class="icon-size-4 text-red-500"
+                                        [svgIcon]="'heroicons_solid:arrow-trending-down'"
+                                    ></mat-icon>
+                                    <div class="ml-1 text-md font-medium text-red-500">4%</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Remaining -->
+                        <div class="flex flex-col flex-auto p-6 bg-card shadow rounded-2xl overflow-hidden">
+                            <div class="flex items-start justify-between">
+                                <div class="text-lg font-medium tracking-tight leading-6 truncate">Remaining</div>
+                                <div class="ml-2">
+                                    <mat-icon
+                                        class="icon-size-5 text-hint"
+                                        [svgIcon]="'heroicons_solid:calculator'"
+                                    ></mat-icon>
+                                </div>
+                            </div>
+                            <div class="flex items-center mt-2">
+                                <div class="text-3xl font-bold tracking-tight leading-none">
+                                    {{data.summary.remaining | currency:'USD':'symbol':'1.0-0'}}
+                                </div>
+                                <div class="flex items-center ml-2">
+                                    <mat-icon
+                                        class="icon-size-4 text-green-500"
+                                        [svgIcon]="'heroicons_solid:arrow-trending-up'"
+                                    ></mat-icon>
+                                    <div class="ml-1 text-md font-medium text-green-500">6%</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Completed -->
+                        <div class="flex flex-col flex-auto p-6 bg-card shadow rounded-2xl overflow-hidden">
+                            <div class="flex items-start justify-between">
+                                <div class="text-lg font-medium tracking-tight leading-6 truncate">Completed</div>
+                                <div class="ml-2">
+                                    <mat-icon
+                                        class="icon-size-5 text-hint"
+                                        [svgIcon]="'heroicons_solid:check-circle'"
+                                    ></mat-icon>
+                                </div>
+                            </div>
+                            <div class="flex items-center mt-2">
+                                <div class="text-3xl font-bold tracking-tight leading-none">
+                                    {{data.summary.completed}}%
+                                </div>
+                                <div class="flex items-center ml-2">
+                                    <mat-icon
+                                        class="icon-size-4 text-green-500"
+                                        [svgIcon]="'heroicons_solid:arrow-trending-up'"
+                                    ></mat-icon>
+                                    <div class="ml-1 text-md font-medium text-green-500">12%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Github Issues -->
+                    <div class="flex flex-col flex-auto bg-card shadow rounded-2xl overflow-hidden mt-8">
+                        <div class="flex items-center justify-between py-3 px-6 bg-gray-50 dark:bg-transparent">
+                            <div class="text-lg font-medium tracking-tight leading-6 truncate">Github Issues</div>
+                            <div class="ml-2">
+                                <mat-icon
+                                    class="icon-size-5 text-hint"
+                                    [svgIcon]="'heroicons_solid:chart-bar'"
+                                ></mat-icon>
+                            </div>
+                        </div>
+                        <div class="flex flex-auto h-80 p-2">
+                            <apx-chart
+                                class="flex-auto w-full h-full"
+                                [chart]="chartGithubIssues.chart"
+                                [colors]="chartGithubIssues.colors"
+                                [dataLabels]="chartGithubIssues.dataLabels"
+                                [grid]="chartGithubIssues.grid"
+                                [labels]="chartGithubIssues.labels"
+                                [legend]="chartGithubIssues.legend"
+                                [plotOptions]="chartGithubIssues.plotOptions"
+                                [series]="chartGithubIssues.series"
+                                [states]="chartGithubIssues.states"
+                                [stroke]="chartGithubIssues.stroke"
+                                [tooltip]="chartGithubIssues.tooltip"
+                                [xaxis]="chartGithubIssues.xaxis"
+                                [yaxis]="chartGithubIssues.yaxis"
+                            ></apx-chart>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="flex flex-col space-y-8">
+                    <!-- Task distribution -->
+                    <div class="flex flex-col flex-auto bg-card shadow rounded-2xl overflow-hidden">
+                        <div class="flex items-center justify-between py-3 px-6 bg-gray-50 dark:bg-transparent">
+                            <div class="text-lg font-medium tracking-tight leading-6 truncate">Task distribution</div>
+                            <div class="ml-2">
+                                <mat-icon
+                                    class="icon-size-5 text-hint"
+                                    [svgIcon]="'heroicons_solid:chart-pie'"
+                                ></mat-icon>
+                            </div>
+                        </div>
+                        <div class="flex flex-auto h-80 p-2">
+                            <apx-chart
+                                class="flex-auto w-full h-full"
+                                [chart]="chartTaskDistribution.chart"
+                                [colors]="chartTaskDistribution.colors"
+                                [labels]="chartTaskDistribution.labels"
+                                [plotOptions]="chartTaskDistribution.plotOptions"
+                                [series]="chartTaskDistribution.series"
+                                [states]="chartTaskDistribution.states"
+                                [tooltip]="chartTaskDistribution.tooltip"
+                            ></apx-chart>
+                        </div>
+                    </div>
+
+                    <!-- Budget distribution -->
+                    <div class="flex flex-col flex-auto bg-card shadow rounded-2xl overflow-hidden">
+                        <div class="flex items-center justify-between py-3 px-6 bg-gray-50 dark:bg-transparent">
+                            <div class="text-lg font-medium tracking-tight leading-6 truncate">Budget distribution</div>
+                            <div class="ml-2">
+                                <mat-icon
+                                    class="icon-size-5 text-hint"
+                                    [svgIcon]="'heroicons_solid:chart-bar'"
+                                ></mat-icon>
+                            </div>
+                        </div>
+                        <div class="flex flex-auto h-80 p-2">
+                            <apx-chart
+                                class="flex-auto w-full h-full"
+                                [chart]="chartBudgetDistribution.chart"
+                                [colors]="chartBudgetDistribution.colors"
+                                [dataLabels]="chartBudgetDistribution.dataLabels"
+                                [markers]="chartBudgetDistribution.markers"
+                                [plotOptions]="chartBudgetDistribution.plotOptions"
+                                [series]="chartBudgetDistribution.series"
+                                [stroke]="chartBudgetDistribution.stroke"
+                                [tooltip]="chartBudgetDistribution.tooltip"
+                                [xaxis]="chartBudgetDistribution.xaxis"
+                                [yaxis]="chartBudgetDistribution.yaxis"
+                            ></apx-chart>
+                        </div>
+                    </div>
+
+                    <!-- Weekly expenses -->
+                    <div class="flex flex-col flex-auto bg-card shadow rounded-2xl overflow-hidden">
+                        <div class="flex items-center justify-between py-3 px-6 bg-gray-50 dark:bg-transparent">
+                            <div class="text-lg font-medium tracking-tight leading-6 truncate">Weekly expenses</div>
+                            <div class="ml-2">
+                                <mat-icon
+                                    class="icon-size-5 text-hint"
+                                    [svgIcon]="'heroicons_solid:chart-bar'"
+                                ></mat-icon>
+                            </div>
+                        </div>
+                        <div class="flex flex-auto h-20 p-2">
+                            <apx-chart
+                                class="flex-auto w-full h-full"
+                                [chart]="chartWeeklyExpenses.chart"
+                                [colors]="chartWeeklyExpenses.colors"
+                                [series]="chartWeeklyExpenses.series"
+                                [stroke]="chartWeeklyExpenses.stroke"
+                                [tooltip]="chartWeeklyExpenses.tooltip"
+                                [xaxis]="chartWeeklyExpenses.xaxis"
+                                [yaxis]="chartWeeklyExpenses.yaxis"
+                            ></apx-chart>
+                        </div>
+                    </div>
+
+                    <!-- Monthly expenses -->
+                    <div class="flex flex-col flex-auto bg-card shadow rounded-2xl overflow-hidden">
+                        <div class="flex items-center justify-between py-3 px-6 bg-gray-50 dark:bg-transparent">
+                            <div class="text-lg font-medium tracking-tight leading-6 truncate">Monthly expenses</div>
+                            <div class="ml-2">
+                                <mat-icon
+                                    class="icon-size-5 text-hint"
+                                    [svgIcon]="'heroicons_solid:chart-bar'"
+                                ></mat-icon>
+                            </div>
+                        </div>
+                        <div class="flex flex-auto h-20 p-2">
+                            <apx-chart
+                                class="flex-auto w-full h-full"
+                                [chart]="chartMonthlyExpenses.chart"
+                                [colors]="chartMonthlyExpenses.colors"
+                                [series]="chartMonthlyExpenses.series"
+                                [stroke]="chartMonthlyExpenses.stroke"
+                                [tooltip]="chartMonthlyExpenses.tooltip"
+                                [xaxis]="chartMonthlyExpenses.xaxis"
+                                [yaxis]="chartMonthlyExpenses.yaxis"
+                            ></apx-chart>
+                        </div>
+                    </div>
+
+                    <!-- Yearly expenses -->
+                    <div class="flex flex-col flex-auto bg-card shadow rounded-2xl overflow-hidden">
+                        <div class="flex items-center justify-between py-3 px-6 bg-gray-50 dark:bg-transparent">
+                            <div class="text-lg font-medium tracking-tight leading-6 truncate">Yearly expenses</div>
+                            <div class="ml-2">
+                                <mat-icon
+                                    class="icon-size-5 text-hint"
+                                    [svgIcon]="'heroicons_solid:chart-bar'"
+                                ></mat-icon>
+                            </div>
+                        </div>
+                        <div class="flex flex-auto h-20 p-2">
+                            <apx-chart
+                                class="flex-auto w-full h-full"
+                                [chart]="chartYearlyExpenses.chart"
+                                [colors]="chartYearlyExpenses.colors"
+                                [series]="chartYearlyExpenses.series"
+                                [stroke]="chartYearlyExpenses.stroke"
+                                [tooltip]="chartYearlyExpenses.tooltip"
+                                [xaxis]="chartYearlyExpenses.xaxis"
+                                [yaxis]="chartYearlyExpenses.yaxis"
+                            ></apx-chart>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

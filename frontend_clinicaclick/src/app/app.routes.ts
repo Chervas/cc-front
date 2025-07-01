@@ -27,7 +27,7 @@ export const appRoutes: Route[] = [
             { path: 'forgot-password', loadChildren: () => import('./modules/auth/forgot-password/forgot-password.routes') },
             { path: 'reset-password', loadChildren: () => import('./modules/auth/reset-password/reset-password.routes') },
             { path: 'sign-in', loadChildren: () => import('./modules/auth/sign-in/sign-in.routes') },
-            { path: 'sign-up', loadChildren: () => import('./modules/auth/sign-up/sign-up.routes') },
+            { path: 'sign-up', loadChildren: () => import('./modules/auth/sign-up/sign-up.routes') }
         ]
     },
 
@@ -68,32 +68,27 @@ export const appRoutes: Route[] = [
             {
                 path: 'apps',
                 children: [
+                    { path: 'paneles', loadChildren: () => import('./modules/admin/apps/paneles/paneles.routes') },
                     { path: 'contacts', loadChildren: () => import('./modules/admin/apps/contacts/contacts.routes') },
                     { path: 'clinicas', loadChildren: () => import('./modules/admin/apps/clinicas/clinicas.routes') },
-                    { path: 'ventas', loadChildren: () => import('./modules/admin/apps/ventas/ventas.routes') },
-                    
-                    
+                    { path: 'ventas', loadChildren: () => import('./modules/admin/apps/ventas/ventas.routes') }
                 ]
             },
 
             // Ruta de pacientes (fuera del grupo "apps")
             {
                 path: 'pacientes',
-                loadChildren: () =>
-                  import('./modules/admin/apps/pacientes/pacientes.routes').then(m => m.pacientesRoutes)
-              },       
-              
-              // NUEVA RUTA: Marketing
-              {
-                path: 'marketing', 
-                loadChildren: () => import('./modules/admin/apps/marketing/marketing.module').then(m => m.MarketingModule)
-              },
-              
-        
-        ]
-        
-    },
+                loadChildren: () => 
+                    import('./modules/admin/apps/pacientes/pacientes.routes').then(m => m.pacientesRoutes)
+            },
 
-    // Ruta comodín (fallback)
-    { path: '**', redirectTo: 'example' }
+            // NUEVA RUTA: Marketing
+            {
+                path: 'marketing',
+                loadChildren: () => 
+                    import('./modules/admin/apps/marketing/marketing.module').then(m => m.MarketingModule)
+            }
+        ]
+    }
 ];
+

@@ -6,25 +6,25 @@ export interface Clinica {
     url_ficha_local?: string | null;
     nombre_clinica: string;
     fecha_creacion: Date;
-    
+
     // Información de contacto
     telefono?: string;
     email?: string;
     descripcion?: string;
-    
+
     // Dirección
     direccion?: string;
     codigo_postal?: string;
     ciudad?: string;
     provincia?: string;
     pais?: string;
-    
+
     // Horarios y servicios
     horario_atencion?: string;
     servicios: string;
     checklist?: string;
     estado_clinica?: boolean;
-    
+
     // Redes sociales
     redes_sociales?: {
         instagram?: string;
@@ -33,14 +33,14 @@ export interface Clinica {
         linkedin?: string;
         doctoralia?: string;
     };
-    
+
     // Configuración
     configuracion?: {
         citas_online?: boolean;
         notificaciones_email?: boolean;
         notificaciones_sms?: boolean;
     };
-    
+
     // Marketing
     id_publicidad_meta?: number;
     url_publicidad_meta?: number;
@@ -48,14 +48,14 @@ export interface Clinica {
     id_publicidad_google?: number;
     url_publicidad_google?: number;
     filtro_pc_google?: number;
-    
+
     // Datos fiscales
     datos_fiscales_clinica?: {
         denominacion_social: string;
         cif_nif: string;
         direccion_facturacion: string;
     };
-    
+
     // Asociación opcional con GrupoClinica
     grupoClinica?: GroupClinica;
 }
@@ -90,10 +90,17 @@ export interface ClinicaFormData {
     pais?: string;
     horario_atencion?: string;
     servicios?: string;
+    checklist?: string;
     estado_clinica?: boolean;
     url_avatar?: string;
     url_fondo?: string;
     url_ficha_local?: string;
+    id_publicidad_meta?: number;
+    url_publicidad_meta?: number;
+    filtro_pc_meta?: number;
+    id_publicidad_google?: number;
+    url_publicidad_google?: number;
+    filtro_pc_google?: number;
     redes_sociales?: {
         instagram?: string;
         facebook?: string;
@@ -101,16 +108,16 @@ export interface ClinicaFormData {
         linkedin?: string;
         doctoralia?: string;
     };
+    datos_fiscales_clinica?: {
+        denominacion_social?: string;
+        cif_nif?: string;
+        direccion_facturacion?: string;
+    };
     configuracion?: {
         citas_online?: boolean;
         notificaciones_email?: boolean;
         notificaciones_sms?: boolean;
     };
-    id_publicidad_meta?: number;
-    url_publicidad_meta?: number;
-    filtro_pc_meta?: number;
-    id_publicidad_google?: number;
-    url_publicidad_google?: number;
-    filtro_pc_google?: number;
+    grupoClinica?: GroupClinica;
 }
 

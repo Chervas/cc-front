@@ -4,6 +4,18 @@ import { FuseNavigationItem } from '@fuse/components/navigation';
 export const defaultNavigation: FuseNavigationItem[] = [
        /* aquí van los elementos del menú de segundo nivel y desplegables */
     {
+    id: 'apps.paneles',
+    title: 'Paneles',
+    type: 'basic',
+    icon: 'heroicons_outline:chart-bar',
+    link: '/apps/paneles',
+    },
+
+
+
+
+
+       {
         id      : 'apps',
         title   : 'Contabilidad',
         subtitle: 'Custom made application designs',
