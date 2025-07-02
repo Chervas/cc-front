@@ -121,13 +121,14 @@ export class SettingsConnectedAccountsComponent {
         const clientId = '1025462336033536';
         const redirectUri = encodeURIComponent('https://autenticacion.clinicaclick.com/oauth/meta/callback');
         const scope = encodeURIComponent([
-            'pages_show_list',
-            'pages_read_engagement', 
-            'instagram_basic',
-            'instagram_manage_insights',
-            'ads_read',
-            'leads_retrieval',
-            'business_management'
+            'email'
+            //'pages_show_list',
+            //'pages_read_engagement', 
+            //'instagram_basic',
+            //'instagram_manage_insights',
+            //'ads_read',
+            //'leads_retrieval',
+           // 'business_management'
         ].join(','));
         
         const state = this.generateRandomState();
