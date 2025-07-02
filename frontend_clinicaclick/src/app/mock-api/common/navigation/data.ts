@@ -3,18 +3,6 @@ import { FuseNavigationItem } from '@fuse/components/navigation';
 
 export const defaultNavigation: FuseNavigationItem[] = [
        /* aquí van los elementos del menú de segundo nivel y desplegables */
-    {
-    id: 'apps.paneles',
-    title: 'Paneles',
-    type: 'basic',
-    icon: 'heroicons_outline:chart-bar',
-    link: '/apps/paneles',
-    },
-
-
-
-
-
        {
         id      : 'apps',
         title   : 'Contabilidad',
@@ -148,6 +136,22 @@ export const defaultNavigation: FuseNavigationItem[] = [
 export const compactNavigation: FuseNavigationItem[] = [
     /* aquí van los elementos del menú de primer nivel, por ejmeplo, la bola tendría que ir a este */
     {
+        id      : 'paneles',
+        title   : 'Paneles',
+        tooltip : 'Paneles',
+        type    : 'basic',
+        icon    : 'heroicons_outline:chart-bar',
+        link    : '/apps/paneles',
+    },
+    {
+        id      : 'settings',
+        title   : 'Configuración',
+        tooltip : 'Configuración',
+        type    : 'basic',
+        icon    : 'heroicons_outline:cog-6-tooth',
+        link    : '/pages/settings',
+    },
+    {
         id      : 'apps',
         title   : 'Miembros',
         tooltip : 'Miembros',
@@ -204,3 +208,4 @@ export const horizontalNavigation: FuseNavigationItem[] = [
     }
     */
 ];
+

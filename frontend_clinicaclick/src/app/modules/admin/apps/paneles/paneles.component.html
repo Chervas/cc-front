@@ -2,34 +2,25 @@
     <!-- Header -->
     <div class="bg-card">
         <div class="mx-auto flex w-full max-w-screen-xl flex-col px-6 sm:px-8">
-            <div
-                class="my-8 flex min-w-0 flex-auto flex-col sm:my-12 sm:flex-row sm:items-center"
-            >
+            <div class="my-8 flex min-w-0 flex-auto flex-col sm:my-12 sm:flex-row sm:items-center">
                 <!-- Avatar and name -->
                 <div class="flex min-w-0 flex-auto items-center">
                     <div class="h-16 w-16 flex-0 overflow-hidden rounded-full">
                         <img
                             class="h-full w-full object-cover"
-                            src="images/avatars/brian-hughes.jpg"
-                        />
+                            src="assets/images/avatars/brian-hughes.jpg"
+                            alt="Avatar" />
                     </div>
                     <div class="ml-4 flex min-w-0 flex-col">
-                        <ng-container *transloco="let t">
-                            <div
-                                class="truncate text-2xl font-semibold leading-7 tracking-tight md:text-5xl md:leading-snug"
-                            >
-                                {{ t('welcome-back') }}, Brian!
-                            </div>
-                        </ng-container>
+                        <div class="truncate text-2xl font-semibold leading-7 tracking-tight md:text-5xl md:leading-snug">
+                            Hola, Carlos Hervas
+                        </div>
                         <div class="flex items-center">
                             <mat-icon
                                 class="icon-size-5"
-                                [svgIcon]="'heroicons_solid:bell'"
-                            ></mat-icon>
-                            <div
-                                class="text-secondary ml-1.5 truncate leading-6"
-                            >
-                                You have 2 new messages and 15 new tasks
+                                [svgIcon]="'heroicons_solid:bell'"></mat-icon>
+                            <div class="text-secondary ml-1.5 truncate leading-6">
+                                Tienes 5 notificaciones y 3 tareas por hacer
                             </div>
                         </div>
                     </div>
@@ -39,20 +30,17 @@
                     <button
                         class="bg-accent"
                         mat-flat-button
-                        [color]="'accent'"
-                    >
+                        [color]="'accent'">
                         <mat-icon
                             class="icon-size-5"
-                            [svgIcon]="'heroicons_solid:envelope'"
-                        ></mat-icon>
-                        <span class="ml-2">Messages</span>
+                            [svgIcon]="'heroicons_solid:cog-8-tooth'"></mat-icon>
+                        <span class="ml-2">Configuración</span>
                     </button>
                     <button mat-flat-button [color]="'primary'">
                         <mat-icon
                             class="icon-size-5"
-                            [svgIcon]="'heroicons_solid:cog-6-tooth'"
-                        ></mat-icon>
-                        <span class="ml-2">Settings</span>
+                            [svgIcon]="'heroicons_solid:arrow-path'"></mat-icon>
+                        <span class="ml-2">Actualizar</span>
                     </button>
                 </div>
             </div>
@@ -62,290 +50,272 @@
     <!-- Main -->
     <div class="flex-auto">
         <div class="mx-auto w-full max-w-screen-xl p-6 sm:p-8">
-            <!-- Project selection -->
-            <div class="flex flex-col items-start space-y-3 sm:flex-row sm:items-center sm:space-x-3 sm:space-y-0">
-                <mat-button-toggle-group
-                    class="fuse-mat-button-toggle-appearance-standard"
-                    value="{{selectedProject}}"
-                >
-                    <mat-button-toggle value="ACME Corp. Backend App">
-                        ACME Corp. Backend App
-                    </mat-button-toggle>
-                </mat-button-toggle-group>
-                <div class="text-secondary text-md font-medium">
-                    22 members, 1 year 2 months
+            
+            <!-- Información de clínica seleccionada -->
+            <div class="mb-8">
+                <div class="flex items-center">
+                    <mat-icon class="text-hint mr-2" [svgIcon]="'heroicons_outline:building-storefront'"></mat-icon>
+                    <span class="text-lg font-medium">Clínica Dental Madrid Centro</span>
+                    <span class="ml-2 px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                        Activa
+                    </span>
                 </div>
             </div>
 
-            <!-- Content -->
-            <div class="mt-8 grid grid-cols-1 gap-8 sm:mt-12 lg:grid-cols-3 xl:grid-cols-4">
-                <!-- Summary -->
-                <div class="lg:col-span-2 xl:col-span-3">
-                    <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4">
-                        <!-- Budget -->
-                        <div class="flex flex-col flex-auto p-6 bg-card shadow rounded-2xl overflow-hidden">
-                            <div class="flex items-start justify-between">
-                                <div class="text-lg font-medium tracking-tight leading-6 truncate">Budget</div>
-                                <div class="ml-2">
-                                    <mat-icon
-                                        class="icon-size-5 text-hint"
-                                        [svgIcon]="'heroicons_solid:banknotes'"
-                                    ></mat-icon>
+            <!-- Pestañas principales -->
+            <mat-tab-group 
+                class="fuse-mat-dense fuse-mat-rounded w-full"
+                [animationDuration]="'0ms'"
+                mat-stretch-tabs="false">
+                
+                <!-- Pestaña Resumen -->
+                <mat-tab label="Resumen">
+                    <ng-template matTabContent>
+                        <div class="grid gap-8 pt-8 sm:gap-16 sm:pt-16">
+                            <div class="flex flex-col items-center justify-center p-16 text-center">
+                                <mat-icon 
+                                    class="icon-size-16 text-hint mb-4"
+                                    [svgIcon]="'heroicons_outline:chart-bar'"></mat-icon>
+                                <div class="text-2xl font-semibold tracking-tight">
+                                    Panel de Resumen
                                 </div>
-                            </div>
-                            <div class="flex items-center mt-2">
-                                <div class="text-3xl font-bold tracking-tight leading-none">
-                                    {{data.summary.budget | currency:'USD':'symbol':'1.0-0'}}
-                                </div>
-                                <div class="flex items-center ml-2">
-                                    <mat-icon
-                                        class="icon-size-4 text-green-500"
-                                        [svgIcon]="'heroicons_solid:arrow-trending-up'"
-                                    ></mat-icon>
-                                    <div class="ml-1 text-md font-medium text-green-500">2%</div>
+                                <div class="text-secondary mt-2">
+                                    Aquí aparecerán las métricas generales de tu clínica
                                 </div>
                             </div>
                         </div>
+                    </ng-template>
+                </mat-tab>
 
-                        <!-- Spent -->
-                        <div class="flex flex-col flex-auto p-6 bg-card shadow rounded-2xl overflow-hidden">
-                            <div class="flex items-start justify-between">
-                                <div class="text-lg font-medium tracking-tight leading-6 truncate">Spent</div>
-                                <div class="ml-2">
-                                    <mat-icon
-                                        class="icon-size-5 text-hint"
-                                        [svgIcon]="'heroicons_solid:credit-card'"
-                                    ></mat-icon>
-                                </div>
+                <!-- Pestaña Redes Sociales -->
+                <mat-tab label="Redes Sociales">
+                    <ng-template matTabContent>
+                        <div class="grid gap-8 pt-8 sm:gap-16 sm:pt-16">
+                            
+                            <!-- Título de sección -->
+                            <div>
+                                <div class="text-2xl font-semibold tracking-tight">Seguidores</div>
+                                <div class="text-secondary">Evolución seguidores en tus redes</div>
                             </div>
-                            <div class="flex items-center mt-2">
-                                <div class="text-3xl font-bold tracking-tight leading-none">
-                                    {{data.summary.spent | currency:'USD':'symbol':'1.0-0'}}
-                                </div>
-                                <div class="flex items-center ml-2">
-                                    <mat-icon
-                                        class="icon-size-4 text-red-500"
-                                        [svgIcon]="'heroicons_solid:arrow-trending-down'"
-                                    ></mat-icon>
-                                    <div class="ml-1 text-md font-medium text-red-500">4%</div>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Remaining -->
-                        <div class="flex flex-col flex-auto p-6 bg-card shadow rounded-2xl overflow-hidden">
-                            <div class="flex items-start justify-between">
-                                <div class="text-lg font-medium tracking-tight leading-6 truncate">Remaining</div>
-                                <div class="ml-2">
-                                    <mat-icon
-                                        class="icon-size-5 text-hint"
-                                        [svgIcon]="'heroicons_solid:calculator'"
-                                    ></mat-icon>
+                            <!-- Cards de redes sociales principales -->
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                
+                                <!-- Instagram Card -->
+                                <div class="bg-card shadow rounded-2xl p-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div>
+                                            <div class="text-lg font-semibold">Instagram</div>
+                                            <div class="text-2xl font-bold text-pink-500">+20%</div>
+                                        </div>
+                                        <mat-icon class="text-pink-500 icon-size-8" [svgIcon]="'heroicons_solid:camera'"></mat-icon>
+                                    </div>
+                                    <div class="h-32 bg-gradient-to-r from-pink-500/10 to-purple-500/10 rounded-lg flex items-center justify-center">
+                                        <span class="text-sm text-secondary">Gráfico de evolución</span>
+                                    </div>
+                                </div>
+
+                                <!-- TikTok Card -->
+                                <div class="bg-card shadow rounded-2xl p-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div>
+                                            <div class="text-lg font-semibold">TikTok</div>
+                                            <div class="text-2xl font-bold text-gray-800">+15%</div>
+                                        </div>
+                                        <mat-icon class="text-gray-800 icon-size-8" [svgIcon]="'heroicons_solid:musical-note'"></mat-icon>
+                                    </div>
+                                    <div class="h-32 bg-gradient-to-r from-gray-800/10 to-gray-600/10 rounded-lg flex items-center justify-center">
+                                        <span class="text-sm text-secondary">Gráfico de evolución</span>
+                                    </div>
+                                </div>
+
+                                <!-- Facebook Card -->
+                                <div class="bg-card shadow rounded-2xl p-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div>
+                                            <div class="text-lg font-semibold">Facebook</div>
+                                            <div class="text-2xl font-bold text-blue-600">+8%</div>
+                                            <div class="text-xs text-secondary flex items-center">
+                                                <mat-icon class="icon-size-4 mr-1" [svgIcon]="'heroicons_solid:check'"></mat-icon>
+                                                This Year
+                                            </div>
+                                        </div>
+                                        <mat-icon class="text-blue-600 icon-size-8" [svgIcon]="'heroicons_solid:users'"></mat-icon>
+                                    </div>
+                                    <div class="h-32 bg-gradient-to-r from-blue-600/10 to-blue-400/10 rounded-lg flex items-center justify-center">
+                                        <span class="text-sm text-secondary">Gráfico de evolución</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="flex items-center mt-2">
-                                <div class="text-3xl font-bold tracking-tight leading-none">
-                                    {{data.summary.remaining | currency:'USD':'symbol':'1.0-0'}}
+
+                            <!-- Sección de estadísticas detalladas -->
+                            <div>
+                                <div class="text-2xl font-semibold tracking-tight mb-2">Instagram</div>
+                                <div class="text-secondary mb-6">Estadísticas</div>
+                                
+                                <!-- Grid de métricas -->
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                    <!-- Conversions -->
+                                    <div class="bg-card shadow rounded-2xl p-6">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-secondary text-sm">Conversions</span>
+                                            <span class="text-xs text-secondary">30 days</span>
+                                        </div>
+                                        <div class="text-3xl font-bold">4,123</div>
+                                        <div class="text-sm text-green-500">2% below target</div>
+                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
+                                    </div>
+
+                                    <!-- Conversions 2 -->
+                                    <div class="bg-card shadow rounded-2xl p-6">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-secondary text-sm">Conversions</span>
+                                            <span class="text-xs text-secondary">30 days</span>
+                                        </div>
+                                        <div class="text-3xl font-bold">4,123</div>
+                                        <div class="text-sm text-green-500">2% below target</div>
+                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
+                                    </div>
+
+                                    <!-- Conversions 3 -->
+                                    <div class="bg-card shadow rounded-2xl p-6">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-secondary text-sm">Conversions</span>
+                                            <span class="text-xs text-secondary">30 days</span>
+                                        </div>
+                                        <div class="text-3xl font-bold">4,123</div>
+                                        <div class="text-sm text-green-500">2% below target</div>
+                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
+                                    </div>
+
+                                    <!-- Segunda fila -->
+                                    <div class="bg-card shadow rounded-2xl p-6">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-secondary text-sm">Conversions</span>
+                                            <span class="text-xs text-secondary">30 days</span>
+                                        </div>
+                                        <div class="text-3xl font-bold">4,123</div>
+                                        <div class="text-sm text-red-500">2% below target</div>
+                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
+                                    </div>
+
+                                    <div class="bg-card shadow rounded-2xl p-6">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-secondary text-sm">Conversions</span>
+                                            <span class="text-xs text-secondary">30 days</span>
+                                        </div>
+                                        <div class="text-3xl font-bold">4,123</div>
+                                        <div class="text-sm text-red-500">2% below target</div>
+                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
+                                    </div>
+
+                                    <div class="bg-card shadow rounded-2xl p-6">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-secondary text-sm">Conversions</span>
+                                            <span class="text-xs text-secondary">30 days</span>
+                                        </div>
+                                        <div class="text-3xl font-bold">4,123</div>
+                                        <div class="text-sm text-green-500">2% below target</div>
+                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
+                                    </div>
                                 </div>
-                                <div class="flex items-center ml-2">
-                                    <mat-icon
-                                        class="icon-size-4 text-green-500"
-                                        [svgIcon]="'heroicons_solid:arrow-trending-up'"
-                                    ></mat-icon>
-                                    <div class="ml-1 text-md font-medium text-green-500">6%</div>
+
+                                <!-- Tabla de transacciones recientes -->
+                                <div class="bg-card shadow rounded-2xl p-6">
+                                    <div class="text-lg font-semibold mb-4">Recent transactions</div>
+                                    <div class="text-sm text-secondary mb-4">1 pending, 4 completed</div>
+                                    
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full">
+                                            <thead>
+                                                <tr class="border-b">
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Transaction ID</th>
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Date</th>
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Name</th>
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Amount</th>
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr class="border-b">
+                                                    <td class="py-3 text-sm">528651571NT</td>
+                                                    <td class="py-3 text-sm">Oct 08, 2019</td>
+                                                    <td class="py-3 text-sm">Morgan Page</td>
+                                                    <td class="py-3 text-sm">$1,358.75</td>
+                                                    <td class="py-3">
+                                                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">COMPLETED</span>
+                                                    </td>
+                                                </tr>
+                                                <tr class="border-b">
+                                                    <td class="py-3 text-sm">421436904YT</td>
+                                                    <td class="py-3 text-sm">Dec 18, 2019</td>
+                                                    <td class="py-3 text-sm">Nita Hebert</td>
+                                                    <td class="py-3 text-sm">-$1,042.82</td>
+                                                    <td class="py-3">
+                                                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">COMPLETED</span>
+                                                    </td>
+                                                </tr>
+                                                <tr class="border-b">
+                                                    <td class="py-3 text-sm">685377421YT</td>
+                                                    <td class="py-3 text-sm">Dec 25, 2019</td>
+                                                    <td class="py-3 text-sm">Marsha Chambers</td>
+                                                    <td class="py-3 text-sm">$1,828.16</td>
+                                                    <td class="py-3">
+                                                        <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">PENDING</span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <button class="mt-4 text-sm text-primary font-medium">
+                                        See all transactions
+                                    </button>
                                 </div>
                             </div>
                         </div>
+                    </ng-template>
+                </mat-tab>
 
-                        <!-- Completed -->
-                        <div class="flex flex-col flex-auto p-6 bg-card shadow rounded-2xl overflow-hidden">
-                            <div class="flex items-start justify-between">
-                                <div class="text-lg font-medium tracking-tight leading-6 truncate">Completed</div>
-                                <div class="ml-2">
-                                    <mat-icon
-                                        class="icon-size-5 text-hint"
-                                        [svgIcon]="'heroicons_solid:check-circle'"
-                                    ></mat-icon>
+                <!-- Pestaña Web -->
+                <mat-tab label="Web">
+                    <ng-template matTabContent>
+                        <div class="grid gap-8 pt-8 sm:gap-16 sm:pt-16">
+                            <div class="flex flex-col items-center justify-center p-16 text-center">
+                                <mat-icon 
+                                    class="icon-size-16 text-hint mb-4"
+                                    [svgIcon]="'heroicons_outline:globe-alt'"></mat-icon>
+                                <div class="text-2xl font-semibold tracking-tight">
+                                    Métricas Web
                                 </div>
-                            </div>
-                            <div class="flex items-center mt-2">
-                                <div class="text-3xl font-bold tracking-tight leading-none">
-                                    {{data.summary.completed}}%
-                                </div>
-                                <div class="flex items-center ml-2">
-                                    <mat-icon
-                                        class="icon-size-4 text-green-500"
-                                        [svgIcon]="'heroicons_solid:arrow-trending-up'"
-                                    ></mat-icon>
-                                    <div class="ml-1 text-md font-medium text-green-500">12%</div>
+                                <div class="text-secondary mt-2">
+                                    Aquí aparecerán las métricas de tu sitio web
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </ng-template>
+                </mat-tab>
 
-                    <!-- Github Issues -->
-                    <div class="flex flex-col flex-auto bg-card shadow rounded-2xl overflow-hidden mt-8">
-                        <div class="flex items-center justify-between py-3 px-6 bg-gray-50 dark:bg-transparent">
-                            <div class="text-lg font-medium tracking-tight leading-6 truncate">Github Issues</div>
-                            <div class="ml-2">
-                                <mat-icon
-                                    class="icon-size-5 text-hint"
-                                    [svgIcon]="'heroicons_solid:chart-bar'"
-                                ></mat-icon>
+                <!-- Pestaña Publicidad -->
+                <mat-tab label="Publicidad">
+                    <ng-template matTabContent>
+                        <div class="grid gap-8 pt-8 sm:gap-16 sm:pt-16">
+                            <div class="flex flex-col items-center justify-center p-16 text-center">
+                                <mat-icon 
+                                    class="icon-size-16 text-hint mb-4"
+                                    [svgIcon]="'heroicons_outline:megaphone'"></mat-icon>
+                                <div class="text-2xl font-semibold tracking-tight">
+                                    Campañas Publicitarias
+                                </div>
+                                <div class="text-secondary mt-2">
+                                    Aquí aparecerán las métricas de tus campañas publicitarias
+                                </div>
                             </div>
                         </div>
-                        <div class="flex flex-auto h-80 p-2">
-                            <apx-chart
-                                class="flex-auto w-full h-full"
-                                [chart]="chartGithubIssues.chart"
-                                [colors]="chartGithubIssues.colors"
-                                [dataLabels]="chartGithubIssues.dataLabels"
-                                [grid]="chartGithubIssues.grid"
-                                [labels]="chartGithubIssues.labels"
-                                [legend]="chartGithubIssues.legend"
-                                [plotOptions]="chartGithubIssues.plotOptions"
-                                [series]="chartGithubIssues.series"
-                                [states]="chartGithubIssues.states"
-                                [stroke]="chartGithubIssues.stroke"
-                                [tooltip]="chartGithubIssues.tooltip"
-                                [xaxis]="chartGithubIssues.xaxis"
-                                [yaxis]="chartGithubIssues.yaxis"
-                            ></apx-chart>
-                        </div>
-                    </div>
-                </div>
+                    </ng-template>
+                </mat-tab>
 
-                <!-- Sidebar -->
-                <div class="flex flex-col space-y-8">
-                    <!-- Task distribution -->
-                    <div class="flex flex-col flex-auto bg-card shadow rounded-2xl overflow-hidden">
-                        <div class="flex items-center justify-between py-3 px-6 bg-gray-50 dark:bg-transparent">
-                            <div class="text-lg font-medium tracking-tight leading-6 truncate">Task distribution</div>
-                            <div class="ml-2">
-                                <mat-icon
-                                    class="icon-size-5 text-hint"
-                                    [svgIcon]="'heroicons_solid:chart-pie'"
-                                ></mat-icon>
-                            </div>
-                        </div>
-                        <div class="flex flex-auto h-80 p-2">
-                            <apx-chart
-                                class="flex-auto w-full h-full"
-                                [chart]="chartTaskDistribution.chart"
-                                [colors]="chartTaskDistribution.colors"
-                                [labels]="chartTaskDistribution.labels"
-                                [plotOptions]="chartTaskDistribution.plotOptions"
-                                [series]="chartTaskDistribution.series"
-                                [states]="chartTaskDistribution.states"
-                                [tooltip]="chartTaskDistribution.tooltip"
-                            ></apx-chart>
-                        </div>
-                    </div>
-
-                    <!-- Budget distribution -->
-                    <div class="flex flex-col flex-auto bg-card shadow rounded-2xl overflow-hidden">
-                        <div class="flex items-center justify-between py-3 px-6 bg-gray-50 dark:bg-transparent">
-                            <div class="text-lg font-medium tracking-tight leading-6 truncate">Budget distribution</div>
-                            <div class="ml-2">
-                                <mat-icon
-                                    class="icon-size-5 text-hint"
-                                    [svgIcon]="'heroicons_solid:chart-bar'"
-                                ></mat-icon>
-                            </div>
-                        </div>
-                        <div class="flex flex-auto h-80 p-2">
-                            <apx-chart
-                                class="flex-auto w-full h-full"
-                                [chart]="chartBudgetDistribution.chart"
-                                [colors]="chartBudgetDistribution.colors"
-                                [dataLabels]="chartBudgetDistribution.dataLabels"
-                                [markers]="chartBudgetDistribution.markers"
-                                [plotOptions]="chartBudgetDistribution.plotOptions"
-                                [series]="chartBudgetDistribution.series"
-                                [stroke]="chartBudgetDistribution.stroke"
-                                [tooltip]="chartBudgetDistribution.tooltip"
-                                [xaxis]="chartBudgetDistribution.xaxis"
-                                [yaxis]="chartBudgetDistribution.yaxis"
-                            ></apx-chart>
-                        </div>
-                    </div>
-
-                    <!-- Weekly expenses -->
-                    <div class="flex flex-col flex-auto bg-card shadow rounded-2xl overflow-hidden">
-                        <div class="flex items-center justify-between py-3 px-6 bg-gray-50 dark:bg-transparent">
-                            <div class="text-lg font-medium tracking-tight leading-6 truncate">Weekly expenses</div>
-                            <div class="ml-2">
-                                <mat-icon
-                                    class="icon-size-5 text-hint"
-                                    [svgIcon]="'heroicons_solid:chart-bar'"
-                                ></mat-icon>
-                            </div>
-                        </div>
-                        <div class="flex flex-auto h-20 p-2">
-                            <apx-chart
-                                class="flex-auto w-full h-full"
-                                [chart]="chartWeeklyExpenses.chart"
-                                [colors]="chartWeeklyExpenses.colors"
-                                [series]="chartWeeklyExpenses.series"
-                                [stroke]="chartWeeklyExpenses.stroke"
-                                [tooltip]="chartWeeklyExpenses.tooltip"
-                                [xaxis]="chartWeeklyExpenses.xaxis"
-                                [yaxis]="chartWeeklyExpenses.yaxis"
-                            ></apx-chart>
-                        </div>
-                    </div>
-
-                    <!-- Monthly expenses -->
-                    <div class="flex flex-col flex-auto bg-card shadow rounded-2xl overflow-hidden">
-                        <div class="flex items-center justify-between py-3 px-6 bg-gray-50 dark:bg-transparent">
-                            <div class="text-lg font-medium tracking-tight leading-6 truncate">Monthly expenses</div>
-                            <div class="ml-2">
-                                <mat-icon
-                                    class="icon-size-5 text-hint"
-                                    [svgIcon]="'heroicons_solid:chart-bar'"
-                                ></mat-icon>
-                            </div>
-                        </div>
-                        <div class="flex flex-auto h-20 p-2">
-                            <apx-chart
-                                class="flex-auto w-full h-full"
-                                [chart]="chartMonthlyExpenses.chart"
-                                [colors]="chartMonthlyExpenses.colors"
-                                [series]="chartMonthlyExpenses.series"
-                                [stroke]="chartMonthlyExpenses.stroke"
-                                [tooltip]="chartMonthlyExpenses.tooltip"
-                                [xaxis]="chartMonthlyExpenses.xaxis"
-                                [yaxis]="chartMonthlyExpenses.yaxis"
-                            ></apx-chart>
-                        </div>
-                    </div>
-
-                    <!-- Yearly expenses -->
-                    <div class="flex flex-col flex-auto bg-card shadow rounded-2xl overflow-hidden">
-                        <div class="flex items-center justify-between py-3 px-6 bg-gray-50 dark:bg-transparent">
-                            <div class="text-lg font-medium tracking-tight leading-6 truncate">Yearly expenses</div>
-                            <div class="ml-2">
-                                <mat-icon
-                                    class="icon-size-5 text-hint"
-                                    [svgIcon]="'heroicons_solid:chart-bar'"
-                                ></mat-icon>
-                            </div>
-                        </div>
-                        <div class="flex flex-auto h-20 p-2">
-                            <apx-chart
-                                class="flex-auto w-full h-full"
-                                [chart]="chartYearlyExpenses.chart"
-                                [colors]="chartYearlyExpenses.colors"
-                                [series]="chartYearlyExpenses.series"
-                                [stroke]="chartYearlyExpenses.stroke"
-                                [tooltip]="chartYearlyExpenses.tooltip"
-                                [xaxis]="chartYearlyExpenses.xaxis"
-                                [yaxis]="chartYearlyExpenses.yaxis"
-                            ></apx-chart>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            </mat-tab-group>
         </div>
     </div>
 </div>

@@ -1,10 +1,9 @@
 import { Routes } from '@angular/router';
-import { PanelesComponent } from './paneles.component';
 
 export default [
     {
         path: '',
-        component: PanelesComponent,
+        loadComponent: () => import('./paneles.component').then(m => m.PanelesComponent),
         data: {
             title: 'Paneles'
         }

@@ -1,0 +1,221 @@
+<div class="flex w-full min-w-0 flex-col sm:absolute sm:inset-0 sm:overflow-hidden">
+    <mat-drawer-container class="flex-auto sm:h-full">
+        <!-- Drawer -->
+        <mat-drawer
+            class="dark:bg-gray-900 sm:w-96"
+            [autoFocus]="false"
+            [mode]="drawerMode"
+            [opened]="drawerOpened"
+            #drawer>
+            <!-- Header -->
+            <div class="m-8 mr-6 flex items-center justify-between sm:my-10">
+                <!-- Title -->
+                <div class="text-4xl font-extrabold leading-none tracking-tight">
+                    Settings
+                </div>
+                <!-- Close button -->
+                <div class="lg:hidden">
+                    <button mat-icon-button (click)="drawer.close()">
+                        <mat-icon [svgIcon]="'heroicons_outline:x-mark'"></mat-icon>
+                    </button>
+                </div>
+            </div>
+            <!-- Panel links -->
+            <div class="flex flex-col divide-y border-b border-t">
+                @for (panel of panels; track trackByFn($index, panel)) {
+                    <div
+                        class="flex cursor-pointer px-8 py-5"
+                        [ngClass]="{
+                            'dark:hover:bg-hover hover:bg-gray-100':
+                                !selectedPanel || selectedPanel !== panel.id,
+                            'bg-primary-50 dark:bg-hover':
+                                selectedPanel && selectedPanel === panel.id,
+                        }"
+                        (click)="goToPanel(panel.id)">
+                        <mat-icon
+                            [ngClass]="{
+                                'text-hint':
+                                    !selectedPanel ||
+                                    selectedPanel !== panel.id,
+                                'text-primary dark:text-primary-500':
+                                    selectedPanel && selectedPanel === panel.id,
+                            }"
+                            [svgIcon]="panel.icon"></mat-icon>
+                        <div class="ml-4">
+                            <div
+                                class="font-medium leading-6"
+                                [ngClass]="{
+                                    'text-primary dark:text-primary-500':
+                                        selectedPanel && selectedPanel === panel.id,
+                                }">
+                                {{ panel.title }}
+                            </div>
+                            <div class="text-secondary mt-0.5 text-sm leading-5">
+                                {{ panel.description }}
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </mat-drawer>
+
+        <!-- Drawer content -->
+        <mat-drawer-content class="flex flex-col">
+            <!-- Main -->
+            <div class="flex-auto overflow-y-auto">
+                <!-- Connected Accounts -->
+                @if (selectedPanel === 'connected-accounts') {
+                    <div class="flex flex-col">
+                        <!-- Header -->
+                        <div class="flex flex-col p-6 sm:p-10 pb-4">
+                            <div class="flex items-center">
+                                <div class="flex items-center">
+                                    <mat-icon
+                                        class="icon-size-5 text-hint"
+                                        [svgIcon]="'heroicons_outline:link'"></mat-icon>
+                                    <div class="ml-3 text-4xl font-extrabold leading-none tracking-tight">
+                                        Cuentas Conectadas
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-secondary mt-2">
+                                Gestiona las conexiones con redes sociales y plataformas publicitarias para sincronizar datos automáticamente
+                            </div>
+                        </div>
+
+                        <!-- Main -->
+                        <div class="flex-auto p-6 sm:p-10 pt-0">
+                            
+                            <!-- Connected Accounts List -->
+                            <div class="space-y-6">
+                                @for (account of accounts; track trackAccountByFn($index, account)) {
+                                    <div class="bg-card shadow rounded-2xl p-6">
+                                        <!-- Account Header -->
+                                        <div class="flex items-center justify-between mb-4">
+                                            <div class="flex items-center">
+                                                <div class="flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800">
+                                                    <mat-icon 
+                                                        class="icon-size-6"
+                                                        [ngClass]="account.color"
+                                                        [svgIcon]="account.icon"></mat-icon>
+                                                </div>
+                                                <div class="ml-4">
+                                                    <div class="text-xl font-semibold">{{ account.name }}</div>
+                                                    <div class="text-sm text-secondary">{{ account.description }}</div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Connection Status & Action -->
+                                            <div class="flex items-center space-x-3">
+                                                @if (account.connected) {
+                                                    <div class="flex items-center">
+                                                        <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                                                        <span class="text-sm text-green-600 dark:text-green-400 font-medium">Conectada</span>
+                                                    </div>
+                                                    <button 
+                                                        mat-stroked-button
+                                                        color="warn"
+                                                        (click)="disconnectAccount(account.id)">
+                                                        Desconectar
+                                                    </button>
+                                                } @else {
+                                                    <div class="flex items-center">
+                                                        <div class="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
+                                                        <span class="text-sm text-gray-500 font-medium">No conectada</span>
+                                                    </div>
+                                                    <button 
+                                                        mat-flat-button
+                                                        color="primary"
+                                                        (click)="connectAccount(account.id)">
+                                                        Conectar
+                                                    </button>
+                                                }
+                                            </div>
+                                        </div>
+
+                                        <mat-divider class="my-4"></mat-divider>
+
+                                        <!-- Permissions -->
+                                        <div>
+                                            <div class="text-sm font-medium text-secondary mb-3">
+                                                Permisos que solicitamos:
+                                            </div>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                @for (permission of account.permissions; track permission) {
+                                                    <div class="flex items-center text-sm text-secondary">
+                                                        <mat-icon 
+                                                            class="icon-size-4 mr-2 text-green-500"
+                                                            [svgIcon]="'heroicons_solid:check'"></mat-icon>
+                                                        {{ permission }}
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+
+                                        <!-- Additional Info for Connected Accounts -->
+                                        @if (account.connected) {
+                                            <mat-divider class="my-4"></mat-divider>
+                                            <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                                                <div class="flex items-center">
+                                                    <mat-icon 
+                                                        class="icon-size-5 text-green-600 mr-2"
+                                                        [svgIcon]="'heroicons_solid:check-circle'"></mat-icon>
+                                                    <div class="text-sm">
+                                                        <div class="font-medium text-green-800 dark:text-green-200">
+                                                            Conexión activa
+                                                        </div>
+                                                        <div class="text-green-600 dark:text-green-300">
+                                                            Los datos se sincronizan automáticamente cada hora
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Help Section -->
+                            <div class="mt-8 bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-6">
+                                <div class="flex items-start">
+                                    <mat-icon 
+                                        class="icon-size-6 text-blue-600 mr-3 mt-1"
+                                        [svgIcon]="'heroicons_outline:information-circle'"></mat-icon>
+                                    <div>
+                                        <div class="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                                            ¿Necesitas ayuda?
+                                        </div>
+                                        <div class="text-blue-800 dark:text-blue-200 text-sm mb-4">
+                                            Las conexiones son seguras y utilizan OAuth2. Solo accedemos a los datos que necesitamos para generar tus informes.
+                                        </div>
+                                        <div class="space-y-2 text-sm text-blue-700 dark:text-blue-300">
+                                            <div class="flex items-center">
+                                                <mat-icon 
+                                                    class="icon-size-4 mr-2"
+                                                    [svgIcon]="'heroicons_solid:shield-check'"></mat-icon>
+                                                Conexiones encriptadas y seguras
+                                            </div>
+                                            <div class="flex items-center">
+                                                <mat-icon 
+                                                    class="icon-size-4 mr-2"
+                                                    [svgIcon]="'heroicons_solid:key'"></mat-icon>
+                                                Puedes revocar el acceso en cualquier momento
+                                            </div>
+                                            <div class="flex items-center">
+                                                <mat-icon 
+                                                    class="icon-size-4 mr-2"
+                                                    [svgIcon]="'heroicons_solid:clock'"></mat-icon>
+                                                Sincronización automática cada hora
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </mat-drawer-content>
+    </mat-drawer-container>
+</div>
+

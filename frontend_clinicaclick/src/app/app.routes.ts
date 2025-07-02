@@ -75,6 +75,14 @@ export const appRoutes: Route[] = [
                 ]
             },
 
+            // Rutas dentro del grupo "pages"
+            {
+                path: 'pages',
+                children: [
+                    { path: 'settings', loadChildren: () => import('./modules/admin/pages/settings/settings.routes') }
+                ]
+            },
+
             // Ruta de pacientes (fuera del grupo "apps")
             {
                 path: 'pacientes',
