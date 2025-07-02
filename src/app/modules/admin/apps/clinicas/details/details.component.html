@@ -1,0 +1,620 @@
+<div class="flex flex-col w-full">
+
+    <!-- Modo Vista -->
+    <ng-container *ngIf="!editMode">
+        <!-- ✅ CABECERA ORIGINAL RESTAURADA -->
+        <div class="relative w-full h-40 sm:h-48 px-8 sm:px-12 bg-accent-100 dark:bg-accent-700">
+            <img *ngIf="clinica.url_fondo" class="absolute inset-0 object-cover w-full h-full" [src]="clinica.url_fondo">
+            <div *ngIf="!clinica.url_fondo" class="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600"></div>
+            <!-- ✅ CORREGIDO: Usar routerLink en lugar de (click) para evitar bloqueos -->
+            <div class="flex items-center justify-end w-full max-w-3xl mx-auto pt-6">
+                <a mat-icon-button [matTooltip]="'Close'" [routerLink]="['../']">
+                    <mat-icon class="text-white" [svgIcon]="'heroicons_outline:x-mark'"></mat-icon>
+                </a>
+            </div>
+        </div>
+        
+        <div class="relative flex flex-col flex-auto items-center p-6 pt-0 sm:p-12 sm:pt-0">
+            <div class="w-full max-w-3xl">
+                <!-- Avatar y botón editar -->
+                <div class="flex flex-auto items-end -mt-16">
+                    <div class="flex items-center justify-center w-32 h-32 rounded-full overflow-hidden ring-4 ring-bg-card">
+                        <img *ngIf="clinica.url_avatar" [src]="clinica.url_avatar" class="object-cover w-full h-full">
+                        <div *ngIf="!clinica.url_avatar" class="flex items-center justify-center w-full h-full rounded uppercase text-8xl font-bold leading-none bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                            {{ clinica.nombre_clinica?.charAt(0) }}
+                        </div>
+                    </div>
+                    <div class="flex items-center ml-auto mb-1">
+                        <button mat-stroked-button (click)="toggleEditMode(true)">
+                            <mat-icon class="icon-size-5" [svgIcon]="'heroicons_solid:pencil-square'"></mat-icon>
+                            <span class="ml-2">Editar</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Nombre de la clínica -->
+                <div class="mt-3 text-4xl font-bold truncate">{{ clinica.nombre_clinica }}</div>
+                
+                <!-- Estado de la clínica -->
+                <div class="mt-2" *ngIf="clinica.estado_clinica !== undefined">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                          [ngClass]="clinica.estado_clinica ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+                        {{ clinica.estado_clinica ? 'Activa' : 'Inactiva' }}
+                    </span>
+                </div>
+
+                <!-- Información principal -->
+                <div class="flex flex-col mt-4 pt-6 border-t space-y-6">
+                    
+                    <!-- ✅ CORREGIDO: INFORMACIÓN DE CONTACTO CON TODOS LOS CAMPOS -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- ✅ AÑADIDO: Teléfono -->
+                        <div class="flex items-center" *ngIf="clinica.telefono">
+                            <mat-icon [svgIcon]="'heroicons_outline:phone'"></mat-icon>
+                            <a class="ml-3 hover:underline text-primary-500" [href]="'tel:' + clinica.telefono">
+                                {{ clinica.telefono }}
+                            </a>
+                        </div>
+                        
+                        <!-- ✅ AÑADIDO: Email -->
+                        <div class="flex items-center" *ngIf="clinica.email">
+                            <mat-icon [svgIcon]="'heroicons_outline:envelope'"></mat-icon>
+                            <a class="ml-3 hover:underline text-primary-500" [href]="'mailto:' + clinica.email">
+                                {{ clinica.email }}
+                            </a>
+                        </div>
+                        
+                        <!-- URL Web -->
+                        <div class="flex items-center" *ngIf="clinica.url_web">
+                            <mat-icon [svgIcon]="'heroicons_outline:link'"></mat-icon>
+                            <a class="ml-3 leading-6 hover:underline text-primary-500" [href]="clinica.url_web" target="_blank">
+                                Ver Website
+                            </a>
+                        </div>
+                        
+                        <!-- ✅ AÑADIDO: Ficha Local -->
+                        <div class="flex items-center" *ngIf="clinica.url_ficha_local">
+                            <mat-icon [svgIcon]="'heroicons_outline:map-pin'"></mat-icon>
+                            <a class="ml-3 hover:underline text-primary-500" [href]="clinica.url_ficha_local" target="_blank">
+                                Ver Ficha Local
+                            </a>
+                        </div>
+
+                        <!-- ✅ AÑADIDO: Cuenta Google Ads -->
+                        <div class="flex items-center" *ngIf="clinica.url_publicidad_google">
+                            <mat-icon [svgIcon]="'heroicons_outline:megaphone'"></mat-icon>
+                            <a class="ml-3 hover:underline text-primary-500" [href]="clinica.url_publicidad_google" target="_blank">
+                                Google Ads
+                            </a>
+                        </div>
+
+                        <!-- ✅ AÑADIDO: Cuenta Meta Ads -->
+                        <div class="flex items-center" *ngIf="clinica.url_publicidad_meta">
+                            <mat-icon [svgIcon]="'heroicons_outline:megaphone'"></mat-icon>
+                            <a class="ml-3 hover:underline text-primary-500" [href]="clinica.url_publicidad_meta" target="_blank">
+                                Meta Ads
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- ✅ CORREGIDO: Horario de atención -->
+                    <div *ngIf="clinica.horario_atencion">
+                        <div class="flex items-center">
+                            <mat-icon [svgIcon]="'heroicons_outline:clock'"></mat-icon>
+                            <div class="ml-3">
+                                <div class="font-medium">Horario de Atención</div>
+                                <div class="text-secondary whitespace-pre-line">{{ clinica.horario_atencion }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dirección completa -->
+                    <div class="flex items-start" *ngIf="clinica.direccion">
+                        <mat-icon [svgIcon]="'heroicons_outline:map-pin'"></mat-icon>
+                        <div class="ml-3">
+                            <div>{{ clinica.direccion }}</div>
+                            <div *ngIf="clinica.codigo_postal || clinica.ciudad || clinica.provincia">
+                                {{ clinica.codigo_postal }} {{ clinica.ciudad }}, {{ clinica.provincia }}
+                            </div>
+                            <div *ngIf="clinica.pais">{{ clinica.pais }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Descripción -->
+                    <div *ngIf="clinica.descripcion">
+                        <h3 class="text-lg font-medium mb-2">Descripción</h3>
+                        <p class="text-secondary">{{ clinica.descripcion }}</p>
+                    </div>
+
+                    <!-- Servicios -->
+                    <div *ngIf="clinica.servicios">
+                        <h3 class="text-lg font-medium mb-2">Servicios</h3>
+                        <p class="text-secondary">{{ clinica.servicios }}</p>
+                    </div>
+
+                    <!-- ✅ CORREGIDO: Redes sociales con enlaces funcionales -->
+                    <div *ngIf="clinica.redes_sociales && hasAnySocialMedia()">
+                        <h3 class="text-lg font-medium mb-3">Redes Sociales</h3>
+                        <div class="flex flex-wrap gap-4">
+                            <a *ngIf="clinica.redes_sociales.instagram" 
+                               [href]="clinica.redes_sociales.instagram" 
+                               target="_blank"
+                               class="flex items-center text-pink-600 hover:text-pink-700">
+                                <mat-icon [svgIcon]="'heroicons_outline:camera'"></mat-icon>
+                                <span class="ml-2">Instagram</span>
+                            </a>
+                            <a *ngIf="clinica.redes_sociales.facebook" 
+                               [href]="clinica.redes_sociales.facebook" 
+                               target="_blank"
+                               class="flex items-center text-blue-600 hover:text-blue-700">
+                                <mat-icon [svgIcon]="'heroicons_outline:share'"></mat-icon>
+                                <span class="ml-2">Facebook</span>
+                            </a>
+                            <a *ngIf="clinica.redes_sociales.tiktok" 
+                               [href]="clinica.redes_sociales.tiktok" 
+                               target="_blank"
+                               class="flex items-center text-black hover:text-gray-700">
+                                <mat-icon [svgIcon]="'heroicons_outline:musical-note'"></mat-icon>
+                                <span class="ml-2">TikTok</span>
+                            </a>
+                            <a *ngIf="clinica.redes_sociales.linkedin" 
+                               [href]="clinica.redes_sociales.linkedin" 
+                               target="_blank"
+                               class="flex items-center text-blue-700 hover:text-blue-800">
+                                <mat-icon [svgIcon]="'heroicons_outline:briefcase'"></mat-icon>
+                                <span class="ml-2">LinkedIn</span>
+                            </a>
+                            <a *ngIf="clinica.redes_sociales.doctoralia" 
+                               [href]="clinica.redes_sociales.doctoralia" 
+                               target="_blank"
+                               class="flex items-center text-green-600 hover:text-green-700">
+                                <mat-icon [svgIcon]="'heroicons_outline:heart'"></mat-icon>
+                                <span class="ml-2">Doctoralia</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Datos fiscales -->
+                    <div *ngIf="clinica.datos_fiscales_clinica && (clinica.datos_fiscales_clinica.denominacion_social || clinica.datos_fiscales_clinica.cif_nif || clinica.datos_fiscales_clinica.direccion_facturacion)">
+                        <h3 class="text-lg font-medium mb-3">Datos Fiscales</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div *ngIf="clinica.datos_fiscales_clinica.denominacion_social">
+                                <span class="font-medium">Denominación Social:</span>
+                                <span class="ml-2">{{ clinica.datos_fiscales_clinica.denominacion_social }}</span>
+                            </div>
+                            <div *ngIf="clinica.datos_fiscales_clinica.cif_nif">
+                                <span class="font-medium">CIF/NIF:</span>
+                                <span class="ml-2">{{ clinica.datos_fiscales_clinica.cif_nif }}</span>
+                            </div>
+                            <div *ngIf="clinica.datos_fiscales_clinica.direccion_facturacion" class="md:col-span-2">
+                                <span class="font-medium">Dirección de Facturación:</span>
+                                <span class="ml-2">{{ clinica.datos_fiscales_clinica.direccion_facturacion }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Configuración -->
+                    <div *ngIf="clinica.configuracion && (clinica.configuracion.citas_online !== undefined || clinica.configuracion.notificaciones_email !== undefined || clinica.configuracion.notificaciones_sms !== undefined)">
+                        <h3 class="text-lg font-medium mb-3">Configuración</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div *ngIf="clinica.configuracion.citas_online !== undefined">
+                                <span class="font-medium">Citas Online:</span>
+                                <span class="ml-2" [ngClass]="clinica.configuracion.citas_online ? 'text-green-600' : 'text-red-600'">
+                                    {{ clinica.configuracion.citas_online ? 'Habilitadas' : 'Deshabilitadas' }}
+                                </span>
+                            </div>
+                            <div *ngIf="clinica.configuracion.notificaciones_email !== undefined">
+                                <span class="font-medium">Notificaciones Email:</span>
+                                <span class="ml-2" [ngClass]="clinica.configuracion.notificaciones_email ? 'text-green-600' : 'text-red-600'">
+                                    {{ clinica.configuracion.notificaciones_email ? 'Activas' : 'Inactivas' }}
+                                </span>
+                            </div>
+                            <div *ngIf="clinica.configuracion.notificaciones_sms !== undefined">
+                                <span class="font-medium">Notificaciones SMS:</span>
+                                <span class="ml-2" [ngClass]="clinica.configuracion.notificaciones_sms ? 'text-green-600' : 'text-red-600'">
+                                    {{ clinica.configuracion.notificaciones_sms ? 'Activas' : 'Inactivas' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grupo -->
+                    <div *ngIf="clinica.grupoClinica">
+                        <h3 class="text-lg font-medium mb-2">Grupo</h3>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                            {{ clinica.grupoClinica.nombre_grupo }}
+                        </span>
+                    </div>
+
+                    <!-- Fecha de creación -->
+                    <div class="text-sm text-secondary">
+                        <span class="font-medium">Fecha de creación:</span>
+                        <span class="ml-2">{{ clinica.fecha_creacion | date:'dd/MM/yyyy' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </ng-container>
+    
+    <!-- ✅ CORREGIDO: Modo Edición con cabecera más pequeña, título y subtítulo -->
+    <ng-container *ngIf="editMode">
+        <!-- ✅ CABECERA MÁS PEQUEÑA CON TÍTULO Y SUBTÍTULO (como recordabas) -->
+        <div class="relative w-full h-24 px-8 sm:px-12 bg-gray-100 dark:bg-gray-800">
+            <div class="flex items-center justify-between w-full max-w-3xl mx-auto h-full">
+                <div>
+                    <div class="text-xl font-semibold text-gray-700 dark:text-gray-300">
+                        Editando clínica
+                    </div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                        {{ clinica.nombre_clinica }}
+                    </div>
+                </div>
+                <button mat-icon-button [matTooltip]="'Cancelar'" (click)="toggleEditMode(false)">
+                    <mat-icon class="text-gray-700 dark:text-gray-300" [svgIcon]="'heroicons_outline:x-mark'"></mat-icon>
+                </button>
+            </div>
+        </div>
+        
+        <!-- ✅ SIN AVATAR EN MODO EDICIÓN -->
+        <div class="relative flex flex-col flex-auto items-center px-6 sm:px-12 pt-8">
+            <div class="w-full max-w-3xl">
+                <form [formGroup]="clinicaForm">
+                    <!-- Información básica -->
+                    <div class="space-y-6">
+                        <h3 class="text-lg font-medium">Información Básica</h3>
+                        
+                        <mat-form-field class="w-full" appearance="fill">
+                            <mat-label>Nombre de la Clínica</mat-label>
+                            <input matInput formControlName="nombre_clinica" placeholder="Nombre de la Clínica">
+                        </mat-form-field>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <mat-form-field appearance="fill">
+                                <mat-label>Teléfono</mat-label>
+                                <input matInput formControlName="telefono" placeholder="Teléfono">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="fill">
+                                <mat-label>Email</mat-label>
+                                <input matInput formControlName="email" placeholder="Email">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="fill">
+                                <mat-label>Website</mat-label>
+                                <input matInput formControlName="url_web" placeholder="https://...">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="fill">
+                                <mat-label>URL Avatar</mat-label>
+                                <input matInput formControlName="url_avatar" placeholder="https://...">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="fill">
+                                <mat-label>URL Fondo</mat-label>
+                                <input matInput formControlName="url_fondo" placeholder="https://...">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="fill">
+                                <mat-label>URL Ficha Local</mat-label>
+                                <input matInput formControlName="url_ficha_local" placeholder="https://...">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="fill">
+                                <mat-label>URL Publicidad Google</mat-label>
+                                <input matInput formControlName="url_publicidad_google" placeholder="https://...">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="fill">
+                                <mat-label>URL Publicidad Meta</mat-label>
+                                <input matInput formControlName="url_publicidad_meta" placeholder="https://...">
+                            </mat-form-field>
+                        </div>
+
+                        <mat-form-field class="w-full" appearance="fill">
+                            <mat-label>Descripción</mat-label>
+                            <textarea matInput formControlName="descripcion" rows="3" placeholder="Descripción de la clínica"></textarea>
+                        </mat-form-field>
+
+                        <mat-form-field class="w-full" appearance="fill">
+                            <mat-label>Servicios</mat-label>
+                            <textarea matInput formControlName="servicios" rows="2" placeholder="Servicios que ofrece la clínica"></textarea>
+                        </mat-form-field>
+                    </div>
+
+                    <!-- ✅ HORARIOS TIPO GOOGLE MY BUSINESS (sin opción texto simple) -->
+                    <div class="mt-8 space-y-6">
+                        <h3 class="text-lg font-medium">Horario de Atención</h3>
+                        
+                        <!-- Configuración de horarios por días -->
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 gap-4">
+                                <!-- Lunes -->
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-20 text-sm font-medium">Lunes</div>
+                                    <mat-slide-toggle [(ngModel)]="horarios.lunes.abierto" [ngModelOptions]="{standalone: true}">
+                                        Abierto
+                                    </mat-slide-toggle>
+                                    <div *ngIf="horarios.lunes.abierto" class="flex items-center space-x-2">
+                                        <mat-form-field appearance="outline" class="w-24">
+                                            <input matInput type="time" [(ngModel)]="horarios.lunes.apertura" [ngModelOptions]="{standalone: true}">
+                                        </mat-form-field>
+                                        <span>-</span>
+                                        <mat-form-field appearance="outline" class="w-24">
+                                            <input matInput type="time" [(ngModel)]="horarios.lunes.cierre" [ngModelOptions]="{standalone: true}">
+                                        </mat-form-field>
+                                    </div>
+                                </div>
+
+                                <!-- Martes -->
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-20 text-sm font-medium">Martes</div>
+                                    <mat-slide-toggle [(ngModel)]="horarios.martes.abierto" [ngModelOptions]="{standalone: true}">
+                                        Abierto
+                                    </mat-slide-toggle>
+                                    <div *ngIf="horarios.martes.abierto" class="flex items-center space-x-2">
+                                        <mat-form-field appearance="outline" class="w-24">
+                                            <input matInput type="time" [(ngModel)]="horarios.martes.apertura" [ngModelOptions]="{standalone: true}">
+                                        </mat-form-field>
+                                        <span>-</span>
+                                        <mat-form-field appearance="outline" class="w-24">
+                                            <input matInput type="time" [(ngModel)]="horarios.martes.cierre" [ngModelOptions]="{standalone: true}">
+                                        </mat-form-field>
+                                    </div>
+                                </div>
+
+                                <!-- Miércoles -->
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-20 text-sm font-medium">Miércoles</div>
+                                    <mat-slide-toggle [(ngModel)]="horarios.miercoles.abierto" [ngModelOptions]="{standalone: true}">
+                                        Abierto
+                                    </mat-slide-toggle>
+                                    <div *ngIf="horarios.miercoles.abierto" class="flex items-center space-x-2">
+                                        <mat-form-field appearance="outline" class="w-24">
+                                            <input matInput type="time" [(ngModel)]="horarios.miercoles.apertura" [ngModelOptions]="{standalone: true}">
+                                        </mat-form-field>
+                                        <span>-</span>
+                                        <mat-form-field appearance="outline" class="w-24">
+                                            <input matInput type="time" [(ngModel)]="horarios.miercoles.cierre" [ngModelOptions]="{standalone: true}">
+                                        </mat-form-field>
+                                    </div>
+                                </div>
+
+                                <!-- Jueves -->
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-20 text-sm font-medium">Jueves</div>
+                                    <mat-slide-toggle [(ngModel)]="horarios.jueves.abierto" [ngModelOptions]="{standalone: true}">
+                                        Abierto
+                                    </mat-slide-toggle>
+                                    <div *ngIf="horarios.jueves.abierto" class="flex items-center space-x-2">
+                                        <mat-form-field appearance="outline" class="w-24">
+                                            <input matInput type="time" [(ngModel)]="horarios.jueves.apertura" [ngModelOptions]="{standalone: true}">
+                                        </mat-form-field>
+                                        <span>-</span>
+                                        <mat-form-field appearance="outline" class="w-24">
+                                            <input matInput type="time" [(ngModel)]="horarios.jueves.cierre" [ngModelOptions]="{standalone: true}">
+                                        </mat-form-field>
+                                    </div>
+                                </div>
+
+                                <!-- Viernes -->
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-20 text-sm font-medium">Viernes</div>
+                                    <mat-slide-toggle [(ngModel)]="horarios.viernes.abierto" [ngModelOptions]="{standalone: true}">
+                                        Abierto
+                                    </mat-slide-toggle>
+                                    <div *ngIf="horarios.viernes.abierto" class="flex items-center space-x-2">
+                                        <mat-form-field appearance="outline" class="w-24">
+                                            <input matInput type="time" [(ngModel)]="horarios.viernes.apertura" [ngModelOptions]="{standalone: true}">
+                                        </mat-form-field>
+                                        <span>-</span>
+                                        <mat-form-field appearance="outline" class="w-24">
+                                            <input matInput type="time" [(ngModel)]="horarios.viernes.cierre" [ngModelOptions]="{standalone: true}">
+                                        </mat-form-field>
+                                    </div>
+                                </div>
+
+                                <!-- Sábado -->
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-20 text-sm font-medium">Sábado</div>
+                                    <mat-slide-toggle [(ngModel)]="horarios.sabado.abierto" [ngModelOptions]="{standalone: true}">
+                                        Abierto
+                                    </mat-slide-toggle>
+                                    <div *ngIf="horarios.sabado.abierto" class="flex items-center space-x-2">
+                                        <mat-form-field appearance="outline" class="w-24">
+                                            <input matInput type="time" [(ngModel)]="horarios.sabado.apertura" [ngModelOptions]="{standalone: true}">
+                                        </mat-form-field>
+                                        <span>-</span>
+                                        <mat-form-field appearance="outline" class="w-24">
+                                            <input matInput type="time" [(ngModel)]="horarios.sabado.cierre" [ngModelOptions]="{standalone: true}">
+                                        </mat-form-field>
+                                    </div>
+                                </div>
+
+                                <!-- Domingo -->
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-20 text-sm font-medium">Domingo</div>
+                                    <mat-slide-toggle [(ngModel)]="horarios.domingo.abierto" [ngModelOptions]="{standalone: true}">
+                                        Abierto
+                                    </mat-slide-toggle>
+                                    <div *ngIf="horarios.domingo.abierto" class="flex items-center space-x-2">
+                                        <mat-form-field appearance="outline" class="w-24">
+                                            <input matInput type="time" [(ngModel)]="horarios.domingo.apertura" [ngModelOptions]="{standalone: true}">
+                                        </mat-form-field>
+                                        <span>-</span>
+                                        <mat-form-field appearance="outline" class="w-24">
+                                            <input matInput type="time" [(ngModel)]="horarios.domingo.cierre" [ngModelOptions]="{standalone: true}">
+                                        </mat-form-field>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botones de acción rápida -->
+                            <div class="flex flex-wrap gap-2 mt-4">
+                                <button mat-stroked-button type="button" (click)="aplicarHorarioATodos()">
+                                    Aplicar horario de lunes a todos
+                                </button>
+                                <button mat-stroked-button type="button" (click)="aplicarHorarioLaborables()">
+                                    Aplicar a días laborables
+                                </button>
+                                <button mat-stroked-button type="button" (click)="cerrarFinDeSemana()">
+                                    Cerrar fin de semana
+                                </button>
+                            </div>
+
+                            <!-- Vista previa del horario -->
+                            <div class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                <div class="text-sm font-medium mb-2">Vista previa:</div>
+                                <div class="text-sm text-secondary whitespace-pre-line">{{ getHorarioPreview() }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dirección -->
+                    <div class="mt-8 space-y-6">
+                        <h3 class="text-lg font-medium">Dirección</h3>
+                        
+                        <mat-form-field class="w-full" appearance="fill">
+                            <mat-label>Dirección</mat-label>
+                            <input matInput formControlName="direccion" placeholder="Calle, número">
+                        </mat-form-field>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <mat-form-field appearance="fill">
+                                <mat-label>Código Postal</mat-label>
+                                <input matInput formControlName="codigo_postal" placeholder="28001">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="fill">
+                                <mat-label>Ciudad</mat-label>
+                                <input matInput formControlName="ciudad" placeholder="Madrid">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="fill">
+                                <mat-label>Provincia</mat-label>
+                                <input matInput formControlName="provincia" placeholder="Madrid">
+                            </mat-form-field>
+                        </div>
+
+                        <mat-form-field class="w-full" appearance="fill">
+                            <mat-label>País</mat-label>
+                            <input matInput formControlName="pais" placeholder="España">
+                        </mat-form-field>
+                    </div>
+
+                    <!-- Redes sociales -->
+                    <div class="mt-8 space-y-6">
+                        <h3 class="text-lg font-medium">Redes Sociales</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <mat-form-field appearance="fill">
+                                <mat-label>Instagram</mat-label>
+                                <input matInput formControlName="instagram" placeholder="https://instagram.com/...">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="fill">
+                                <mat-label>Meta/Facebook</mat-label>
+                                <input matInput formControlName="meta" placeholder="https://facebook.com/...">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="fill">
+                                <mat-label>TikTok</mat-label>
+                                <input matInput formControlName="tiktok" placeholder="https://tiktok.com/@...">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="fill">
+                                <mat-label>LinkedIn</mat-label>
+                                <input matInput formControlName="linkedin" placeholder="https://linkedin.com/company/...">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="fill">
+                                <mat-label>Doctoralia</mat-label>
+                                <input matInput formControlName="doctoralia" placeholder="https://doctoralia.es/...">
+                            </mat-form-field>
+                        </div>
+                    </div>
+
+                    <!-- Datos fiscales -->
+                    <div class="mt-8 space-y-6">
+                        <h3 class="text-lg font-medium">Datos Fiscales</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <mat-form-field appearance="fill">
+                                <mat-label>Denominación Social</mat-label>
+                                <input matInput formControlName="denominacion_social" placeholder="Nombre fiscal">
+                            </mat-form-field>
+
+                            <mat-form-field appearance="fill">
+                                <mat-label>CIF/NIF</mat-label>
+                                <input matInput formControlName="cif_nif" placeholder="B12345678">
+                            </mat-form-field>
+                        </div>
+
+                        <mat-form-field class="w-full" appearance="fill">
+                            <mat-label>Dirección de Facturación</mat-label>
+                            <input matInput formControlName="direccion_facturacion" placeholder="Dirección para facturación">
+                        </mat-form-field>
+                    </div>
+
+                    <!-- ✅ CORREGIDO: Selector de Grupo de Clínica (sin botón gestionar) -->
+                    <div class="mt-8 space-y-6">
+                        <h3 class="text-lg font-medium">Grupo de Clínicas</h3>
+                        
+                        <div class="flex items-center space-x-2">
+                            <mat-form-field class="w-full" appearance="fill">
+                                <mat-label>Grupo de la Clínica</mat-label>
+                                <mat-select formControlName="grupoClinicaId">
+                                    <mat-option *ngFor="let grupo of grupos" [value]="grupo.id_grupo">
+                                        {{ grupo.nombre_grupo }}
+                                    </mat-option>
+                                    <mat-option [value]="null">Sin grupo</mat-option>
+                                </mat-select>
+                            </mat-form-field>
+                            <button mat-icon-button color="primary" type="button" (click)="openCreateGroupDialog()">
+                                <mat-icon>add</mat-icon>
+                            </button>
+                        </div>
+
+                        <!-- Información del grupo seleccionado -->
+                        <div *ngIf="getSelectedGroupName()" class="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                            <div class="text-sm text-secondary">
+                                Grupo seleccionado: <strong>{{ getSelectedGroupName() }}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Estado de la clínica -->
+                    <div class="mt-8 space-y-6">
+                        <h3 class="text-lg font-medium">Estado</h3>
+                        <mat-slide-toggle formControlName="estado_clinica" 
+                                          (change)="onEstadoClinicaChange($event)">
+                            Clínica activa
+                        </mat-slide-toggle>
+                    </div>
+
+                    <!-- Botones de acción -->
+                    <div class="flex items-center justify-between pt-6 border-t mt-8">
+                        <button mat-stroked-button type="button" (click)="deleteClinica()" color="warn">
+                            <mat-icon [svgIcon]="'heroicons_outline:trash'"></mat-icon>
+                            <span class="ml-2">Eliminar</span>
+                        </button>
+                        
+                        <div class="flex items-center space-x-4">
+                            <button mat-stroked-button type="button" (click)="toggleEditMode(false)">
+                                Cancelar
+                            </button>
+                            
+                            <button mat-flat-button color="primary" type="button" 
+                                    (click)="updateClinica()"
+                                    [disabled]="clinicaForm.invalid">
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </ng-container>
+
+</div>
+

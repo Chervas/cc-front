@@ -1,0 +1,12 @@
+[0;1;31m●[0m nginx.service - A high performance web server and a reverse proxy server
+     Loaded: loaded (/lib/systemd/system/nginx.service; enabled; vendor preset: enabled)
+     Active: [0;1;31mfailed[0m (Result: exit-code) since Wed 2025-07-02 07:33:09 UTC; 1min 11s ago
+       Docs: man:nginx(8)
+    Process: 12808 ExecStartPre=/usr/sbin/nginx -t -q -g daemon on; master_process on; [0;1;31m(code=exited, status=1/FAILURE)[0m
+
+Jul 02 07:33:09 ip-172-26-13-207 systemd[1]: Starting A high performance web server and a reverse proxy server...
+Jul 02 07:33:09 ip-172-26-13-207 nginx[12808]: nginx: [emerg] unknown directive "passenger_root" in /etc/nginx/conf.d/mod-http-passenger.conf:2
+Jul 02 07:33:09 ip-172-26-13-207 nginx[12808]: nginx: configuration file /etc/nginx/nginx.conf test failed
+Jul 02 07:33:09 ip-172-26-13-207 systemd[1]: [0;1;39m[0;1;31m[0;1;39mnginx.service: Control process exited, code=exited, status=1/FAILURE[0m
+Jul 02 07:33:09 ip-172-26-13-207 systemd[1]: [0;1;38;5;185m[0;1;39m[0;1;38;5;185mnginx.service: Failed with result 'exit-code'.[0m
+Jul 02 07:33:09 ip-172-26-13-207 systemd[1]: [0;1;31m[0;1;39m[0;1;31mFailed to start A high performance web server and a reverse proxy server.[0m

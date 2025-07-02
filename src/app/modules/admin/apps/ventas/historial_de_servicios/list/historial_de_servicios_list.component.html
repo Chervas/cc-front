@@ -1,0 +1,232 @@
+<div class="sm:absolute sm:inset-0 flex flex-col flex-auto min-w-0 sm:overflow-hidden bg-card dark:bg-transparent">
+    <!-- Header -->
+    <div class="relative flex flex-col sm:flex-row flex-0 sm:items-center sm:justify-between py-8 px-6 md:px-8 border-b">
+        <!-- Loader -->
+        <div class="absolute inset-x-0 bottom-0" *ngIf="isLoading">
+            <mat-progress-bar [mode]="'indeterminate'"></mat-progress-bar>
+        </div>
+        <!-- Title -->
+        <div>
+            <div class="text-4xl font-extrabold tracking-tight leading-none">Historial de Servicios</div>
+            <div class="ml-0.5 font-medium text-secondary">
+                <span class="ng-star-inserted">Servicios que se le ofrecieron al cliente y facturas asociadas a estos</span>
+            </div>
+        </div>
+        
+        <div>
+            <mat-button-toggle-group value="this-month" #githubIssuesWeekSelector="matButtonToggleGroup">
+                <mat-button-toggle value="last-month">Mes pasado</mat-button-toggle>
+                <mat-button-toggle value="this-month">Este mes</mat-button-toggle>
+                <mat-button-toggle value="next-month">Julio 2024</mat-button-toggle>
+            </mat-button-toggle-group>
+        </div>
+        
+        <!-- Actions -->
+        <div class="flex shrink-0 items-center mt-6 sm:mt-0 sm:ml-4">
+            <!-- Search -->
+            <mat-form-field class="fuse-mat-dense fuse-mat-rounded min-w-64" [subscriptSizing]="'dynamic'">
+                <mat-icon class="icon-size-5" matPrefix [svgIcon]="'heroicons_solid:magnifying-glass'"></mat-icon>
+                <input matInput [formControl]="searchInputControl" [autocomplete]="'off'" [placeholder]="'Buscar servicios históricos'">
+            </mat-form-field>
+            <!-- Add product button -->
+            <button class="ml-4" mat-flat-button [color]="'primary'" (click)="openFormDialog()">
+                <mat-icon [svgIcon]="'heroicons_outline:plus'"></mat-icon>
+                <span class="ml-2 mr-1">Añadir</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Selected Actions -->
+    <div *ngIf="selectedProducts.length > 0" class="bg-gray-50 dark:bg-transparent p-4 flex items-center justify-between">
+        <div>{{selectedProducts.length}} seleccionados</div>
+        <div>
+            <button mat-raised-button color="warn" (click)="deleteSelectedProducts()">Eliminar</button>
+            <button mat-raised-button color="primary">Generar Factura</button>
+        </div>
+    </div>
+
+    <!-- Main -->
+    <div class="flex flex-col flex-auto overflow-hidden">
+        <div class="flex flex-col flex-auto sm:mb-18 overflow-hidden sm:overflow-y-auto">
+            <ng-container *ngIf="(products$ | async) as products">
+                <ng-container *ngIf="products.length > 0; else noProducts">
+                    <div class="grid">
+
+                        <!-- Header -->
+                        <div class="servicios-grid z-10 sticky top-0 grid gap-4 py-4 px-6 md:px-8 shadow text-md font-semibold text-secondary bg-gray-50 dark:bg-black dark:bg-opacity-5" matSort matSortDisableClear>
+                            <mat-checkbox (change)="toggleSelectAll()" [checked]="selectedProducts.length === products.length"></mat-checkbox>
+                            <div class="truncate border-r-2" [mat-sort-header]="'id_servicio_asignado'">ID</div>
+                            <div class="truncate border-r-2" [mat-sort-header]="'nombre_clinica'">Clínica</div>
+                            <div class="truncate border-r-2" [mat-sort-header]="'nombre_servicio'">Servicio</div>
+                            <div class="truncate border-r-2" [mat-sort-header]="'descripcion_servicio'">Descripción</div>
+                            <div class="truncate border-r-2" [mat-sort-header]="'descripcion_detallada_servicio'">Detalle</div>
+                            <div class="truncate border-r-2" [mat-sort-header]="'precio_servicio'">Precio</div>
+                            <div class="truncate border-r-2" [mat-sort-header]="'iva_servicio'">IVA</div>
+                            <div class="truncate border-r-2" [mat-sort-header]="'servicio_recurrente'">¿Recurrente?</div>
+                            <div class="truncate border-r-2" [mat-sort-header]="'fecha_cobro'">Fecha de Cobro</div>
+                            <div class="truncate border-r-2" [mat-sort-header]="'num_factura_asociada'">Número de Factura</div>
+                            <div class="truncate border-r-2" [mat-sort-header]="'empresa_servicio'">Empresa</div>
+                            <div class="truncate border-r-2" [mat-sort-header]="'incluir_en_factura'">¿Incluido en Factura?</div>
+                            <div></div>
+                        </div>
+                        <ng-container *ngFor="let product of products; trackBy: trackByFn">
+                            <div class="servicios-grid grid items-center gap-4 py-3 px-6 md:px-8 border-b hover:bg-hover">
+                                <mat-checkbox (change)="toggleProductSelection(product)" [checked]="product.selected"></mat-checkbox>
+                                <div class="truncate border-r-2">{{product.id_servicio_asignado}}</div>
+                                <div class="truncate border-r-2">{{product.nombre_clinica}}</div>
+                                <div class="truncate border-r-2">{{product.nombre_servicio}}</div>
+                                <div class="truncate border-r-2">{{product.descripcion_servicio}}</div>
+                                <div class="truncate border-r-2">{{product.descripcion_detallada_servicio}}</div>
+                                <div class="truncate border-r-2">{{product.precio_servicio | currency:'EUR':'symbol':'1.2-2'}}</div>
+                                <div class="truncate border-r-2">{{product.iva_servicio}}%</div>
+                                <div class="truncate border-r-2">{{product.servicio_recurrente ? 'Sí' : 'No'}}</div>
+                                <div class="truncate border-r-2">{{product.fecha_cobro | date: 'dd MMM, yyyy'}}</div>
+                                <div class="truncate border-r-2">{{product.num_factura_asociada}}</div>
+                                <div class="truncate border-r-2">{{product.empresa_servicio}}</div>
+                                <div class="truncate border-r-2">{{product.incluir_en_factura ? 'Sí' : 'No'}}</div>
+                                <div>
+                                    <button class="min-w-10 min-h-7 h-7 px-2 leading-6" mat-stroked-button (click)="toggleDetails(product.id_servicio_asignado)">
+                                        <mat-icon class="icon-size-5" [svgIcon]="selectedProduct?.id_servicio_asignado === product.id_servicio_asignado ? 'heroicons_solid:chevron-up' : 'heroicons_solid:chevron-down'"></mat-icon>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="grid">
+                                <ng-container *ngIf="selectedProduct?.id_servicio_asignado === product.id_servicio_asignado">
+                                    <ng-container *ngTemplateOutlet="rowDetailsTemplate; context: {$implicit: product}"></ng-container>
+                                </ng-container>
+                            </div>
+                        </ng-container>
+                    </div>
+                    <mat-paginator class="sm:absolute sm:inset-x-0 sm:bottom-0 border-b sm:border-t sm:border-b-0 z-10 bg-gray-50 dark:bg-transparent" [ngClass]="{'pointer-events-none': isLoading}" [length]="pagination.length" [pageIndex]="pagination.page" [pageSize]="50" [pageSizeOptions]="[5, 10, 25, 50, 100]" [showFirstLastButtons]="true"></mat-paginator>
+                </ng-container>
+            </ng-container>
+            <ng-template #rowDetailsTemplate let-product>
+                <div class="shadow-lg overflow-hidden">
+                    <div class="flex border-b">
+                        <form class="flex flex-col w-full" [formGroup]="selectedProductForm">
+                            <div class="flex flex-col sm:flex-row p-8">
+                                <div class="flex flex-auto flex-wrap w-full">
+                                    <div class="flex flex-col w-full lg:w-2/5">
+                                        <mat-form-field class="w-full">
+                                            <mat-icon matPrefix class="hidden sm:flex icon-size-5" [svgIcon]="'heroicons_outline:building-storefront'"></mat-icon>
+                                            <mat-label>Clínica</mat-label>
+                                            <mat-select [formControlName]="'id_clinica'" (selectionChange)="onClinicaChange($event.value)">
+                                                <mat-option *ngFor="let clinica of clinicas$ | async" [value]="clinica.id_clinica">{{ clinica.nombre_clinica }}</mat-option>
+                                            </mat-select>
+                                        </mat-form-field>
+                                        <mat-form-field class="w-full">
+                                            <mat-label>Servicio</mat-label>
+                                            <mat-select [formControlName]="'id_servicio'">
+                                                <mat-option *ngFor="let servicio of servicios$ | async" [value]="servicio.id_servicio">{{ servicio.nombre_servicio }}</mat-option>
+                                            </mat-select>
+                                        </mat-form-field>
+                                        <mat-form-field class="w-full">
+                                            <mat-label>Descripción</mat-label>
+                                            <input matInput [formControlName]="'descripcion_servicio'">
+                                        </mat-form-field>
+                                        
+                                        <mat-form-field class="w-full">
+                                            <mat-label>Detalle</mat-label>
+                                            <textarea matInput [formControlName]="'descripcion_detallada_servicio'"></textarea>
+                                        </mat-form-field>
+                                       
+                                      
+                                    </div>
+                                    <div class="flex flex-col w-full lg:w-1/5 sm:pl-8">
+                                      
+                                        <mat-form-field class="w-full">
+                                            <mat-label>Precio</mat-label>
+                                            <span matSuffix>€</span>
+                                            <input matInput [formControlName]="'precio_servicio'">
+                                        </mat-form-field>
+                                        <mat-form-field class="w-full">
+                                            <mat-label>IVA</mat-label>
+                                            <span matSuffix>%</span>
+                                            <input type="number" matInput [formControlName]="'iva_servicio'">
+                                        </mat-form-field>
+                                        <mat-form-field class="w-full">
+                                            <mat-label>¿Recurrente?</mat-label>
+                                            <mat-select [formControlName]="'servicio_recurrente'">
+                                                <mat-option [value]="true">Sí</mat-option>
+                                                <mat-option [value]="false">No</mat-option>
+                                            </mat-select>
+                                        </mat-form-field>
+                                        <mat-form-field class="w-full">
+                                            <mat-label>Precio Especial</mat-label>
+                                            <mat-select [formControlName]="'precio_especial'">
+                                                <mat-option [value]="true">Sí</mat-option>
+                                                <mat-option [value]="false">No</mat-option>
+                                            </mat-select>
+                                        </mat-form-field>
+                                    </div>
+                                    <div class="flex flex-col w-full lg:w-1/5 sm:pl-8">
+                                        <mat-form-field class="w-full">
+                                            <mat-label>Fecha de Cobro</mat-label>
+                                            <mat-icon matPrefix class="hidden sm:flex icon-size-5" [svgIcon]="'heroicons_solid:calendar'"></mat-icon>
+                                            <input matInput [matDatepicker]="fechaCobroDatepicker" [formControlName]="'fecha_cobro'" [placeholder]="'Fecha de Cobro'">
+                                            <mat-datepicker-toggle matSuffix [for]="fechaCobroDatepicker"></mat-datepicker-toggle>
+                                            <mat-datepicker #fechaCobroDatepicker [startView]="'year'" [startAt]="startDate"></mat-datepicker>
+                                        </mat-form-field>
+                                        <mat-form-field class="w-full">
+                                            <mat-label>Número de Factura</mat-label>
+                                            <input matInput [formControlName]="'num_factura_asociada'">
+                                        </mat-form-field>
+                                        <mat-form-field class="w-full">
+                                            <mat-label>Empresa</mat-label>
+                                            <mat-select [formControlName]="'empresa_servicio'">
+                                                <mat-option value="La voz medios digitales SL">La voz medios digitales SL</mat-option>
+                                                <mat-option value="Parallel Campaign OU">Parallel Campaign OU</mat-option>
+                                            </mat-select>
+                                        </mat-form-field>
+                                        <mat-form-field class="w-full">
+                                            <mat-label>¿Incluir en Factura?</mat-label>
+                                            <mat-select [formControlName]="'incluir_en_factura'">
+                                                <mat-option [value]="true">Sí</mat-option>
+                                                <mat-option [value]="false">No</mat-option>
+                                            </mat-select>
+                                        </mat-form-field>
+                                    </div>
+                                    <div class="flex flex-col w-full lg:w-1/5 sm:pl-8" formGroupName="datos_fiscales_clinica">
+                                        <mat-form-field class="w-full">
+                                            <mat-label>Denominación social</mat-label>
+                                            <input matInput [formControlName]="'denominacion_social'">
+                                        </mat-form-field>
+                                        <mat-form-field class="w-full">
+                                            <mat-label>CIF/NIF</mat-label>
+                                            <input matInput [formControlName]="'cif_nif'">
+                                        </mat-form-field>
+                                        <mat-form-field class="w-full">
+                                            <mat-label>Dirección de facturación</mat-label>
+                                            <input matInput [formControlName]="'direccion_facturacion'">
+                                        </mat-form-field>
+                                    </div>
+                                </div>
+                               
+                            </div>
+                            <div class="flex items-center justify-between w-full border-t px-8 py-4">
+                                <button class="-ml-4" mat-button [color]="'warn'" (click)="deleteSelectedProduct()">Eliminar</button>
+                                <div class="flex items-center">
+                                    <button class="ml-4" mat-button [color]="'accent'" (click)="duplicateProduct()">Duplicar</button>
+                                    <div class="flex items-center mr-4" *ngIf="flashMessage">
+                                        <ng-container *ngIf="flashMessage === 'success'">
+                                            <mat-icon class="text-green-500" [svgIcon]="'heroicons_outline:check'"></mat-icon>
+                                            <span class="ml-2">Servicio actualizado</span>
+                                        </ng-container>
+                                        <ng-container *ngIf="flashMessage === 'error'">
+                                            <mat-icon class="text-red-500" [svgIcon]="'heroicons_outline:x-mark'"></mat-icon>
+                                            <span class="ml-2">Ocurrió un error, intenta nuevamente</span>
+                                        </ng-container>
+                                    </div>
+                                    <button mat-flat-button [color]="'primary'" (click)="updateSelectedProduct()">Actualizar</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </ng-template>
+            <ng-template #noProducts>
+                <div class="p-8 sm:p-16 border-t text-4xl font-semibold tracking-tight text-center">¡No hay servicios históricos!</div>
+            </ng-template>
+        </div>
+    </div>
+</div>
