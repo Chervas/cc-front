@@ -1,0 +1,27 @@
+<!-- Botón que muestra la "bola" con las iniciales -->
+<button mat-button [matMenuTriggerFor]="menu" class="clinic-circle">
+    <span>
+      {{ getInitials(
+           selectedClinic?.nombre_clinica || selectedClinic?.nombre_grupo || 'Sin grupo',
+           selectedClinic?.isGroup
+         ) }}
+    </span>
+  </button>
+  
+  <!-- Menú desplegable -->
+  <mat-menu #menu="matMenu" xPosition="after">
+    <ng-container *ngFor="let group of clinicsGrouped | keyvalue">
+      <!-- Botón para seleccionar TODO el grupo -->
+      <button mat-menu-item (click)="onSelectGroup(group.key)" class="group-label">
+        <span>{{ group.key }}</span>
+      </button>
+      <!-- Opciones para cada clínica en ese grupo -->
+      <ng-container *ngFor="let clinic of group.value">
+        <button mat-menu-item (click)="onSelect(clinic)">
+          <span>{{ clinic.nombre_clinica }}</span>
+        </button>
+      </ng-container>
+      <mat-divider></mat-divider>
+    </ng-container>
+  </mat-menu>
+  

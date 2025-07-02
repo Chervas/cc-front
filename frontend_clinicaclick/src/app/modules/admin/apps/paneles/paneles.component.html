@@ -1,0 +1,322 @@
+<div class="flex min-w-0 flex-auto flex-col">
+    <!-- Header -->
+    <div class="bg-card">
+        <div class="mx-auto flex w-full max-w-screen-xl flex-col px-6 sm:px-8">
+            <div class="my-8 flex min-w-0 flex-auto flex-col sm:my-12 sm:flex-row sm:items-center">
+                <!-- Avatar and name -->
+                <div class="flex min-w-0 flex-auto items-center">
+                    <div class="h-16 w-16 flex-0 overflow-hidden rounded-full">
+                        <img
+                            class="h-full w-full object-cover"
+                            src="assets/images/avatars/brian-hughes.jpg"
+                            alt="Avatar" />
+                    </div>
+                    <div class="ml-4 flex min-w-0 flex-col">
+                        <div class="truncate text-2xl font-semibold leading-7 tracking-tight md:text-5xl md:leading-snug">
+                            Hola, Carlos Hervas
+                        </div>
+                        <div class="flex items-center">
+                            <mat-icon
+                                class="icon-size-5"
+                                [svgIcon]="'heroicons_solid:bell'"></mat-icon>
+                            <div class="text-secondary ml-1.5 truncate leading-6">
+                                Tienes 5 notificaciones y 3 tareas por hacer
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Actions -->
+                <div class="mt-6 flex items-center space-x-3 sm:ml-2 sm:mt-0">
+                    <button
+                        class="bg-accent"
+                        mat-flat-button
+                        [color]="'accent'">
+                        <mat-icon
+                            class="icon-size-5"
+                            [svgIcon]="'heroicons_solid:cog-8-tooth'"></mat-icon>
+                        <span class="ml-2">Configuración</span>
+                    </button>
+                    <button mat-flat-button [color]="'primary'">
+                        <mat-icon
+                            class="icon-size-5"
+                            [svgIcon]="'heroicons_solid:arrow-path'"></mat-icon>
+                        <span class="ml-2">Actualizar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main -->
+    <div class="flex-auto">
+        <div class="mx-auto w-full max-w-screen-xl p-6 sm:p-8">
+            
+            <!-- Información de clínica seleccionada -->
+            <div class="mb-8">
+                <div class="flex items-center">
+                    <mat-icon class="text-hint mr-2" [svgIcon]="'heroicons_outline:building-storefront'"></mat-icon>
+                    <span class="text-lg font-medium">Clínica Dental Madrid Centro</span>
+                    <span class="ml-2 px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                        Activa
+                    </span>
+                </div>
+            </div>
+
+            <!-- Pestañas principales -->
+            <mat-tab-group 
+                class="fuse-mat-dense fuse-mat-rounded w-full"
+                [animationDuration]="'0ms'"
+                mat-stretch-tabs="false">
+                
+                <!-- Pestaña Resumen -->
+                <mat-tab label="Resumen">
+                    <ng-template matTabContent>
+                        <div class="grid gap-8 pt-8 sm:gap-16 sm:pt-16">
+                            <div class="flex flex-col items-center justify-center p-16 text-center">
+                                <mat-icon 
+                                    class="icon-size-16 text-hint mb-4"
+                                    [svgIcon]="'heroicons_outline:chart-bar'"></mat-icon>
+                                <div class="text-2xl font-semibold tracking-tight">
+                                    Panel de Resumen
+                                </div>
+                                <div class="text-secondary mt-2">
+                                    Aquí aparecerán las métricas generales de tu clínica
+                                </div>
+                            </div>
+                        </div>
+                    </ng-template>
+                </mat-tab>
+
+                <!-- Pestaña Redes Sociales -->
+                <mat-tab label="Redes Sociales">
+                    <ng-template matTabContent>
+                        <div class="grid gap-8 pt-8 sm:gap-16 sm:pt-16">
+                            
+                            <!-- Título de sección -->
+                            <div>
+                                <div class="text-2xl font-semibold tracking-tight">Seguidores</div>
+                                <div class="text-secondary">Evolución seguidores en tus redes</div>
+                            </div>
+
+                            <!-- Cards de redes sociales principales -->
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                
+                                <!-- Instagram Card -->
+                                <div class="bg-card shadow rounded-2xl p-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div>
+                                            <div class="text-lg font-semibold">Instagram</div>
+                                            <div class="text-2xl font-bold text-pink-500">+20%</div>
+                                        </div>
+                                        <mat-icon class="text-pink-500 icon-size-8" [svgIcon]="'heroicons_solid:camera'"></mat-icon>
+                                    </div>
+                                    <div class="h-32 bg-gradient-to-r from-pink-500/10 to-purple-500/10 rounded-lg flex items-center justify-center">
+                                        <span class="text-sm text-secondary">Gráfico de evolución</span>
+                                    </div>
+                                </div>
+
+                                <!-- TikTok Card -->
+                                <div class="bg-card shadow rounded-2xl p-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div>
+                                            <div class="text-lg font-semibold">TikTok</div>
+                                            <div class="text-2xl font-bold text-gray-800">+15%</div>
+                                        </div>
+                                        <mat-icon class="text-gray-800 icon-size-8" [svgIcon]="'heroicons_solid:musical-note'"></mat-icon>
+                                    </div>
+                                    <div class="h-32 bg-gradient-to-r from-gray-800/10 to-gray-600/10 rounded-lg flex items-center justify-center">
+                                        <span class="text-sm text-secondary">Gráfico de evolución</span>
+                                    </div>
+                                </div>
+
+                                <!-- Facebook Card -->
+                                <div class="bg-card shadow rounded-2xl p-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div>
+                                            <div class="text-lg font-semibold">Facebook</div>
+                                            <div class="text-2xl font-bold text-blue-600">+8%</div>
+                                            <div class="text-xs text-secondary flex items-center">
+                                                <mat-icon class="icon-size-4 mr-1" [svgIcon]="'heroicons_solid:check'"></mat-icon>
+                                                This Year
+                                            </div>
+                                        </div>
+                                        <mat-icon class="text-blue-600 icon-size-8" [svgIcon]="'heroicons_solid:users'"></mat-icon>
+                                    </div>
+                                    <div class="h-32 bg-gradient-to-r from-blue-600/10 to-blue-400/10 rounded-lg flex items-center justify-center">
+                                        <span class="text-sm text-secondary">Gráfico de evolución</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sección de estadísticas detalladas -->
+                            <div>
+                                <div class="text-2xl font-semibold tracking-tight mb-2">Instagram</div>
+                                <div class="text-secondary mb-6">Estadísticas</div>
+                                
+                                <!-- Grid de métricas -->
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                    <!-- Conversions -->
+                                    <div class="bg-card shadow rounded-2xl p-6">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-secondary text-sm">Conversions</span>
+                                            <span class="text-xs text-secondary">30 days</span>
+                                        </div>
+                                        <div class="text-3xl font-bold">4,123</div>
+                                        <div class="text-sm text-green-500">2% below target</div>
+                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
+                                    </div>
+
+                                    <!-- Conversions 2 -->
+                                    <div class="bg-card shadow rounded-2xl p-6">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-secondary text-sm">Conversions</span>
+                                            <span class="text-xs text-secondary">30 days</span>
+                                        </div>
+                                        <div class="text-3xl font-bold">4,123</div>
+                                        <div class="text-sm text-green-500">2% below target</div>
+                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
+                                    </div>
+
+                                    <!-- Conversions 3 -->
+                                    <div class="bg-card shadow rounded-2xl p-6">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-secondary text-sm">Conversions</span>
+                                            <span class="text-xs text-secondary">30 days</span>
+                                        </div>
+                                        <div class="text-3xl font-bold">4,123</div>
+                                        <div class="text-sm text-green-500">2% below target</div>
+                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
+                                    </div>
+
+                                    <!-- Segunda fila -->
+                                    <div class="bg-card shadow rounded-2xl p-6">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-secondary text-sm">Conversions</span>
+                                            <span class="text-xs text-secondary">30 days</span>
+                                        </div>
+                                        <div class="text-3xl font-bold">4,123</div>
+                                        <div class="text-sm text-red-500">2% below target</div>
+                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
+                                    </div>
+
+                                    <div class="bg-card shadow rounded-2xl p-6">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-secondary text-sm">Conversions</span>
+                                            <span class="text-xs text-secondary">30 days</span>
+                                        </div>
+                                        <div class="text-3xl font-bold">4,123</div>
+                                        <div class="text-sm text-red-500">2% below target</div>
+                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
+                                    </div>
+
+                                    <div class="bg-card shadow rounded-2xl p-6">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-secondary text-sm">Conversions</span>
+                                            <span class="text-xs text-secondary">30 days</span>
+                                        </div>
+                                        <div class="text-3xl font-bold">4,123</div>
+                                        <div class="text-sm text-green-500">2% below target</div>
+                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Tabla de transacciones recientes -->
+                                <div class="bg-card shadow rounded-2xl p-6">
+                                    <div class="text-lg font-semibold mb-4">Recent transactions</div>
+                                    <div class="text-sm text-secondary mb-4">1 pending, 4 completed</div>
+                                    
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full">
+                                            <thead>
+                                                <tr class="border-b">
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Transaction ID</th>
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Date</th>
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Name</th>
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Amount</th>
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr class="border-b">
+                                                    <td class="py-3 text-sm">528651571NT</td>
+                                                    <td class="py-3 text-sm">Oct 08, 2019</td>
+                                                    <td class="py-3 text-sm">Morgan Page</td>
+                                                    <td class="py-3 text-sm">$1,358.75</td>
+                                                    <td class="py-3">
+                                                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">COMPLETED</span>
+                                                    </td>
+                                                </tr>
+                                                <tr class="border-b">
+                                                    <td class="py-3 text-sm">421436904YT</td>
+                                                    <td class="py-3 text-sm">Dec 18, 2019</td>
+                                                    <td class="py-3 text-sm">Nita Hebert</td>
+                                                    <td class="py-3 text-sm">-$1,042.82</td>
+                                                    <td class="py-3">
+                                                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">COMPLETED</span>
+                                                    </td>
+                                                </tr>
+                                                <tr class="border-b">
+                                                    <td class="py-3 text-sm">685377421YT</td>
+                                                    <td class="py-3 text-sm">Dec 25, 2019</td>
+                                                    <td class="py-3 text-sm">Marsha Chambers</td>
+                                                    <td class="py-3 text-sm">$1,828.16</td>
+                                                    <td class="py-3">
+                                                        <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">PENDING</span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <button class="mt-4 text-sm text-primary font-medium">
+                                        See all transactions
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </ng-template>
+                </mat-tab>
+
+                <!-- Pestaña Web -->
+                <mat-tab label="Web">
+                    <ng-template matTabContent>
+                        <div class="grid gap-8 pt-8 sm:gap-16 sm:pt-16">
+                            <div class="flex flex-col items-center justify-center p-16 text-center">
+                                <mat-icon 
+                                    class="icon-size-16 text-hint mb-4"
+                                    [svgIcon]="'heroicons_outline:globe-alt'"></mat-icon>
+                                <div class="text-2xl font-semibold tracking-tight">
+                                    Métricas Web
+                                </div>
+                                <div class="text-secondary mt-2">
+                                    Aquí aparecerán las métricas de tu sitio web
+                                </div>
+                            </div>
+                        </div>
+                    </ng-template>
+                </mat-tab>
+
+                <!-- Pestaña Publicidad -->
+                <mat-tab label="Publicidad">
+                    <ng-template matTabContent>
+                        <div class="grid gap-8 pt-8 sm:gap-16 sm:pt-16">
+                            <div class="flex flex-col items-center justify-center p-16 text-center">
+                                <mat-icon 
+                                    class="icon-size-16 text-hint mb-4"
+                                    [svgIcon]="'heroicons_outline:megaphone'"></mat-icon>
+                                <div class="text-2xl font-semibold tracking-tight">
+                                    Campañas Publicitarias
+                                </div>
+                                <div class="text-secondary mt-2">
+                                    Aquí aparecerán las métricas de tus campañas publicitarias
+                                </div>
+                            </div>
+                        </div>
+                    </ng-template>
+                </mat-tab>
+
+            </mat-tab-group>
+        </div>
+    </div>
+</div>
+
