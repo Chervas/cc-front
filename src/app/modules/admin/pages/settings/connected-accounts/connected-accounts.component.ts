@@ -118,17 +118,17 @@ export class SettingsConnectedAccountsComponent {
      * Connect to Meta (Facebook/Instagram) using OAuth2
      */
     private connectMeta(): void {
-        const clientId = '1025462336033536';
+        const clientId = '1807844546609897';
         const redirectUri = encodeURIComponent('https://autenticacion.clinicaclick.com/oauth/meta/callback');
         const scope = encodeURIComponent([
-            'email'
-            //'pages_show_list',
-            //'pages_read_engagement', 
-            //'instagram_basic',
-            //'instagram_manage_insights',
-            //'ads_read',
-            //'leads_retrieval',
-           // 'business_management'
+            'email',
+            'pages_show_list',
+            'pages_read_engagement', 
+            'instagram_basic',
+            'instagram_manage_insights',
+            'ads_read',
+            'leads_retrieval',
+            'business_management'
         ].join(','));
         
         const state = this.generateRandomState();
@@ -136,7 +136,7 @@ export class SettingsConnectedAccountsComponent {
         // Store state in sessionStorage for verification
         sessionStorage.setItem('oauth_state', state);
         
-        const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?` +
+        const authUrl = `https://www.facebook.com/v23.0/dialog/oauth?` +
             `client_id=${clientId}&` +
             `redirect_uri=${redirectUri}&` +
             `scope=${scope}&` +
