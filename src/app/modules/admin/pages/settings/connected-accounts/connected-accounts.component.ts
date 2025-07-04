@@ -1,14 +1,19 @@
-import { NgClass, NgFor, NgIf } from '@angular/common'; // Asegúrate de importar NgFor y NgIf
+// cc-front/src/app/modules/admin/pages/settings/conected-accounts/connected-accounts.component.ts
+import { NgClass, NgFor, NgIf } from '@angular/common';
 import {
     ChangeDetectionStrategy,
-    ChangeDetectorRef, // Importar ChangeDetectorRef
+    ChangeDetectorRef,
     Component,
-    OnInit, // Importar OnInit
+    OnInit,
     ViewEncapsulation,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
+import { HttpClient } from '@angular/common/http'; // Importar HttpClient
+import { UserService } from 'app/core/user/user.service'; // Importar UserService
+import { User } from 'app/core/user/user.types'; // Importar User types
+import { FuseConfirmationService } from '@fuse/services/confirmation'; // Importar FuseConfirmationService
 
 interface ConnectedAccount {
     id: string;
@@ -18,11 +23,10 @@ interface ConnectedAccount {
     connected: boolean;
     permissions: string[];
     color: string;
-    // Nuevas propiedades para almacenar información del usuario conectado
+    // Propiedades para mostrar info del usuario conectado (obtenidas del backend )
     userId?: string;
     userName?: string;
     userEmail?: string;
-    accessToken?: string;
 }
 
 @Component({
@@ -36,11 +40,13 @@ interface ConnectedAccount {
         MatButtonModule,
         MatIconModule,
         MatDividerModule,
-        NgIf, // Asegúrate de que NgIf esté importado
-        NgFor, // Asegúrate de que NgFor esté importado
+        NgIf,
+        NgFor,
     ],
 })
-export class SettingsConnectedAccountsComponent implements OnInit { // Implementar OnInit
+export class SettingsConnectedAccountsComponent implements OnInit {
+    
+    currentUser: User | null = null; // Almacenar el usuario actual
     
     accounts: ConnectedAccount[] = [
         {
@@ -91,30 +97,47 @@ export class SettingsConnectedAccountsComponent implements OnInit { // Implement
         }
     ];
 
-    constructor(private _changeDetectorRef: ChangeDetectorRef) {} // Inyectar ChangeDetectorRef
+    constructor(
+        private _changeDetectorRef: ChangeDetectorRef,
+        private _httpClient: HttpClient, // Inyectar HttpClient
+        private _userService: UserService, // Inyectar UserService
+        private _fuseConfirmationService: FuseConfirmationService // Inyectar FuseConfirmationService
+     ) {}
 
     ngOnInit(): void {
+        // Obtener el usuario actual
+        this._userService.user$.subscribe(user => {
+            this.currentUser = user;
+        });
+        
         this._checkMetaConnectionStatus();
     }
 
     private _checkMetaConnectionStatus(): void {
-        const metaUserId = localStorage.getItem('meta_user_id');
-        const metaUserName = localStorage.getItem('meta_user_name');
-        const metaUserEmail = localStorage.getItem('meta_user_email');
-        const metaAccessToken = localStorage.getItem('meta_access_token');
-
-        const metaAccount = this.accounts.find(acc => acc.id === 'meta');
-        if (metaAccount && metaUserId && metaUserName && metaUserEmail && metaAccessToken) {
-            metaAccount.connected = true;
-            metaAccount.userId = metaUserId;
-            metaAccount.userName = metaUserName;
-            metaAccount.userEmail = metaUserEmail;
-            metaAccount.accessToken = metaAccessToken;
-            console.log('Estado de conexión Meta cargado desde localStorage.');
-        } else if (metaAccount) {
-            metaAccount.connected = false; // Asegurarse de que esté desconectado si faltan datos
-        }
-        this._changeDetectorRef.markForCheck(); // Forzar detección de cambios
+        // Consultar al backend el estado de conexión de Meta
+        this._httpClient.get<any>('https://autenticacion.clinicaclick.com/oauth/meta/connection-status').subscribe(
+            (response) => {
+                const metaAccount = this.accounts.find(acc => acc.id === 'meta');
+                if (metaAccount) {
+                    metaAccount.connected = response.connected;
+                    if (response.connected) {
+                        metaAccount.userId = response.metaUserId;
+                        metaAccount.userName = response.userName;
+                        metaAccount.userEmail = response.userEmail;
+                        console.log('Estado de conexión Meta cargado desde el backend.');
+                    } else {
+                        console.log('No hay conexión Meta activa para este usuario.');
+                    }
+                }
+                this._changeDetectorRef.markForCheck(); // Forzar detección de cambios
+            },
+            (error) => {
+                console.error('Error al consultar estado de conexión Meta:', error);
+                const metaAccount = this.accounts.find(acc => acc.id === 'meta');
+                if (metaAccount) metaAccount.connected = false;
+                this._changeDetectorRef.markForCheck();
+            }
+        );
     }
 
     /**
@@ -144,20 +167,17 @@ export class SettingsConnectedAccountsComponent implements OnInit { // Implement
         const account = this.accounts.find(acc => acc.id === accountId);
         if (!account) return;
 
-        console.log(`Desconectando ${account.name}...`);
-        account.connected = false;
-        account.userId = undefined;
-        account.userName = undefined;
-        account.userEmail = undefined;
-        account.accessToken = undefined;
-        
-        // Limpiar localStorage
-        localStorage.removeItem('meta_user_id');
-        localStorage.removeItem('meta_user_name');
-        localStorage.removeItem('meta_user_email');
-        localStorage.removeItem('meta_access_token');
-
-        this._changeDetectorRef.markForCheck(); // Forzar detección de cambios
+        switch (accountId) {
+            case 'meta':
+                this.disconnectMeta();
+                break;
+            case 'google':
+                console.log('Google desconexión no implementada aún');
+                break;
+            case 'tiktok':
+                console.log('TikTok desconexión no implementada aún');
+                break;
+        }
     }
 
     /**
@@ -168,12 +188,13 @@ export class SettingsConnectedAccountsComponent implements OnInit { // Implement
         const redirectUri = encodeURIComponent('https://autenticacion.clinicaclick.com/oauth/meta/callback' );
         const scope = encodeURIComponent('email,public_profile,pages_show_list,pages_read_engagement,instagram_basic,instagram_manage_insights,ads_read,leads_retrieval,business_management'); // Permisos completos
         
+        // Generar state aleatorio como en la versión original
         const state = this.generateRandomState();
         
         // Store state in sessionStorage for verification
         sessionStorage.setItem('oauth_state', state);
         
-        const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?` +
+        const authUrl = `https://www.facebook.com/v23.0/dialog/oauth?` +
             `client_id=${clientId}&` +
             `redirect_uri=${redirectUri}&` +
             `scope=${scope}&` +
@@ -185,12 +206,76 @@ export class SettingsConnectedAccountsComponent implements OnInit { // Implement
     }
 
     /**
+     * Disconnect from Meta
+     */
+    disconnectMeta(): void {
+        console.log('Solicitando confirmación para desconectar Meta...');
+        
+        // Configuración del diálogo de confirmación de Fuse
+        const confirmation = this._fuseConfirmationService.open({
+            title: 'Desconectar Meta',
+            message: 'Vas a desconectar tu cuenta de Meta, esto afectará a la recuperación de leads, datos, WhatsApp, etc con tus clínicas. ¿Estás seguro?',
+            icon: {
+                show: true,
+                name: 'heroicons_outline:exclamation-triangle',
+                color: 'warn'
+            },
+            actions: {
+                confirm: {
+                    show: true,
+                    label: 'Desconectar',
+                    color: 'warn'
+                },
+                cancel: {
+                    show: true,
+                    label: 'Cancelar'
+                }
+            },
+            dismissible: true
+        });
+
+        // Suscribirse al resultado del diálogo
+        confirmation.afterClosed().subscribe((result) => {
+            if (!result || result !== 'confirmed') {
+                console.log('Desconexión de Meta cancelada por el usuario');
+                return;
+            }
+            
+            console.log('Desconectando Meta...');
+            
+            const metaAccount = this.accounts.find(acc => acc.id === 'meta');
+            if (!metaAccount) return;
+
+            // Llamar al endpoint del backend para eliminar la conexión
+            this._httpClient.delete<any>('https://autenticacion.clinicaclick.com/oauth/meta/disconnect').subscribe(
+                (response) => {
+                    if (response.success) {
+                        console.log('✅ Meta desconectado correctamente:', response.message);
+                        
+                        // Actualizar el estado local
+                        metaAccount.connected = false;
+                        metaAccount.userId = undefined;
+                        metaAccount.userName = undefined;
+                        metaAccount.userEmail = undefined;
+                        
+                        this._changeDetectorRef.markForCheck(); // Forzar detección de cambios
+                    } else {
+                        console.error('❌ Error al desconectar Meta:', response.error);
+                    }
+                },
+                (error) => {
+                    console.error('❌ Error al desconectar Meta:', error);
+                    // En caso de error, mantener el estado actual
+                }
+            );
+        });
+    }
+
+    /**
      * Generate random state for OAuth security
      */
-    private generateRandomState( ): string {
-        const array = new Uint32Array(1);
-        crypto.getRandomValues(array);
-        return array[0].toString(36);
+    generateRandomState(): string {
+        return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     }
 
     /**
@@ -200,3 +285,4 @@ export class SettingsConnectedAccountsComponent implements OnInit { // Implement
         return item.id;
     }
 }
+

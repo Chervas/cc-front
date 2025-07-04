@@ -1,3 +1,4 @@
+// cc-front/src/app/modules/admin/pages/settings/settings.component.ts
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -8,8 +9,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatDividerModule } from '@angular/material/divider';
-import { SettingsConnectedAccountsComponent } from './connected-accounts/connected-accounts.component';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar'; // Importar MatSnackBar
+// CORRECCIÓN AQUÍ: Cambiado a 'connected-accounts' (con dos 'n')
+import { SettingsConnectedAccountsComponent } from './connected-accounts/connected-accounts.component'; 
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
     selector: 'settings',
@@ -24,9 +27,9 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar'; //
         NgIf,
         NgFor,
         SettingsConnectedAccountsComponent,
-        MatSnackBarModule // Añadir MatSnackBarModule
+        MatSnackBarModule
     ],
-})
+} )
 export class SettingsComponent implements OnInit, OnDestroy {
     
     drawerMode: 'over' | 'side' = 'side';
@@ -48,14 +51,14 @@ export class SettingsComponent implements OnInit, OnDestroy {
         private _changeDetectorRef: ChangeDetectorRef,
         private _fuseMediaWatcherService: FuseMediaWatcherService,
         private _route: ActivatedRoute,
-        private _router: Router, // Necesario para la redirección y limpieza de URL
-        private _snackBar: MatSnackBar // Inyectar MatSnackBar
-    ) {}
+        private _router: Router,
+        private _snackBar: MatSnackBar,
+        private _httpClient: HttpClient
+     ) {}
 
     ngOnInit(): void {
         this._checkScreenSize();
         
-        // Suscribirse a los cambios de media query para el drawer
         this._fuseMediaWatcherService.onMediaChange$
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe(({ matchingAliases }) => {
@@ -64,49 +67,85 @@ export class SettingsComponent implements OnInit, OnDestroy {
                 this._changeDetectorRef.markForCheck();
             });
 
-        // Procesar los query params de la URL
+        // Verificar si hay un mensaje de éxito pendiente después del reload
+        this._checkForSuccessMessage();
+
+        // Procesar los query params de la URL (modificado para mostrar snackbar después del reload)
         this._route.queryParamMap
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe((params) => {
                 const connected = params.get('connected');
                 const error = params.get('error');
-                const userId = params.get('userId'); // Nuevo: ID de usuario de Meta
-                const userName = params.get('userName'); // Nuevo: Nombre de usuario de Meta
-                const userEmail = params.get('userEmail'); // Nuevo: Email de usuario de Meta
-                const accessToken = params.get('accessToken'); // Nuevo: Access Token de Meta
+                const userId = params.get('userId');
+                const userName = params.get('userName');
+                const userEmail = params.get('userEmail');
+                const accessToken = params.get('accessToken');
 
-                if (connected === 'meta') {
-                    this.selectedPanel = 'connected-accounts'; // Asegurarse de que el panel correcto esté activo
-                    this._snackBar.open('Cuenta Meta conectada correctamente.', 'Cerrar', {
-                        duration: 5000,
-                        panelClass: ['snackbar-success'] // Clase CSS para estilos personalizados
+                if (connected === 'meta' && userId && userName && userEmail && accessToken) {
+                    // Almacenar los datos en localStorage como en la versión original
+                    localStorage.setItem('meta_user_id', userId);
+                    localStorage.setItem('meta_user_name', userName);
+                    localStorage.setItem('meta_user_email', userEmail);
+                    localStorage.setItem('meta_access_token', accessToken);
+
+                    console.log('✅ Datos de Meta almacenados en localStorage:', {
+                        userId,
+                        userName,
+                        userEmail,
+                        accessToken: accessToken.substring(0, 20) + '...'
                     });
 
-                    // ALMACENAR CREDENCIALES DE META
-                    if (userId && userName && userEmail && accessToken) {
-                        localStorage.setItem('meta_user_id', userId);
-                        localStorage.setItem('meta_user_name', userName);
-                        localStorage.setItem('meta_user_email', userEmail);
-                        localStorage.setItem('meta_access_token', accessToken);
-                        console.log('Credenciales de Meta almacenadas en localStorage.');
-                    }
+                    // Preparar mensaje de éxito para después del reload
+                    const successData = {
+                        platform: 'Meta',
+                        userName: userName,
+                        userEmail: userEmail
+                    };
+                    localStorage.setItem('oauth_success_pending', JSON.stringify(successData));
+
+                    this.selectedPanel = 'connected-accounts';
+
+                    // Limpiar query params y recargar inmediatamente (sin mostrar snackbar aún)
+                    this._router.navigate([], {
+                        queryParams: { 
+                            connected: null, 
+                            error: null, 
+                            userId: null,
+                            userName: null,
+                            userEmail: null,
+                            accessToken: null
+                        },
+                        queryParamsHandling: 'merge',
+                        replaceUrl: true
+                    }).then(() => {
+                        // Reload inmediato después de limpiar la URL
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 100);
+                    });
 
                 } else if (error) {
-                    this.selectedPanel = 'connected-accounts'; // Asegurarse de que el panel correcto esté activo
+                    this.selectedPanel = 'connected-accounts';
                     this._snackBar.open(`Error al conectar cuenta: ${error}`, 'Cerrar', {
-                        duration: 5000,
-                        panelClass: ['snackbar-error'] // Clase CSS para estilos personalizados
+                        duration: 8000,
+                        panelClass: ['snackbar-error']
                     });
-                }
 
-                // Limpiar los query params de la URL para evitar recargas o comportamientos inesperados
-                if (connected || error) {
+                    // Limpiar los query params de la URL para errores
                     this._router.navigate([], {
-                        queryParams: { connected: null, error: null, userId: null, userName: null, userEmail: null, accessToken: null },
+                        queryParams: { 
+                            connected: null, 
+                            error: null, 
+                            userId: null,
+                            userName: null,
+                            userEmail: null,
+                            accessToken: null
+                        },
                         queryParamsHandling: 'merge',
                         replaceUrl: true
                     });
                 }
+
                 this._changeDetectorRef.markForCheck();
             });
     }
@@ -137,4 +176,35 @@ export class SettingsComponent implements OnInit, OnDestroy {
             this.drawerOpened = true;
         }
     }
+
+    private _checkForSuccessMessage(): void {
+        // Verificar si hay un flag de conexión exitosa en localStorage
+        const successFlag = localStorage.getItem('oauth_success_pending');
+        
+        if (successFlag) {
+            try {
+                const successData = JSON.parse(successFlag);
+                
+                // Mostrar mensaje de éxito después del reload
+                this._snackBar.open(
+                    `✅ ${successData.platform} conectado correctamente como ${successData.userName}`,
+                    'Cerrar',
+                    {
+                        duration: 5000,
+                        panelClass: ['snackbar-success']
+                    }
+                );
+                
+                console.log(`✅ ${successData.platform} conectado exitosamente:`, successData);
+                
+                // Limpiar el flag después de mostrar el mensaje
+                localStorage.removeItem('oauth_success_pending');
+                
+            } catch (error) {
+                console.error('Error al procesar mensaje de éxito:', error);
+                localStorage.removeItem('oauth_success_pending');
+            }
+        }
+    }
 }
+
