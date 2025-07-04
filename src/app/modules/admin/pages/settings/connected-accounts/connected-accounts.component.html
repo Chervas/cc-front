@@ -68,6 +68,23 @@
 
                     <mat-divider class="my-4"></mat-divider>
 
+                    <!-- User Info if Connected -->
+                    @if (account.connected && account.userName) {
+                        <div class="mb-4">
+                            <div class="text-sm font-medium text-secondary mb-2">
+                                Conectado como:
+                            </div>
+                            <div class="flex items-center text-sm">
+                                <mat-icon class="icon-size-4 mr-2" [svgIcon]="'heroicons_solid:user-circle'"></mat-icon>
+                                <span class="font-medium">{{ account.userName }}</span>
+                                @if (account.userEmail) {
+                                    <span class="ml-2 text-secondary">({{ account.userEmail }})</span>
+                                }
+                            </div>
+                        </div>
+                        <mat-divider class="my-4"></mat-divider>
+                    }
+
                     <!-- Permissions -->
                     <div>
                         <div class="text-sm font-medium text-secondary mb-3">
@@ -93,7 +110,7 @@
                                 <mat-icon 
                                     class="icon-size-5 text-green-600 mr-2"
                                     [svgIcon]="'heroicons_solid:check-circle'"></mat-icon>
-                                <div class="text-sm">
+                                <div>
                                     <div class="font-medium text-green-800 dark:text-green-200">
                                         Conexión activa
                                     </div>

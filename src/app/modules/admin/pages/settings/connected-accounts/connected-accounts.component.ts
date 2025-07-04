@@ -1,7 +1,9 @@
-import { NgClass } from '@angular/common';
+import { NgClass, NgFor, NgIf } from '@angular/common'; // Asegúrate de importar NgFor y NgIf
 import {
     ChangeDetectionStrategy,
+    ChangeDetectorRef, // Importar ChangeDetectorRef
     Component,
+    OnInit, // Importar OnInit
     ViewEncapsulation,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +18,11 @@ interface ConnectedAccount {
     connected: boolean;
     permissions: string[];
     color: string;
+    // Nuevas propiedades para almacenar información del usuario conectado
+    userId?: string;
+    userName?: string;
+    userEmail?: string;
+    accessToken?: string;
 }
 
 @Component({
@@ -29,9 +36,11 @@ interface ConnectedAccount {
         MatButtonModule,
         MatIconModule,
         MatDividerModule,
+        NgIf, // Asegúrate de que NgIf esté importado
+        NgFor, // Asegúrate de que NgFor esté importado
     ],
 })
-export class SettingsConnectedAccountsComponent {
+export class SettingsConnectedAccountsComponent implements OnInit { // Implementar OnInit
     
     accounts: ConnectedAccount[] = [
         {
@@ -82,25 +91,49 @@ export class SettingsConnectedAccountsComponent {
         }
     ];
 
-    /**
-     * Constructor
-     */
-    constructor() {}
+    constructor(private _changeDetectorRef: ChangeDetectorRef) {} // Inyectar ChangeDetectorRef
 
-    // -----------------------------------------------------------------------------------------------------
-    // @ Public methods
-    // -----------------------------------------------------------------------------------------------------
+    ngOnInit(): void {
+        this._checkMetaConnectionStatus();
+    }
+
+    private _checkMetaConnectionStatus(): void {
+        const metaUserId = localStorage.getItem('meta_user_id');
+        const metaUserName = localStorage.getItem('meta_user_name');
+        const metaUserEmail = localStorage.getItem('meta_user_email');
+        const metaAccessToken = localStorage.getItem('meta_access_token');
+
+        const metaAccount = this.accounts.find(acc => acc.id === 'meta');
+        if (metaAccount && metaUserId && metaUserName && metaUserEmail && metaAccessToken) {
+            metaAccount.connected = true;
+            metaAccount.userId = metaUserId;
+            metaAccount.userName = metaUserName;
+            metaAccount.userEmail = metaUserEmail;
+            metaAccount.accessToken = metaAccessToken;
+            console.log('Estado de conexión Meta cargado desde localStorage.');
+        } else if (metaAccount) {
+            metaAccount.connected = false; // Asegurarse de que esté desconectado si faltan datos
+        }
+        this._changeDetectorRef.markForCheck(); // Forzar detección de cambios
+    }
 
     /**
      * Connect account
      */
     connectAccount(accountId: string): void {
-        if (accountId === 'meta') {
-            this.connectMeta();
-        } else if (accountId === 'google') {
-            this.connectGoogle();
-        } else if (accountId === 'tiktok') {
-            this.connectTikTok();
+        const account = this.accounts.find(acc => acc.id === accountId);
+        if (!account) return;
+
+        switch (accountId) {
+            case 'meta':
+                this.connectMeta();
+                break;
+            case 'google':
+                console.log('Google OAuth no implementado aún');
+                break;
+            case 'tiktok':
+                console.log('TikTok OAuth no implementado aún');
+                break;
         }
     }
 
@@ -109,64 +142,52 @@ export class SettingsConnectedAccountsComponent {
      */
     disconnectAccount(accountId: string): void {
         const account = this.accounts.find(acc => acc.id === accountId);
-        if (account) {
-            account.connected = false;
-        }
+        if (!account) return;
+
+        console.log(`Desconectando ${account.name}...`);
+        account.connected = false;
+        account.userId = undefined;
+        account.userName = undefined;
+        account.userEmail = undefined;
+        account.accessToken = undefined;
+        
+        // Limpiar localStorage
+        localStorage.removeItem('meta_user_id');
+        localStorage.removeItem('meta_user_name');
+        localStorage.removeItem('meta_user_email');
+        localStorage.removeItem('meta_access_token');
+
+        this._changeDetectorRef.markForCheck(); // Forzar detección de cambios
     }
 
     /**
-     * Connect to Meta (Facebook/Instagram) using OAuth2
+     * Connect to Meta (permisos básicos)
      */
-    private connectMeta(): void {
-        const clientId = '1807844546609897';
-        const redirectUri = encodeURIComponent('https://autenticacion.clinicaclick.com/oauth/meta/callback');
-        const scope = encodeURIComponent([
-            'email',
-            'pages_show_list',
-            'pages_read_engagement', 
-            'instagram_basic',
-            'instagram_manage_insights',
-            'ads_read',
-            'leads_retrieval',
-            'business_management'
-        ].join(','));
+    connectMeta(): void {
+        const clientId = '1807844546609897'; // Asegúrate de que este es el ID correcto
+        const redirectUri = encodeURIComponent('https://autenticacion.clinicaclick.com/oauth/meta/callback' );
+        const scope = encodeURIComponent('email,public_profile,pages_show_list,pages_read_engagement,instagram_basic,instagram_manage_insights,ads_read,leads_retrieval,business_management'); // Permisos completos
         
         const state = this.generateRandomState();
         
         // Store state in sessionStorage for verification
         sessionStorage.setItem('oauth_state', state);
         
-        const authUrl = `https://www.facebook.com/v23.0/dialog/oauth?` +
+        const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?` +
             `client_id=${clientId}&` +
             `redirect_uri=${redirectUri}&` +
             `scope=${scope}&` +
             `response_type=code&` +
             `state=${state}`;
         
-        // Open OAuth window
+        // Abrir en nueva ventana
         window.location.href = authUrl;
-    }
-
-    /**
-     * Connect to Google (placeholder)
-     */
-    private connectGoogle(): void {
-        console.log('Google OAuth integration - To be implemented');
-        // TODO: Implement Google OAuth2 flow
-    }
-
-    /**
-     * Connect to TikTok (placeholder)
-     */
-    private connectTikTok(): void {
-        console.log('TikTok OAuth integration - To be implemented');
-        // TODO: Implement TikTok OAuth2 flow
     }
 
     /**
      * Generate random state for OAuth security
      */
-    private generateRandomState(): string {
+    private generateRandomState( ): string {
         const array = new Uint32Array(1);
         crypto.getRandomValues(array);
         return array[0].toString(36);
@@ -179,4 +200,3 @@ export class SettingsConnectedAccountsComponent {
         return item.id;
     }
 }
-

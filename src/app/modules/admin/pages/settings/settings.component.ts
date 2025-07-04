@@ -4,12 +4,12 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { FuseMediaWatcherService } from '@fuse/services/media-watcher';
 import { NgClass, NgFor, NgIf } from '@angular/common';
-import { HttpClient, HttpClientModule } from '@angular/common/http'; // HttpClientModule no es necesario si no se usa HttpClient directamente aquí
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatDividerModule } from '@angular/material/divider';
-import { SettingsConnectedAccountsComponent } from './connected-accounts/connected-accounts.component'; // <-- Importar el subcomponente
+import { SettingsConnectedAccountsComponent } from './connected-accounts/connected-accounts.component';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar'; // Importar MatSnackBar
 
 @Component({
     selector: 'settings',
@@ -21,46 +21,40 @@ import { SettingsConnectedAccountsComponent } from './connected-accounts/connect
         MatIconModule,
         MatDividerModule,
         NgClass,
-        NgIf, // Necesario para @if
-        NgFor, // Necesario para @for
-        SettingsConnectedAccountsComponent, // <-- Importar el subcomponente aquí
+        NgIf,
+        NgFor,
+        SettingsConnectedAccountsComponent,
+        MatSnackBarModule // Añadir MatSnackBarModule
     ],
-} )
-export class SettingsComponent implements OnInit, OnDestroy { // Implementar OnDestroy para _unsubscribeAll
+})
+export class SettingsComponent implements OnInit, OnDestroy {
     
     drawerMode: 'over' | 'side' = 'side';
     drawerOpened: boolean = true;
     selectedPanel: string = 'connected-accounts';
 
-    // Paneles del drawer lateral - AÑADIR PROPIEDAD 'icon'
     panels = [
         {
             id: 'connected-accounts',
             title: 'Cuentas Conectadas',
             description: 'Gestiona las conexiones con redes sociales',
-            icon: 'heroicons_outline:link' // <-- AÑADIDO: Icono para el panel
+            icon: 'heroicons_outline:link'
         }
-        // Puedes añadir más paneles aquí si los necesitas en el futuro
-        // { id: 'security', title: 'Seguridad', description: 'Configuración de seguridad', icon: 'heroicons_outline:lock-closed' }
     ];
 
-    // ELIMINAR la definición de 'accounts' de aquí, la manejará SettingsConnectedAccountsComponent
-    // accounts = [...];
-
-    private _unsubscribeAll: Subject<any> = new Subject<any>(); // <-- Añadido para OnDestroy
+    private _unsubscribeAll: Subject<any> = new Subject<any>();
 
     constructor(
         private _changeDetectorRef: ChangeDetectorRef,
         private _fuseMediaWatcherService: FuseMediaWatcherService,
         private _route: ActivatedRoute,
-        // private _httpClient: HttpClient, // No es necesario si no se usa directamente aquí
-        // private _router: Router, // No es necesario si no se usa directamente aquí
-     ) {}
+        private _router: Router, // Necesario para la redirección y limpieza de URL
+        private _snackBar: MatSnackBar // Inyectar MatSnackBar
+    ) {}
 
     ngOnInit(): void {
-        this._checkScreenSize(); // Usar el método privado para el tamaño de pantalla
-        this._checkConnectionStatus(); // Usar el método privado para el estado de conexión
-
+        this._checkScreenSize();
+        
         // Suscribirse a los cambios de media query para el drawer
         this._fuseMediaWatcherService.onMediaChange$
             .pipe(takeUntil(this._unsubscribeAll))
@@ -69,54 +63,72 @@ export class SettingsComponent implements OnInit, OnDestroy { // Implementar OnD
                 this.drawerOpened = matchingAliases.includes('lg');
                 this._changeDetectorRef.markForCheck();
             });
+
+        // Procesar los query params de la URL
+        this._route.queryParamMap
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((params) => {
+                const connected = params.get('connected');
+                const error = params.get('error');
+                const userId = params.get('userId'); // Nuevo: ID de usuario de Meta
+                const userName = params.get('userName'); // Nuevo: Nombre de usuario de Meta
+                const userEmail = params.get('userEmail'); // Nuevo: Email de usuario de Meta
+                const accessToken = params.get('accessToken'); // Nuevo: Access Token de Meta
+
+                if (connected === 'meta') {
+                    this.selectedPanel = 'connected-accounts'; // Asegurarse de que el panel correcto esté activo
+                    this._snackBar.open('Cuenta Meta conectada correctamente.', 'Cerrar', {
+                        duration: 5000,
+                        panelClass: ['snackbar-success'] // Clase CSS para estilos personalizados
+                    });
+
+                    // ALMACENAR CREDENCIALES DE META
+                    if (userId && userName && userEmail && accessToken) {
+                        localStorage.setItem('meta_user_id', userId);
+                        localStorage.setItem('meta_user_name', userName);
+                        localStorage.setItem('meta_user_email', userEmail);
+                        localStorage.setItem('meta_access_token', accessToken);
+                        console.log('Credenciales de Meta almacenadas en localStorage.');
+                    }
+
+                } else if (error) {
+                    this.selectedPanel = 'connected-accounts'; // Asegurarse de que el panel correcto esté activo
+                    this._snackBar.open(`Error al conectar cuenta: ${error}`, 'Cerrar', {
+                        duration: 5000,
+                        panelClass: ['snackbar-error'] // Clase CSS para estilos personalizados
+                    });
+                }
+
+                // Limpiar los query params de la URL para evitar recargas o comportamientos inesperados
+                if (connected || error) {
+                    this._router.navigate([], {
+                        queryParams: { connected: null, error: null, userId: null, userName: null, userEmail: null, accessToken: null },
+                        queryParamsHandling: 'merge',
+                        replaceUrl: true
+                    });
+                }
+                this._changeDetectorRef.markForCheck();
+            });
     }
 
-    ngOnDestroy(): void { // <-- Implementar OnDestroy
+    ngOnDestroy(): void {
         this._unsubscribeAll.next(null);
         this._unsubscribeAll.complete();
     }
 
-    /**
-     * Ir a un panel específico
-     */
     goToPanel(panelId: string): void {
         this.selectedPanel = panelId;
-        
-        // En móvil, cerrar el drawer después de seleccionar
         if (this.drawerMode === 'over') {
             this.drawerOpened = false;
         }
-        this._changeDetectorRef.markForCheck(); // Forzar detección de cambios
+        this._changeDetectorRef.markForCheck();
     }
 
-    /**
-     * Track function para paneles
-     */
     trackByFn(index: number, item: any): any {
         return item.id || index;
     }
 
-    /**
-     * Verificar estado de conexiones (ajustado para el subcomponente)
-     */
-    private _checkConnectionStatus(): void {
-        // Esta lógica ahora debería ser manejada principalmente por connected-accounts.component
-        // Aquí solo nos aseguramos de que el panel correcto esté seleccionado si hay un query param
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('connected')) {
-            this.selectedPanel = 'connected-accounts';
-            // Limpiar URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-            this._changeDetectorRef.markForCheck();
-        }
-    }
-
-    /**
-     * Verificar tamaño de pantalla para drawer responsive
-     */
     private _checkScreenSize(): void {
-        // Esta lógica se moverá al ngOnInit con FuseMediaWatcherService
-        // Dejarlo aquí como un fallback inicial si no se usa el servicio
         if (window.innerWidth < 1280) {
             this.drawerMode = 'over';
             this.drawerOpened = false;
