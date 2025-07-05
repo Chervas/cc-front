@@ -29,7 +29,7 @@ import { HttpClient } from '@angular/common/http';
         SettingsConnectedAccountsComponent,
         MatSnackBarModule
     ],
-} )
+})
 export class SettingsComponent implements OnInit, OnDestroy {
     
     drawerMode: 'over' | 'side' = 'side';
@@ -54,7 +54,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         private _router: Router,
         private _snackBar: MatSnackBar,
         private _httpClient: HttpClient
-     ) {}
+    ) {}
 
     ngOnInit(): void {
         this._checkScreenSize();
@@ -70,7 +70,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         // Verificar si hay un mensaje de éxito pendiente después del reload
         this._checkForSuccessMessage();
 
-        // Procesar los query params de la URL (modificado para mostrar snackbar después del reload)
+        // Procesar los query params de la URL (modificado para mostrar snackbar)
         this._route.queryParamMap
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe((params) => {
@@ -80,14 +80,12 @@ export class SettingsComponent implements OnInit, OnDestroy {
                 const userName = params.get('userName');
                 const userEmail = params.get('userEmail');
                 const accessToken = params.get('accessToken');
+                const metaDenied = params.get('meta_denied');
 
                 if (connected === 'meta' && userId && userName && userEmail && accessToken) {
-                    // Almacenar los datos en localStorage como en la versión original
-                    localStorage.setItem('meta_user_id', userId);
-                    localStorage.setItem('meta_user_name', userName);
-                    localStorage.setItem('meta_user_email', userEmail);
+                    // Almacenar los datos en localStorage como en la versión anterior
                     localStorage.setItem('meta_access_token', accessToken);
-
+                    
                     console.log('✅ Datos de Meta almacenados en localStorage:', {
                         userId,
                         userName,
@@ -105,11 +103,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
                     this.selectedPanel = 'connected-accounts';
 
-                    // Limpiar query params y recargar inmediatamente (sin mostrar snackbar aún)
+                    // Limpiar query params y recargar inmediatamente (sin mostrar snackbar)
                     this._router.navigate([], {
-                        queryParams: { 
-                            connected: null, 
-                            error: null, 
+                        queryParams: {
+                            connected: null,
+                            error: null,
                             userId: null,
                             userName: null,
                             userEmail: null,
@@ -118,34 +116,41 @@ export class SettingsComponent implements OnInit, OnDestroy {
                         queryParamsHandling: 'merge',
                         replaceUrl: true
                     }).then(() => {
-                        // Reload inmediato después de limpiar la URL
                         setTimeout(() => {
                             window.location.reload();
                         }, 100);
                     });
 
+                } else if (metaDenied === 'true') {
+                    this.selectedPanel = 'connected-accounts';
+                    this._snackBar.open('🚫 Has rechazado conectar tu clínica con Meta. Si lo haces por seguridad te adelanto que es completamente seguro, puedes intentarlo más adelante.', 'Cerrar', {
+                        duration: 8000,
+                        panelClass: ['snackbar-warning']
+                    });
                 } else if (error) {
                     this.selectedPanel = 'connected-accounts';
                     this._snackBar.open(`Error al conectar cuenta: ${error}`, 'Cerrar', {
                         duration: 8000,
                         panelClass: ['snackbar-error']
                     });
+                }
 
-                    // Limpiar los query params de la URL para errores
+                // Limpiar los query params de la URL para errores
+                if (error || metaDenied) {
                     this._router.navigate([], {
-                        queryParams: { 
-                            connected: null, 
-                            error: null, 
+                        queryParams: {
+                            connected: null,
+                            error: null,
                             userId: null,
                             userName: null,
                             userEmail: null,
-                            accessToken: null
+                            accessToken: null,
+                            meta_denied: null
                         },
                         queryParamsHandling: 'merge',
                         replaceUrl: true
                     });
                 }
-
                 this._changeDetectorRef.markForCheck();
             });
     }
@@ -195,7 +200,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
                     }
                 );
                 
-                console.log(`✅ ${successData.platform} conectado exitosamente:`, successData);
+                console.log(`✅ ${successData.platform} conectado exitosamente después del reload`);
                 
                 // Limpiar el flag después de mostrar el mensaje
                 localStorage.removeItem('oauth_success_pending');
