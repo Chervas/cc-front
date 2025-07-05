@@ -1,0 +1,390 @@
+<div class="asset-mapping-container">
+    <!-- Header del Mapeo -->
+    <div class="mb-6">
+        <h3 class="text-2xl font-bold text-primary mb-2">{{config.title}}</h3>
+        <p class="text-secondary">{{config.subtitle}}</p>
+    </div>
+
+    <!-- Progress Bar -->
+    @if (stepperData.isLoading || isLoadingAssets) {
+        <div class="mb-6">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-primary">Cargando activos de Meta...</span>
+                <span class="text-sm text-secondary" [textContent]="loadingProgress + '%'"></span>
+            </div>
+            <mat-progress-bar mode="determinate" [value]="loadingProgress"></mat-progress-bar>
+        </div>
+    }
+
+    <!-- Stepper Principal -->
+    @if (!stepperData.isLoading && !isLoadingAssets) {
+        <mat-stepper #stepper orientation="horizontal" [linear]="true">
+            
+            <!-- PASO 1: Selección de Activos -->
+            <mat-step [stepControl]="assetFormGroup" label="Seleccionar Activos">
+                <form [formGroup]="assetFormGroup">
+                    <div class="step-content">
+                        <h4 class="text-lg font-semibold mb-4">Selecciona los activos que quieres mapear</h4>
+                        
+                        <!-- Resumen de activos disponibles -->
+                        <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <span class="font-medium">Total de activos disponibles:</span>
+                                <span class="text-primary font-bold" [textContent]="getTotalAssetsCount()"></span>
+                            </div>
+                            <div class="text-sm text-secondary mt-1">
+                                <span [textContent]="assetsByType.facebook_pages.length"></span> páginas Facebook, 
+                                <span [textContent]="assetsByType.instagram_business.length"></span> cuentas Instagram, 
+                                <span [textContent]="assetsByType.ad_accounts.length"></span> cuentas publicitarias
+                            </div>
+                        </div>
+
+                        <!-- Expansion Panels por tipo de activo -->
+                        <mat-accordion class="space-y-4">
+                            
+                            <!-- Facebook Pages -->
+                            @if (assetsByType.facebook_pages.length > 0) {
+                                <mat-expansion-panel>
+                                    <mat-expansion-panel-header>
+                                        <mat-panel-title>
+                                            <div class="flex items-center">
+                                                <mat-icon class="text-blue-600 mr-2" [svgIcon]="'heroicons_outline:globe-alt'"></mat-icon>
+                                                <span>Páginas de Facebook</span>
+                                                <span class="ml-2 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs font-medium" [textContent]="assetsByType.facebook_pages.length"></span>
+                                            </div>
+                                        </mat-panel-title>
+                                    </mat-expansion-panel-header>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                                        @for (asset of assetsByType.facebook_pages; track asset.id) {
+                                            <div class="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                                <div class="flex items-start space-x-3">
+                                                    <!-- Avatar -->
+                                                    <div class="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
+                                                        @if (asset.picture?.data?.url || asset.assetAvatarUrl) {
+                                                            <img [src]="asset.picture?.data?.url || asset.assetAvatarUrl" 
+                                                                 [alt]="asset.name"
+                                                                 class="w-full h-full object-cover"
+                                                                 (error)="$event.target.style.display='none'; $event.target.nextElementSibling.style.display='flex'">
+                                                            <div class="w-full h-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center" style="display: none;">
+                                                                <mat-icon class="text-blue-600" [svgIcon]="'heroicons_outline:globe-alt'"></mat-icon>
+                                                            </div>
+                                                        } @else {
+                                                            <div class="w-full h-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                                                                <mat-icon class="text-blue-600" [svgIcon]="'heroicons_outline:globe-alt'"></mat-icon>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                    
+                                                    <!-- Info -->
+                                                    <div class="flex-1 min-w-0">
+                                                        <div class="font-medium truncate" [textContent]="asset.name"></div>
+                                                        @if (asset.category) {
+                                                            <div class="text-sm text-secondary" [textContent]="asset.category"></div>
+                                                        }
+                                                        @if (asset.followers_count) {
+                                                            <div class="text-xs text-secondary">
+                                                                <span [textContent]="asset.followers_count"></span> seguidores
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                    
+                                                    <!-- Checkbox -->
+                                                    <mat-checkbox 
+                                                        [checked]="isAssetSelected(asset)"
+                                                        (change)="onAssetSelectionChange(asset, $event.checked)">
+                                                    </mat-checkbox>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </mat-expansion-panel>
+                            }
+
+                            <!-- Instagram -->
+                            @if (assetsByType.instagram_business.length > 0) {
+                                <mat-expansion-panel>
+                                    <mat-expansion-panel-header>
+                                        <mat-panel-title>
+                                            <div class="flex items-center">
+                                                <mat-icon class="text-pink-600 mr-2" [svgIcon]="'heroicons_outline:camera'"></mat-icon>
+                                                <span>Cuentas de Instagram</span>
+                                                <span class="ml-2 px-2 py-1 bg-pink-100 dark:bg-pink-900 text-pink-800 dark:text-pink-200 rounded-full text-xs font-medium" [textContent]="assetsByType.instagram_business.length"></span>
+                                            </div>
+                                        </mat-panel-title>
+                                    </mat-expansion-panel-header>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                                        @for (asset of assetsByType.instagram_business; track asset.id) {
+                                            <div class="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                                <div class="flex items-start space-x-3">
+                                                    <!-- Avatar -->
+                                                    <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0">
+                                                        @if (asset.profile_picture_url || asset.assetAvatarUrl) {
+                                                            <img [src]="asset.profile_picture_url || asset.assetAvatarUrl" 
+                                                                 [alt]="asset.name"
+                                                                 class="w-full h-full object-cover"
+                                                                 (error)="$event.target.style.display='none'; $event.target.nextElementSibling.style.display='flex'">
+                                                            <div class="w-full h-full bg-pink-100 dark:bg-pink-900 flex items-center justify-center" style="display: none;">
+                                                                <mat-icon class="text-pink-600" [svgIcon]="'heroicons_outline:camera'"></mat-icon>
+                                                            </div>
+                                                        } @else {
+                                                            <div class="w-full h-full bg-pink-100 dark:bg-pink-900 flex items-center justify-center">
+                                                                <mat-icon class="text-pink-600" [svgIcon]="'heroicons_outline:camera'"></mat-icon>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                    
+                                                    <!-- Info -->
+                                                    <div class="flex-1 min-w-0">
+                                                        <div class="font-medium truncate" [textContent]="asset.name"></div>
+                                                        @if (asset.username) {
+                                                            <div class="text-sm text-secondary">&#64;<span [textContent]="asset.username"></span></div>
+                                                        }
+                                                        @if (asset.followers_count) {
+                                                            <div class="text-xs text-secondary">
+                                                                <span [textContent]="asset.followers_count"></span> seguidores
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                    
+                                                    <!-- Checkbox -->
+                                                    <mat-checkbox 
+                                                        [checked]="isAssetSelected(asset)"
+                                                        (change)="onAssetSelectionChange(asset, $event.checked)">
+                                                    </mat-checkbox>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </mat-expansion-panel>
+                            }
+
+                            <!-- Ad Accounts -->
+                            @if (assetsByType.ad_accounts.length > 0) {
+                                <mat-expansion-panel>
+                                    <mat-expansion-panel-header>
+                                        <mat-panel-title>
+                                            <div class="flex items-center">
+                                                <mat-icon class="text-green-600 mr-2" [svgIcon]="'heroicons_outline:megaphone'"></mat-icon>
+                                                <span>Cuentas Publicitarias</span>
+                                                <span class="ml-2 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-xs font-medium" [textContent]="assetsByType.ad_accounts.length"></span>
+                                            </div>
+                                        </mat-panel-title>
+                                    </mat-expansion-panel-header>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                                        @for (asset of assetsByType.ad_accounts; track asset.id) {
+                                            <div class="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                                <div class="flex items-start space-x-3">
+                                                    <!-- Icon (Ad Accounts no tienen avatar) -->
+                                                    <div class="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                        <mat-icon class="text-green-600" [svgIcon]="'heroicons_outline:megaphone'"></mat-icon>
+                                                    </div>
+                                                    
+                                                    <!-- Info -->
+                                                    <div class="flex-1 min-w-0">
+                                                        <div class="font-medium truncate" [textContent]="asset.name"></div>
+                                                        @if (asset.currency) {
+                                                            <div class="text-sm text-secondary" [textContent]="asset.currency"></div>
+                                                        }
+                                                        @if (asset.account_status) {
+                                                            <div class="text-xs" 
+                                                                 [ngClass]="asset.account_status === 'ACTIVE' ? 'text-green-600' : 'text-orange-600'"
+                                                                 [textContent]="asset.account_status"></div>
+                                                        }
+                                                    </div>
+                                                    
+                                                    <!-- Checkbox -->
+                                                    <mat-checkbox 
+                                                        [checked]="isAssetSelected(asset)"
+                                                        (change)="onAssetSelectionChange(asset, $event.checked)">
+                                                    </mat-checkbox>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </mat-expansion-panel>
+                            }
+                        </mat-accordion>
+
+                        <!-- Resumen de selección -->
+                        @if (getSelectedAssetsCount() > 0) {
+                            <div class="mt-6 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-800">
+                                <div class="flex items-center">
+                                    <mat-icon class="text-primary mr-2" [svgIcon]="'heroicons_outline:check-circle'"></mat-icon>
+                                    <span class="font-medium text-primary">
+                                        <span [textContent]="getSelectedAssetsCount()"></span> activos seleccionados
+                                    </span>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Navegación -->
+                        <div class="flex justify-between mt-6">
+                            <button mat-stroked-button (click)="cancel()">
+                                Cancelar
+                            </button>
+                            <button mat-flat-button 
+                                    color="primary" 
+                                    matStepperNext
+                                    [disabled]="getSelectedAssetsCount() === 0">
+                                Siguiente: Asignar Clínicas
+                                <mat-icon class="ml-2" [svgIcon]="'heroicons_outline:arrow-right'"></mat-icon>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </mat-step>
+
+            <!-- PASO 2: Asignación a Clínicas -->
+            <mat-step [stepControl]="clinicFormGroup" label="Asignar Clínicas">
+                <form [formGroup]="clinicFormGroup">
+                    <div class="step-content">
+                        <h4 class="text-lg font-semibold mb-4">Asigna los activos a clínicas específicas</h4>
+                        
+                        <!-- Loading de clínicas -->
+                        @if (isLoadingClinics) {
+                            <div class="text-center py-8">
+                                <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
+                                <p class="mt-4 text-secondary">Cargando clínicas disponibles...</p>
+                            </div>
+                        } @else {
+                            <!-- Resumen de activos seleccionados -->
+                            <div class="mb-6 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-lg border border-primary-200 dark:border-primary-800">
+                                <h5 class="font-medium text-primary mb-2">Activos seleccionados para mapear:</h5>
+                                <div class="flex flex-wrap gap-2">
+                                    @for (asset of getSelectedAssets(); track asset.id) {
+                                        <div class="px-3 py-1 bg-white dark:bg-gray-800 border border-primary-200 dark:border-primary-700 rounded-full text-sm">
+                                            <span [textContent]="asset.name"></span>
+                                            <span class="ml-1 text-xs text-secondary">(<span [textContent]="asset.type"></span>)</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Lista de clínicas -->
+                            @if (availableClinics.length > 0) {
+                                <div class="space-y-4">
+                                    <h5 class="font-medium text-secondary">Selecciona las clínicas donde quieres usar estos activos:</h5>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        @for (clinic of availableClinics; track clinic.id) {
+                                            <div class="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                                 [ngClass]="{'border-primary-300 bg-primary-50 dark:bg-primary-900/20': isClinicSelected(clinic.id)}">
+                                                <div class="flex items-start space-x-3">
+                                                    <!-- Checkbox de clínica -->
+                                                    <mat-checkbox 
+                                                        [checked]="isClinicSelected(clinic.id)"
+                                                        (change)="onClinicSelectionChange(clinic.id, $event.checked)">
+                                                    </mat-checkbox>
+                                                    
+                                                    <!-- Info de clínica -->
+                                                    <div class="flex-1">
+                                                        <div class="font-medium" [textContent]="clinic.name"></div>
+                                                        @if (clinic.description) {
+                                                            <div class="text-sm text-secondary" [textContent]="clinic.description"></div>
+                                                        }
+                                                        @if (clinic.location) {
+                                                            <div class="text-xs text-secondary mt-1">
+                                                                <mat-icon class="icon-size-4 mr-1" [svgIcon]="'heroicons_outline:map-pin'"></mat-icon>
+                                                                <span [textContent]="clinic.location"></span>
+                                                            </div>
+                                                        }
+                                                        
+                                                        <!-- Activos ya mapeados en esta clínica -->
+                                                        @if (getExistingMappingsForClinic(clinic.id).length > 0) {
+                                                            <div class="mt-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
+                                                                <div class="text-xs text-amber-800 dark:text-amber-200 font-medium mb-1">
+                                                                    Activos ya mapeados:
+                                                                </div>
+                                                                <div class="flex flex-wrap gap-1">
+                                                                    @for (mapping of getExistingMappingsForClinic(clinic.id); track mapping.assetId) {
+                                                                        <span class="px-2 py-0.5 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 rounded text-xs"
+                                                                              [textContent]="mapping.assetName"></span>
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Resumen de asignación -->
+                                @if (getSelectedClinicsCount() > 0) {
+                                    <div class="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                                        <div class="flex items-center">
+                                            <mat-icon class="text-green-600 mr-2" [svgIcon]="'heroicons_outline:check-circle'"></mat-icon>
+                                            <span class="font-medium text-green-900 dark:text-green-100">
+                                                <span [textContent]="getSelectedAssetsCount()"></span> activos se asignarán a 
+                                                <span [textContent]="getSelectedClinicsCount()"></span> clínicas
+                                            </span>
+                                        </div>
+                                        <div class="text-sm text-green-700 dark:text-green-300 mt-1">
+                                            Total de mapeos a crear: <span [textContent]="getTotalMappingsToCreate()"></span>
+                                        </div>
+                                    </div>
+                                }
+                            } @else {
+                                <!-- No hay clínicas disponibles -->
+                                <div class="text-center py-8">
+                                    <mat-icon class="text-6xl text-secondary mb-4" [svgIcon]="'heroicons_outline:building-office'"></mat-icon>
+                                    <h5 class="text-lg font-medium mb-2">No hay clínicas disponibles</h5>
+                                    <p class="text-secondary">No tienes acceso a ninguna clínica o no hay clínicas creadas en el sistema.</p>
+                                </div>
+                            }
+                        }
+
+                        <!-- Navegación -->
+                        <div class="flex justify-between mt-6">
+                            <button mat-stroked-button matStepperPrevious>
+                                <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:arrow-left'"></mat-icon>
+                                Anterior
+                            </button>
+                            <button mat-flat-button 
+                                    color="primary" 
+                                    matStepperNext
+                                    [disabled]="getSelectedClinicsCount() === 0">
+                                Siguiente: Confirmar
+                                <mat-icon class="ml-2" [svgIcon]="'heroicons_outline:arrow-right'"></mat-icon>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </mat-step>
+
+            <!-- PASO 3: Confirmación -->
+            <mat-step [stepControl]="confirmFormGroup" label="Confirmar">
+                <form [formGroup]="confirmFormGroup">
+                    <div class="step-content">
+                        <h4 class="text-lg font-semibold mb-4">Confirma el mapeo de activos</h4>
+                        
+                        <div class="text-center py-8">
+                            <mat-icon class="text-6xl text-secondary mb-4" [svgIcon]="'heroicons_outline:check-circle'"></mat-icon>
+                            <h5 class="text-lg font-medium mb-2">Paso 3 en Desarrollo</h5>
+                            <p class="text-secondary">La confirmación y guardado se implementará en la siguiente fase</p>
+                        </div>
+
+                        <!-- Navegación -->
+                        <div class="flex justify-between mt-6">
+                            <button mat-stroked-button matStepperPrevious>
+                                <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:arrow-left'"></mat-icon>
+                                Anterior
+                            </button>
+                            <button mat-flat-button 
+                                    color="primary" 
+                                    (click)="submitMapping()">
+                                <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:check'"></mat-icon>
+                                Completar Mapeo
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </mat-step>
+        </mat-stepper>
+    }
+</div>
+
