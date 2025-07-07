@@ -109,4 +109,3 @@ export interface AssetSelectionConfig extends AssetMappingConfig {
     mode: 'asset-selection';
     allowMultipleClinics: false;
 }
-

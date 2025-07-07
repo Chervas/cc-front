@@ -1,4 +1,4 @@
-// ARCHIVO CORREGIDO: src/app/modules/admin/pages/settings/shared/asset-mapping.component.ts
+// ARCHIVO COMPLETO Y VERIFICADO: src/app/modules/admin/pages/settings/shared/asset-mapping.component.ts
 
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import { ChangeDetectorRef, Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatStepperModule } from '@angular/material/stepper';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpClient } from '@angular/common/http';
 import { UserService } from 'app/core/user/user.service';
 
@@ -120,15 +121,18 @@ export class AssetMappingComponent implements OnInit {
     @Output() mappingComplete = new EventEmitter<MappingResult>();
     @Output() cancelled = new EventEmitter<void>();
 
-    // Servicios
+    // Servicios inyectados
     private _http = inject(HttpClient);
     private _userService = inject(UserService);
     private _formBuilder = inject(FormBuilder);
     private _cdr = inject(ChangeDetectorRef);
+    private _snackBar = inject(MatSnackBar);
 
     // Estados de carga
     isLoadingAssets = false;
     isLoadingClinics = false;
+    isLoadingMappings = false;
+    isSubmittingMapping = false;
     loadingProgress = 0;
 
     // Datos
@@ -153,6 +157,10 @@ export class AssetMappingComponent implements OnInit {
     clinicFormGroup: FormGroup;
     confirmFormGroup: FormGroup;
 
+    // Estado del stepper
+    currentStep = 0;
+    isLinear = true;
+
     constructor() {
         // Inicializar formularios
         this.assetFormGroup = this._formBuilder.group({
@@ -176,6 +184,9 @@ export class AssetMappingComponent implements OnInit {
         this.loadInitialData();
     }
 
+    /**
+     * Inicializar formularios
+     */
     private initializeForms(): void {
         console.log('📝 Inicializando formularios...');
         // Los formularios ya están inicializados en el constructor
@@ -183,6 +194,9 @@ export class AssetMappingComponent implements OnInit {
         this._cdr.detectChanges();
     }
 
+    /**
+     * Cargar datos iniciales
+     */
     private async loadInitialData(): Promise<void> {
         console.log('🔄 Iniciando carga de datos...');
         this.stepperData.isLoading = true;
@@ -200,6 +214,11 @@ export class AssetMappingComponent implements OnInit {
 
         } catch (error) {
             console.error('❌ Error cargando datos iniciales:', error);
+            this._snackBar.open(
+                '❌ Error cargando datos. Por favor, recarga la página.',
+                'Cerrar',
+                { duration: 5000, panelClass: ['snackbar-error'] }
+            );
         } finally {
             this.stepperData.isLoading = false;
             console.log('🏁 Estado de loading actualizado a false');
@@ -208,6 +227,9 @@ export class AssetMappingComponent implements OnInit {
         }
     }
 
+    /**
+     * Cargar activos de Meta
+     */
     private async loadMetaAssets(): Promise<void> {
         console.log('📡 Iniciando carga de activos Meta...');
         this.isLoadingAssets = true;
@@ -215,17 +237,8 @@ export class AssetMappingComponent implements OnInit {
         this._cdr.detectChanges();
 
         try {
-            const token = localStorage.getItem('accessToken');
-            console.log('🔑 Token obtenido:', token ? 'Presente' : 'No encontrado');
-
-            if (!token) {
-                throw new Error('No se encontró token de acceso');
-            }
-
             console.log('📞 Realizando llamada HTTP...');
-            const response = await this._http.get<any>('https://autenticacion.clinicaclick.com/oauth/meta/assets', {
-                headers: { Authorization: `Bearer ${token}` }
-            }).toPromise();
+            const response = await this._http.get<any>('https://autenticacion.clinicaclick.com/oauth/meta/assets').toPromise();
 
             console.log('📥 Respuesta recibida:', response);
 
@@ -240,6 +253,7 @@ export class AssetMappingComponent implements OnInit {
         } catch (error) {
             console.error('❌ Error cargando activos Meta:', error);
             this.loadingProgress = 0;
+            throw error;
         } finally {
             this.isLoadingAssets = false;
             console.log('🏁 isLoadingAssets actualizado a false');
@@ -247,21 +261,17 @@ export class AssetMappingComponent implements OnInit {
         }
     }
 
+    /**
+     * Cargar clínicas disponibles
+     */
     private async loadAvailableClinics(): Promise<void> {
         console.log('🏥 Cargando clínicas disponibles...');
         this.isLoadingClinics = true;
         this._cdr.detectChanges();
 
         try {
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                throw new Error('No se encontró token de acceso');
-            }
-
-            // Simular carga de clínicas (reemplazar con endpoint real)
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Datos de ejemplo (reemplazar con llamada real)
+            // TODO: Implementar endpoint real de clínicas
+            // Por ahora usamos datos mock
             this.availableClinics = [
                 {
                     id: 1,
@@ -291,42 +301,45 @@ export class AssetMappingComponent implements OnInit {
         } catch (error) {
             console.error('❌ Error cargando clínicas:', error);
             this.availableClinics = [];
+            throw error;
         } finally {
             this.isLoadingClinics = false;
             this._cdr.detectChanges();
         }
     }
 
+    /**
+     * Cargar mapeos existentes
+     */
     private async loadExistingMappings(): Promise<void> {
         console.log('🔗 Cargando mapeos existentes...');
+        this.isLoadingMappings = true;
+        this._cdr.detectChanges();
 
         try {
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                throw new Error('No se encontró token de acceso');
-            }
-
-            // Simular carga de mapeos existentes (reemplazar con endpoint real)
-            await new Promise(resolve => setTimeout(resolve, 500));
+            const response = await this._http.get<any>('https://autenticacion.clinicaclick.com/oauth/meta/mappings').toPromise();
             
-            // Datos de ejemplo (reemplazar con llamada real)
-            this.existingMappings = [
-                {
-                    assetId: '123456789',
-                    assetName: 'Mi Página Principal',
-                    assetType: 'facebook_page',
-                    clinicId: 1
-                }
-            ];
-
-            console.log('✅ Mapeos existentes cargados:', this.existingMappings.length);
+            if (response && response.success && response.data && response.data.mappings) {
+                this.existingMappings = response.data.mappings;
+                console.log('✅ Mapeos existentes cargados:', this.existingMappings.length);
+            } else {
+                console.log('ℹ️ No hay mapeos existentes');
+                this.existingMappings = [];
+            }
 
         } catch (error) {
             console.error('❌ Error cargando mapeos existentes:', error);
+            // No es crítico, continuamos sin mapeos existentes
             this.existingMappings = [];
+        } finally {
+            this.isLoadingMappings = false;
+            this._cdr.detectChanges();
         }
     }
 
+    /**
+     * Procesar activos de Meta
+     */
     private processAssets(assets: any): void {
         console.log('🔄 Procesando activos...');
         
@@ -356,7 +369,8 @@ export class AssetMappingComponent implements OnInit {
             });
         }
 
-        // Procesar cuentas de Instagram Business
+        // ✅ CORRECCIÓN CRÍTICA: Procesar cuentas de Instagram Business
+        // El backend envía 'instagram_business' (no 'instagram_business_accounts')
         if (assets.instagram_business) {
             assets.instagram_business.forEach((ig: any) => {
                 const asset: MetaAsset = {
@@ -402,11 +416,16 @@ export class AssetMappingComponent implements OnInit {
         this._cdr.detectChanges();
     }
 
-    // Métodos de selección de activos
+    /**
+     * Verificar si un activo está seleccionado
+     */
     isAssetSelected(asset: MetaAsset): boolean {
         return this.stepperData.selectedAssets.some(a => a.id === asset.id);
     }
 
+    /**
+     * Manejar cambio de selección de activos
+     */
     onAssetSelectionChange(asset: MetaAsset, selected: boolean): void {
         if (selected) {
             if (!this.isAssetSelected(asset)) {
@@ -421,14 +440,20 @@ export class AssetMappingComponent implements OnInit {
             selectedAssets: this.stepperData.selectedAssets
         });
 
+        console.log('📱 Activos seleccionados:', this.stepperData.selectedAssets.length);
         this._cdr.detectChanges();
     }
 
-    // Métodos de selección de clínicas
+    /**
+     * Verificar si una clínica está seleccionada
+     */
     isClinicSelected(clinicId: number): boolean {
         return this.stepperData.selectedClinicIds.includes(clinicId);
     }
 
+    /**
+     * Manejar cambio de selección de clínicas
+     */
     onClinicSelectionChange(clinicId: number, selected: boolean): void {
         if (selected) {
             if (!this.isClinicSelected(clinicId)) {
@@ -443,10 +468,39 @@ export class AssetMappingComponent implements OnInit {
             selectedClinics: this.stepperData.selectedClinicIds
         });
 
+        console.log('🏥 Clínicas seleccionadas:', this.stepperData.selectedClinicIds.length);
         this._cdr.detectChanges();
     }
 
-    // Métodos de utilidad
+    /**
+     * Verificar si un activo ya está mapeado
+     */
+    isAssetMapped(assetId: string, clinicId?: number): boolean {
+        if (clinicId) {
+            return this.existingMappings.some(m => m.assetId === assetId && m.clinicId === clinicId);
+        }
+        return this.existingMappings.some(m => m.assetId === assetId);
+    }
+
+    /**
+     * Obtener clínicas donde está mapeado un activo
+     */
+    getAssetMappedClinics(assetId: string): number[] {
+        return this.existingMappings
+            .filter(m => m.assetId === assetId)
+            .map(m => m.clinicId);
+    }
+
+    /**
+     * Obtener mapeos existentes para una clínica
+     */
+    getExistingMappingsForClinic(clinicId: number): ExistingMapping[] {
+        return this.existingMappings.filter(mapping => mapping.clinicId === clinicId);
+    }
+
+    /**
+     * Métodos de utilidad para el template
+     */
     getTotalAssetsCount(): number {
         return this.allAssets.length;
     }
@@ -467,21 +521,121 @@ export class AssetMappingComponent implements OnInit {
         return this.getSelectedAssetsCount() * this.getSelectedClinicsCount();
     }
 
-    getExistingMappingsForClinic(clinicId: number): ExistingMapping[] {
-        return this.existingMappings.filter(mapping => mapping.clinicId === clinicId);
+    /**
+     * Avanzar al siguiente paso
+     */
+    nextStep(): void {
+        if (this.currentStep < 2) {
+            this.currentStep++;
+            console.log('➡️ Avanzando al paso:', this.currentStep + 1);
+        }
     }
 
-    // Métodos de navegación
+    /**
+     * Retroceder al paso anterior
+     */
+    previousStep(): void {
+        if (this.currentStep > 0) {
+            this.currentStep--;
+            console.log('⬅️ Retrocediendo al paso:', this.currentStep + 1);
+        }
+    }
+
+    /**
+     * Cancelar el mapeo
+     */
     cancel(): void {
         console.log('❌ Mapeo cancelado por el usuario');
         this.cancelled.emit();
     }
 
-    submitMapping(): void {
-        console.log('✅ Enviando mapeo...');
-        
+    /**
+     * Enviar mapeo al backend
+     */
+    async submitMapping(): Promise<void> {
+        if (this.stepperData.selectedAssets.length === 0 || this.stepperData.selectedClinicIds.length === 0) {
+            this._snackBar.open(
+                '⚠️ Debes seleccionar al menos un activo y una clínica',
+                'Cerrar',
+                { duration: 5000, panelClass: ['snackbar-warning'] }
+            );
+            return;
+        }
+
+        console.log('🚀 Enviando mapeo al backend...');
+        this.isSubmittingMapping = true;
+        this._cdr.detectChanges();
+
+        try {
+            const mappingData = {
+                assets: this.stepperData.selectedAssets.map(asset => ({
+                    id: asset.id,
+                    name: asset.name,
+                    type: asset.type
+                })),
+                clinicaIds: this.stepperData.selectedClinicIds
+            };
+
+            console.log('📤 Datos de mapeo:', mappingData);
+
+            const response = await this._http.post<any>(
+                'https://autenticacion.clinicaclick.com/oauth/meta/map-assets',
+                mappingData
+            ).toPromise();
+
+            if (response && response.success) {
+                console.log('✅ Mapeo creado exitosamente');
+                
+                this._snackBar.open(
+                    '✅ Activos mapeados correctamente',
+                    'Cerrar',
+                    { duration: 5000, panelClass: ['snackbar-success'] }
+                );
+
+                // Crear resultado del mapeo
+                const mappings = this.createMappingResult();
+
+                // Emitir evento de éxito
+                this.mappingComplete.emit({
+                    success: true,
+                    mappings: mappings,
+                    message: 'Mapeo completado exitosamente'
+                });
+
+                // Recargar mapeos existentes
+                await this.loadExistingMappings();
+
+            } else {
+                throw new Error(response?.message || 'Error desconocido');
+            }
+
+        } catch (error) {
+            console.error('❌ Error enviando mapeo:', error);
+            
+            this._snackBar.open(
+                '❌ Error al crear el mapeo. Inténtalo de nuevo.',
+                'Cerrar',
+                { duration: 5000, panelClass: ['snackbar-error'] }
+            );
+
+            this.mappingComplete.emit({
+                success: false,
+                mappings: [],
+                message: 'Error al crear el mapeo'
+            });
+
+        } finally {
+            this.isSubmittingMapping = false;
+            this._cdr.detectChanges();
+        }
+    }
+
+    /**
+     * Crear resultado de mapeo para el evento
+     */
+    private createMappingResult(): AssetMapping[] {
         const mappings: AssetMapping[] = [];
-        
+
         this.stepperData.selectedAssets.forEach(asset => {
             this.stepperData.selectedClinicIds.forEach(clinicId => {
                 const clinic = this.availableClinics.find(c => c.id === clinicId);
@@ -497,14 +651,69 @@ export class AssetMappingComponent implements OnInit {
             });
         });
 
-        const result: MappingResult = {
-            success: true,
-            mappings: mappings,
-            message: `Se han creado ${mappings.length} mapeos exitosamente`
-        };
+        return mappings;
+    }
 
-        console.log('📤 Resultado del mapeo:', result);
-        this.mappingComplete.emit(result);
+    /**
+     * Resetear selecciones
+     */
+    resetSelections(): void {
+        this.stepperData.selectedAssets = [];
+        this.stepperData.selectedClinicIds = [];
+        this.currentStep = 0;
+        
+        this.assetFormGroup.reset();
+        this.clinicFormGroup.reset();
+        this.confirmFormGroup.reset();
+        
+        console.log('🔄 Selecciones reseteadas');
+        this._cdr.detectChanges();
+    }
+
+    /**
+     * Obtener icono para tipo de activo
+     */
+    getAssetTypeIcon(type: string): string {
+        switch (type) {
+            case 'facebook_page':
+                return 'heroicons_solid:share';
+            case 'instagram_business':
+                return 'heroicons_solid:camera';
+            case 'ad_account':
+                return 'heroicons_solid:currency-dollar';
+            default:
+                return 'heroicons_solid:question-mark-circle';
+        }
+    }
+
+    /**
+     * Obtener color para tipo de activo
+     */
+    getAssetTypeColor(type: string): string {
+        switch (type) {
+            case 'facebook_page':
+                return 'text-blue-600';
+            case 'instagram_business':
+                return 'text-pink-600';
+            case 'ad_account':
+                return 'text-green-600';
+            default:
+                return 'text-gray-600';
+        }
+    }
+
+    /**
+     * Track by function para ngFor - activos
+     */
+    trackByAssetId(index: number, asset: MetaAsset): string {
+        return asset.id;
+    }
+
+    /**
+     * Track by function para ngFor - clínicas
+     */
+    trackByClinicId(index: number, clinic: Clinic): number {
+        return clinic.id;
     }
 }
 

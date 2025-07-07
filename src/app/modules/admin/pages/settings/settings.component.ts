@@ -10,7 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatDividerModule } from '@angular/material/divider';
 // CORRECCIÓN AQUÍ: Cambiado a 'connected-accounts' (con dos 'n')
-import { SettingsConnectedAccountsComponent } from './connected-accounts/connected-accounts.component'; 
+import { SettingsConnectedAccountsComponent } from './connected-accounts/connected-accounts.component';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { HttpClient } from '@angular/common/http';
 
@@ -31,7 +31,7 @@ import { HttpClient } from '@angular/common/http';
     ],
 })
 export class SettingsComponent implements OnInit, OnDestroy {
-    
+
     drawerMode: 'over' | 'side' = 'side';
     drawerOpened: boolean = true;
     selectedPanel: string = 'connected-accounts';
@@ -58,7 +58,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
     ngOnInit(): void {
         this._checkScreenSize();
-        
+
         this._fuseMediaWatcherService.onMediaChange$
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe(({ matchingAliases }) => {
@@ -67,10 +67,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
                 this._changeDetectorRef.markForCheck();
             });
 
-        // Verificar si hay un mensaje de éxito pendiente después del reload
+        // ✅ Verificar si hay un mensaje de éxito pendiente después del reload
         this._checkForSuccessMessage();
 
-        // Procesar los query params de la URL (modificado para mostrar snackbar)
+        // ✅ Procesar los query params de la URL (modificado para mostrar snackbar)
         this._route.queryParamMap
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe((params) => {
@@ -85,7 +85,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
                 if (connected === 'meta' && userId && userName && userEmail && accessToken) {
                     // Almacenar los datos en localStorage como en la versión anterior
                     localStorage.setItem('meta_access_token', accessToken);
-                    
+
                     console.log('✅ Datos de Meta almacenados en localStorage:', {
                         userId,
                         userName,
@@ -93,7 +93,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
                         accessToken: accessToken.substring(0, 20) + '...'
                     });
 
-                    // Preparar mensaje de éxito para después del reload
+                    // ✅ Preparar mensaje de éxito para después del reload
                     const successData = {
                         platform: 'Meta',
                         userName: userName,
@@ -103,7 +103,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
                     this.selectedPanel = 'connected-accounts';
 
-                    // Limpiar query params y recargar inmediatamente (sin mostrar snackbar)
+                    // ✅ Limpiar query params y recargar inmediatamente (sin mostrar snackbar)
                     this._router.navigate([], {
                         queryParams: {
                             connected: null,
@@ -123,7 +123,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
                 } else if (metaDenied === 'true') {
                     this.selectedPanel = 'connected-accounts';
-                    this._snackBar.open('🚫 Has rechazado conectar tu clínica con Meta. Si lo haces por seguridad te adelanto que es completamente seguro, puedes intentarlo más adelante.', 'Cerrar', {
+                    this._snackBar.open('⚠️ Has rechazado conectar tu clínica con Meta. Si lo haces por seguridad te adelanto que es completamente seguro, puedes intentarlo más adelante.', 'Cerrar', {
                         duration: 8000,
                         panelClass: ['snackbar-warning']
                     });
@@ -135,7 +135,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
                     });
                 }
 
-                // Limpiar los query params de la URL para errores
+                // ✅ Limpiar los query params de la URL para errores
                 if (error || metaDenied) {
                     this._router.navigate([], {
                         queryParams: {
@@ -151,7 +151,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
                         replaceUrl: true
                     });
                 }
-                this._changeDetectorRef.markForCheck();
             });
     }
 
@@ -160,55 +159,74 @@ export class SettingsComponent implements OnInit, OnDestroy {
         this._unsubscribeAll.complete();
     }
 
-    goToPanel(panelId: string): void {
-        this.selectedPanel = panelId;
+    /**
+     * ✅ Verificar si hay un mensaje de éxito pendiente después del reload
+     */
+    private _checkForSuccessMessage(): void {
+        const pendingSuccess = localStorage.getItem('oauth_success_pending');
+        if (pendingSuccess) {
+            try {
+                const successData = JSON.parse(pendingSuccess);
+                
+                // ✅ Mostrar snackbar de éxito
+                this._snackBar.open(
+                    `✅ ${successData.platform} conectado correctamente como ${successData.userName}`,
+                    'Cerrar',
+                    {
+                        duration: 8000,
+                        panelClass: ['snackbar-success']
+                    }
+                );
+
+                // ✅ Limpiar el mensaje pendiente
+                localStorage.removeItem('oauth_success_pending');
+                
+                console.log('✅ Mensaje de éxito mostrado y limpiado');
+
+            } catch (error) {
+                console.error('❌ Error procesando mensaje de éxito pendiente:', error);
+                localStorage.removeItem('oauth_success_pending');
+            }
+        }
+    }
+
+    /**
+     * Navigate to the panel
+     */
+    goToPanel(panel: string): void {
+        this.selectedPanel = panel;
+
+        // Close the drawer on 'over' mode
         if (this.drawerMode === 'over') {
             this.drawerOpened = false;
         }
-        this._changeDetectorRef.markForCheck();
     }
 
+    /**
+     * Get the details of the panel
+     */
+    getPanelInfo(id: string): any {
+        return this.panels.find(panel => panel.id === id);
+    }
+
+    /**
+     * Track by function for ngFor loops
+     */
     trackByFn(index: number, item: any): any {
         return item.id || index;
     }
 
+    /**
+     * Check screen size
+     */
     private _checkScreenSize(): void {
-        if (window.innerWidth < 1280) {
+        // Check if screen is small
+        if (window.innerWidth < 1024) {
             this.drawerMode = 'over';
             this.drawerOpened = false;
         } else {
             this.drawerMode = 'side';
             this.drawerOpened = true;
-        }
-    }
-
-    private _checkForSuccessMessage(): void {
-        // Verificar si hay un flag de conexión exitosa en localStorage
-        const successFlag = localStorage.getItem('oauth_success_pending');
-        
-        if (successFlag) {
-            try {
-                const successData = JSON.parse(successFlag);
-                
-                // Mostrar mensaje de éxito después del reload
-                this._snackBar.open(
-                    `✅ ${successData.platform} conectado correctamente como ${successData.userName}`,
-                    'Cerrar',
-                    {
-                        duration: 5000,
-                        panelClass: ['snackbar-success']
-                    }
-                );
-                
-                console.log(`✅ ${successData.platform} conectado exitosamente después del reload`);
-                
-                // Limpiar el flag después de mostrar el mensaje
-                localStorage.removeItem('oauth_success_pending');
-                
-            } catch (error) {
-                console.error('Error al procesar mensaje de éxito:', error);
-                localStorage.removeItem('oauth_success_pending');
-            }
         }
     }
 }

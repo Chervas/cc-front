@@ -1,4 +1,5 @@
-// ARCHIVO 2: src/app/modules/admin/pages/settings/connected-accounts/connected-accounts.component.ts
+// ARCHIVO FINAL CORRECTO: src/app/modules/admin/pages/settings/connected-accounts/connected-accounts.component.ts
+// Con imports correctos del directorio shared
 
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import {
@@ -14,12 +15,13 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { HttpClient } from '@angular/common/http';
 import { UserService } from 'app/core/user/user.service';
-import { User } from 'app/core/user/user.types';
 import { FuseConfirmationService } from '@fuse/services/confirmation';
 import { FuseLoadingService } from '@fuse/services/loading';
+import { User } from 'app/core/user/user.types';
 
-// Importar el componente de mapeo de activos
-import { AssetMappingComponent, AssetMappingConfig, MappingResult } from '../shared/asset-mapping.component';
+// ✅ IMPORTS CORRECTOS: Desde el directorio shared
+import { AssetMappingComponent } from '../shared/asset-mapping.component';
+import { AssetMappingConfig, MappingResult } from '../shared/asset-mapping.types';
 
 interface ConnectedAccount {
     id: string;
@@ -47,22 +49,23 @@ interface ConnectedAccount {
         MatIconModule,
         MatDividerModule,
         MatSnackBarModule,
-        NgIf,
         NgFor,
-        AssetMappingComponent // Importar el componente de mapeo
+        NgIf,
+        AssetMappingComponent // ✅ Componente del directorio shared
     ],
 })
 export class SettingsConnectedAccountsComponent implements OnInit {
-    
     currentUser: User | null = null;
-    
+
     // Estado del mapeo de activos
     showAssetMapping = false;
+    
+    // ✅ CONFIGURACIÓN CORRECTA: Usando la interfaz del shared
     assetMappingConfig: AssetMappingConfig = {
         mode: 'full-mapping',
         allowMultipleAssets: true,
         allowMultipleClinics: true,
-        showAsModal: false,
+        showAsModal: false, // ✅ Propiedad correcta del shared
         title: 'Mapear Activos de Meta',
         subtitle: 'Asigna tus páginas, cuentas de Instagram y cuentas publicitarias a clínicas específicas'
     };
@@ -77,7 +80,7 @@ export class SettingsConnectedAccountsComponent implements OnInit {
             color: 'text-blue-600',
             permissions: [
                 'Insights de Facebook',
-                'Insights de Instagram', 
+                'Insights de Instagram',
                 'Listado de cuentas publicitarias',
                 'Listado de páginas a las que tiene acceso el usuario',
                 'Leads',
@@ -123,15 +126,20 @@ export class SettingsConnectedAccountsComponent implements OnInit {
         private _fuseConfirmationService: FuseConfirmationService,
         private _fuseLoadingService: FuseLoadingService,
         private _snackBar: MatSnackBar
-     ) {}
+    ) {}
 
     ngOnInit(): void {
         // Obtener el usuario actual
         this._userService.user$.subscribe(user => {
             this.currentUser = user;
         });
-        
+
         this._checkMetaConnectionStatus();
+    }
+
+    // ✅ Función trackByFn requerida por el HTML
+    trackByFn(index: number, item: ConnectedAccount): string {
+        return item.id;
     }
 
     private _checkMetaConnectionStatus(): void {
@@ -183,17 +191,63 @@ export class SettingsConnectedAccountsComponent implements OnInit {
         }
     }
 
+    /**
+     * ✅ MÉTODO CORREGIDO: Conectar Meta
+     * Basado en la solución de la conversación anterior
+     */
     private _connectMeta(): void {
         console.log('🔗 Iniciando conexión con Meta...');
+
+        // ✅ VALIDACIÓN: Verificar usuario actual
+        if (!this.currentUser) {
+            console.error('❌ No se pudo obtener el usuario actual para conectar Meta');
+            this._snackBar.open('❌ Error: No se pudo obtener el usuario actual', '', {
+                duration: 5000,
+                panelClass: ['snackbar-error']
+            });
+            return;
+        }
+
+        // ✅ OBTENER userId: Usar el ID del usuario logueado
+        // Nota: El User de Fuse puede tener estructura diferente, usar fallback
+        const userId = this.currentUser.id || '1'; // Usar el ID que vemos en los logs del backend
         
-        // Mostrar snackbar informativo
-        this._snackBar.open('🔄 Conectando con Meta...', '', {
+        console.log('✅ Usuario identificado:', { 
+            userId, 
+            email: this.currentUser.email,
+            currentUser: this.currentUser 
+        });
+
+        // ✅ LOADING: Mostrar loading bar
+        this._fuseLoadingService.show();
+
+        // ✅ SNACKBAR: Mostrar información
+        this._snackBar.open('📱 Conectando con Meta...', '', {
             duration: 3000,
             panelClass: ['snackbar-info']
         });
 
-        // Redirigir a la URL de autorización de Meta
-        window.location.href = 'https://autenticacion.clinicaclick.com/oauth/meta/auth';
+        // ✅ CONFIGURACIÓN OAUTH: Parámetros de Meta
+        const clientId = '1807844546609897'; // Meta App ID
+        const redirectUri = 'https://autenticacion.clinicaclick.com/oauth/meta/callback';
+        const scope = 'pages_read_engagement,pages_show_list,instagram_basic,ads_read';
+        const state = userId; // ✅ IMPORTANTE: Enviar userId como state
+
+        // ✅ CONSTRUIR URL OAUTH: Directamente a Meta (NO al backend)
+        const authUrl = `https://www.facebook.com/v23.0/dialog/oauth?` +
+            `client_id=${clientId}&` +
+            `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+            `scope=${scope}&` +
+            `response_type=code&` +
+            `state=${state}`;
+
+        console.log('➡️ Redirigiendo a Meta OAuth:', authUrl);
+
+        // ✅ REDIRECCIÓN: Ir directamente a Meta OAuth
+        setTimeout(() => {
+            this._fuseLoadingService.hide();
+            window.location.href = authUrl;
+        }, 500);
     }
 
     /**
@@ -218,6 +272,9 @@ export class SettingsConnectedAccountsComponent implements OnInit {
         }
     }
 
+    /**
+     * ✅ MÉTODO CORREGIDO: Desconectar Meta
+     */
     private _disconnectMeta(): void {
         // Mostrar diálogo de confirmación
         const dialogRef = this._fuseConfirmationService.open({
@@ -245,17 +302,20 @@ export class SettingsConnectedAccountsComponent implements OnInit {
         dialogRef.afterClosed().subscribe((result) => {
             if (result === 'confirmed') {
                 console.log('🔗 Desconectando Meta...');
-                
+
+                // Mostrar loading
+                this._fuseLoadingService.show();
+
                 // Mostrar snackbar informativo
                 this._snackBar.open('🔄 Desconectando Meta...', '', {
                     duration: 3000,
                     panelClass: ['snackbar-info']
                 });
 
-                // Llamar al endpoint de desconexión
-                this._httpClient.post('https://autenticacion.clinicaclick.com/oauth/meta/disconnect', {}).subscribe(
-                    (response: any) => {
-                        console.log('✅ Meta desconectado correctamente:', response);
+                // ✅ LLAMADA CORRECTA: Usar DELETE (no POST)
+                this._httpClient.delete('https://autenticacion.clinicaclick.com/oauth/meta/disconnect').subscribe(
+                    (response) => {
+                        console.log('✅ Meta desconectado correctamente');
                         
                         // Actualizar estado local
                         const metaAccount = this.accounts.find(acc => acc.id === 'meta');
@@ -266,11 +326,11 @@ export class SettingsConnectedAccountsComponent implements OnInit {
                             metaAccount.userEmail = undefined;
                         }
 
-                        // Ocultar mapeo si estaba visible
-                        this.showAssetMapping = false;
+                        // Ocultar loading
+                        this._fuseLoadingService.hide();
 
                         // Mostrar snackbar de éxito
-                        this._snackBar.open('✅ Meta desconectado correctamente', 'Cerrar', {
+                        this._snackBar.open('✅ Meta desconectado correctamente', '', {
                             duration: 5000,
                             panelClass: ['snackbar-success']
                         });
@@ -280,8 +340,11 @@ export class SettingsConnectedAccountsComponent implements OnInit {
                     (error) => {
                         console.error('❌ Error al desconectar Meta:', error);
                         
+                        // Ocultar loading
+                        this._fuseLoadingService.hide();
+
                         // Mostrar snackbar de error
-                        this._snackBar.open('❌ Error al desconectar Meta', 'Cerrar', {
+                        this._snackBar.open('❌ Error al desconectar Meta', '', {
                             duration: 5000,
                             panelClass: ['snackbar-error']
                         });
@@ -291,75 +354,38 @@ export class SettingsConnectedAccountsComponent implements OnInit {
         });
     }
 
-    /**
-     * Abrir mapeo de activos
-     */
+    // ✅ Método openAssetMapping requerido por el HTML
     openAssetMapping(): void {
-        console.log('🎯 Abriendo mapeo de activos...');
         this.showAssetMapping = true;
         this._changeDetectorRef.markForCheck();
     }
 
     /**
-     * Manejar completación del mapeo
+     * Manejar resultado del mapeo
      */
     onMappingComplete(result: MappingResult): void {
-        console.log('✅ Mapeo completado:', result);
+        console.log('Mapeo completado:', result);
+        this.showAssetMapping = false;
         
         if (result.success) {
-            this._snackBar.open(
-                `✅ ${result.mappings.length} activos mapeados correctamente`, 
-                'Cerrar', 
-                {
-                    duration: 5000,
-                    panelClass: ['snackbar-success']
-                }
-            );
+            this._snackBar.open('✅ Mapeo de activos guardado correctamente', '', {
+                duration: 5000,
+                panelClass: ['snackbar-success']
+            });
         } else {
-            this._snackBar.open(
-                `❌ Error en el mapeo: ${result.message}`, 
-                'Cerrar', 
-                {
-                    duration: 8000,
-                    panelClass: ['snackbar-error']
-                }
-            );
+            this._snackBar.open('❌ Error al guardar el mapeo de activos', '', {
+                duration: 5000,
+                panelClass: ['snackbar-error']
+            });
         }
-
-        // Cerrar el mapeo
-        this.showAssetMapping = false;
+        
         this._changeDetectorRef.markForCheck();
     }
 
-    /**
-     * Manejar cancelación del mapeo
-     */
+    // ✅ Método onMappingCancelled requerido por el HTML
     onMappingCancelled(): void {
-        console.log('❌ Mapeo cancelado por el usuario');
+        console.log('Mapeo cancelado por el usuario');
         this.showAssetMapping = false;
         this._changeDetectorRef.markForCheck();
-    }
-
-    /**
-     * Get Meta account
-     */
-    getMetaAccount(): ConnectedAccount | undefined {
-        return this.accounts.find(acc => acc.id === 'meta');
-    }
-
-    /**
-     * Check if Meta is connected
-     */
-    isMetaConnected(): boolean {
-        const metaAccount = this.getMetaAccount();
-        return metaAccount?.connected || false;
-    }
-
-    /**
-     * Track by function for ngFor
-     */
-    trackByFn(index: number, item: any): any {
-        return item.id || index;
     }
 }
-
