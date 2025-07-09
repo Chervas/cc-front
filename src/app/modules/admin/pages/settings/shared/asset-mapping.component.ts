@@ -1,4 +1,5 @@
 // ARCHIVO COMPLETO Y VERIFICADO: src/app/modules/admin/pages/settings/shared/asset-mapping.component.ts
+// ✅ INTEGRADO CON FUNCIONALIDAD DE CLÍNICAS REALES
 
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import { ChangeDetectorRef, Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
@@ -11,7 +12,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { UserService } from 'app/core/user/user.service';
 
 // Tipos TypeScript
@@ -39,12 +40,18 @@ export interface MetaAsset {
     additionalData?: any;
 }
 
+// ✅ INTERFACE ACTUALIZADA: Clínica con avatar y contact
 export interface Clinic {
     id: number;
     name: string;
     description?: string;
     location?: string;
     isActive: boolean;
+    avatar?: string;
+    contact?: {
+        address?: string;
+        city?: string;
+    };
 }
 
 export interface AssetMapping {
@@ -262,7 +269,7 @@ export class AssetMappingComponent implements OnInit {
     }
 
     /**
-     * Cargar clínicas disponibles
+     * ✅ MÉTODO ACTUALIZADO: Cargar clínicas reales desde el backend
      */
     private async loadAvailableClinics(): Promise<void> {
         console.log('🏥 Cargando clínicas disponibles...');
@@ -270,36 +277,36 @@ export class AssetMappingComponent implements OnInit {
         this._cdr.detectChanges();
 
         try {
-            // TODO: Implementar endpoint real de clínicas
-            // Por ahora usamos datos mock
-            this.availableClinics = [
-                {
-                    id: 1,
-                    name: 'Clínica Central',
-                    description: 'Clínica principal del centro de la ciudad',
-                    location: 'Madrid, España',
-                    isActive: true
-                },
-                {
-                    id: 2,
-                    name: 'Clínica Norte',
-                    description: 'Sucursal en la zona norte',
-                    location: 'Barcelona, España',
-                    isActive: true
-                },
-                {
-                    id: 3,
-                    name: 'Clínica Sur',
-                    description: 'Sucursal en la zona sur',
-                    location: 'Valencia, España',
-                    isActive: true
-                }
-            ];
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                throw new Error('No hay token de acceso');
+            }
 
-            console.log('✅ Clínicas cargadas:', this.availableClinics.length);
+            const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+            const response = await this._http.get<any>('https://autenticacion.clinicaclick.com/api/userclinicas/list', { headers }).toPromise();
+
+            console.log('📥 Respuesta de clínicas recibida:', response);
+
+            if (response && response.success) {
+                this.availableClinics = response.clinicas.map((clinica: any) => ({
+                    id: clinica.id,
+                    name: clinica.name,
+                    description: clinica.description,
+                    location: clinica.contact?.address || clinica.contact?.city || '',
+                    isActive: true,
+                    avatar: clinica.avatar,
+                    contact: clinica.contact
+                }));
+
+                console.log('✅ Clínicas procesadas:', this.availableClinics.length);
+                console.log('📋 Clínicas disponibles:', this.availableClinics);
+            } else {
+                throw new Error('Respuesta inválida del servidor');
+            }
 
         } catch (error) {
-            console.error('❌ Error cargando clínicas:', error);
+            console.error('❌ Error obteniendo clínicas:', error);
+            this._snackBar.open('Error obteniendo clínicas', 'Cerrar', { duration: 5000 });
             this.availableClinics = [];
             throw error;
         } finally {
@@ -414,6 +421,32 @@ export class AssetMappingComponent implements OnInit {
         console.log('  - Ad Accounts:', this.assetsByType.ad_accounts.length);
 
         this._cdr.detectChanges();
+    }
+
+    // ✅ MÉTODOS AÑADIDOS: Manejo de avatares de clínicas
+    /**
+     * Obtener iniciales del nombre de la clínica
+     */
+    getClinicInitials(name: string): string {
+        return name
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase())
+            .slice(0, 2)
+            .join('');
+    }
+
+    /**
+     * Verificar si la clínica tiene avatar
+     */
+    hasClinicAvatar(clinic: Clinic): boolean {
+        return !!(clinic.avatar && clinic.avatar.trim() !== '');
+    }
+
+    /**
+     * Obtener URL del avatar de la clínica
+     */
+    getClinicAvatarUrl(clinic: Clinic): string {
+        return clinic.avatar || '';
     }
 
     /**
