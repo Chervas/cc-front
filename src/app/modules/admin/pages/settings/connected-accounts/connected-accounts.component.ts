@@ -15,6 +15,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { HttpClient } from '@angular/common/http';
 import { UserService } from 'app/core/user/user.service';
+import { AuthService } from 'app/core/auth/auth.service';
 import { FuseConfirmationService } from '@fuse/services/confirmation';
 import { FuseLoadingService } from '@fuse/services/loading';
 import { User } from 'app/core/user/user.types';
@@ -55,7 +56,7 @@ interface ConnectedAccount {
     ],
 })
 export class SettingsConnectedAccountsComponent implements OnInit {
-    currentUser: User | null = null;
+    currentUser: any = null; // ✅ CAMBIO: any en lugar de User para tener id_usuario
 
     // Estado del mapeo de activos
     showAssetMapping = false;
@@ -123,15 +124,17 @@ export class SettingsConnectedAccountsComponent implements OnInit {
         private _changeDetectorRef: ChangeDetectorRef,
         private _httpClient: HttpClient,
         private _userService: UserService,
+        private _authService: AuthService, // ✅ AÑADIDO: AuthService para obtener usuario de negocio
         private _fuseConfirmationService: FuseConfirmationService,
         private _fuseLoadingService: FuseLoadingService,
         private _snackBar: MatSnackBar
     ) {}
 
     ngOnInit(): void {
-        // Obtener el usuario actual
-        this._userService.user$.subscribe(user => {
+        // ✅ CAMBIO: Usar AuthService para obtener usuario de negocio con id_usuario
+        this._authService.getCurrentUser().subscribe(user => {
             this.currentUser = user;
+            console.log('👤 Usuario de negocio obtenido:', user);
         });
 
         this._checkMetaConnectionStatus();
@@ -208,9 +211,9 @@ export class SettingsConnectedAccountsComponent implements OnInit {
             return;
         }
 
-        // ✅ OBTENER userId: Usar el ID del usuario logueado
-        // Nota: El User de Fuse puede tener estructura diferente, usar fallback
-        const userId = this.currentUser.id || '1'; // Usar el ID que vemos en los logs del backend
+        // ✅ OBTENER userId: Usar el ID del usuario logueado (CORREGIDO)
+        // Nota: Usar id_usuario (number) del modelo de negocio, NO id (string) de Fuse
+        const userId = this.currentUser.id_usuario?.toString() || '1'; // Usar el ID real del usuario
         
         console.log('✅ Usuario identificado:', { 
             userId, 
