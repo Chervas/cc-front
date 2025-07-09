@@ -1,5 +1,6 @@
 // ARCHIVO COMPLETO Y VERIFICADO: src/app/modules/admin/pages/settings/shared/asset-mapping.component.ts
 // ✅ INTEGRADO CON FUNCIONALIDAD DE CLÍNICAS REALES
+// ✅ PASO 3 COMPLETO IMPLEMENTADO
 
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import { ChangeDetectorRef, Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
@@ -38,6 +39,7 @@ export interface MetaAsset {
     business_name?: string;
     // Datos adicionales
     additionalData?: any;
+    pageAccessToken?: string; // ✅ AÑADIDO: Para páginas de Facebook
 }
 
 // ✅ INTERFACE ACTUALIZADA: Clínica con avatar y contact
@@ -95,6 +97,32 @@ export interface StepperData {
     selectedAssets: MetaAsset[];
     selectedClinicIds: number[];
     isLoading: boolean;
+}
+
+// ✅ NUEVAS INTERFACES PARA PASO 3
+export interface MappingSummary {
+    totalAssets: number;
+    totalClinics: number;
+    totalMappings: number;
+    assetsByType: {
+        facebook_pages: number;
+        instagram_business: number;
+        ad_accounts: number;
+    };
+    selectedAssets: MetaAsset[];
+    selectedClinics: Clinic[];
+}
+
+export interface SubmissionData {
+    clinicaId: number;
+    selectedAssets: {
+        id: string;
+        name: string;
+        type: string;
+        assetAvatarUrl?: string;
+        pageAccessToken?: string;
+        additionalData?: any;
+    }[];
 }
 
 @Component({
@@ -167,6 +195,11 @@ export class AssetMappingComponent implements OnInit {
     // Estado del stepper
     currentStep = 0;
     isLinear = true;
+
+    // ✅ NUEVAS PROPIEDADES PARA PASO 3
+    mappingSummary: MappingSummary | null = null;
+    submissionProgress = 0;
+    submissionErrors: string[] = [];
 
     constructor() {
         // Inicializar formularios
@@ -253,6 +286,7 @@ export class AssetMappingComponent implements OnInit {
                 console.log('✅ Respuesta válida, procesando activos...');
                 this.processAssets(response.assets);
                 this.loadingProgress = 100;
+                console.log('✅ Activos de Meta cargados correctamente');
             } else {
                 throw new Error('Respuesta inválida del servidor');
             }
@@ -369,6 +403,7 @@ export class AssetMappingComponent implements OnInit {
                     verification_status: page.verification_status,
                     followers_count: page.followers_count,
                     picture: page.picture,
+                    pageAccessToken: page.pageAccessToken, // ✅ AÑADIDO
                     additionalData: page.additionalData
                 };
                 this.allAssets.push(asset);
@@ -554,6 +589,118 @@ export class AssetMappingComponent implements OnInit {
         return this.getSelectedAssetsCount() * this.getSelectedClinicsCount();
     }
 
+    // ✅ NUEVOS MÉTODOS PARA PASO 3
+
+    /**
+     * Generar resumen de mapeo para el paso 3
+     */
+    generateMappingSummary(): MappingSummary {
+        const selectedClinics = this.availableClinics.filter(clinic => 
+            this.stepperData.selectedClinicIds.includes(clinic.id)
+        );
+
+        const assetsByType = {
+            facebook_pages: this.stepperData.selectedAssets.filter(a => a.type === 'facebook_page').length,
+            instagram_business: this.stepperData.selectedAssets.filter(a => a.type === 'instagram_business').length,
+            ad_accounts: this.stepperData.selectedAssets.filter(a => a.type === 'ad_account').length
+        };
+
+        return {
+            totalAssets: this.stepperData.selectedAssets.length,
+            totalClinics: this.stepperData.selectedClinicIds.length,
+            totalMappings: this.getTotalMappingsToCreate(),
+            assetsByType,
+            selectedAssets: this.stepperData.selectedAssets,
+            selectedClinics
+        };
+    }
+
+    /**
+     * Obtener clínicas seleccionadas
+     */
+    getSelectedClinics(): Clinic[] {
+        return this.availableClinics.filter(clinic => 
+            this.stepperData.selectedClinicIds.includes(clinic.id)
+        );
+    }
+
+    /**
+     * Obtener activos por tipo seleccionados
+     */
+    getSelectedAssetsByType(): AssetsByType {
+        const result: AssetsByType = {
+            facebook_pages: [],
+            instagram_business: [],
+            ad_accounts: []
+        };
+
+        this.stepperData.selectedAssets.forEach(asset => {
+            if (asset.type === 'facebook_page') {
+                result.facebook_pages.push(asset);
+            } else if (asset.type === 'instagram_business') {
+                result.instagram_business.push(asset);
+            } else if (asset.type === 'ad_account') {
+                result.ad_accounts.push(asset);
+            }
+        });
+
+        return result;
+    }
+
+    /**
+     * Validar selecciones antes del envío
+     */
+    validateSelections(): { isValid: boolean; errors: string[] } {
+        const errors: string[] = [];
+
+        if (this.stepperData.selectedAssets.length === 0) {
+            errors.push('Debes seleccionar al menos un activo de Meta');
+        }
+
+        if (this.stepperData.selectedClinicIds.length === 0) {
+            errors.push('Debes seleccionar al menos una clínica');
+        }
+
+        // Validar que las clínicas seleccionadas existan
+        const invalidClinics = this.stepperData.selectedClinicIds.filter(id => 
+            !this.availableClinics.some(clinic => clinic.id === id)
+        );
+
+        if (invalidClinics.length > 0) {
+            errors.push(`Clínicas inválidas seleccionadas: ${invalidClinics.join(', ')}`);
+        }
+
+        return {
+            isValid: errors.length === 0,
+            errors
+        };
+    }
+
+    /**
+     * Preparar datos para envío al backend
+     */
+    prepareSubmissionData(): SubmissionData[] {
+        const submissionData: SubmissionData[] = [];
+
+        this.stepperData.selectedClinicIds.forEach(clinicId => {
+            const selectedAssets = this.stepperData.selectedAssets.map(asset => ({
+                id: asset.id,
+                name: asset.name,
+                type: asset.type,
+                assetAvatarUrl: asset.assetAvatarUrl,
+                pageAccessToken: asset.pageAccessToken,
+                additionalData: asset.additionalData
+            }));
+
+            submissionData.push({
+                clinicaId: clinicId,
+                selectedAssets
+            });
+        });
+
+        return submissionData;
+    }
+
     /**
      * Avanzar al siguiente paso
      */
@@ -561,6 +708,12 @@ export class AssetMappingComponent implements OnInit {
         if (this.currentStep < 2) {
             this.currentStep++;
             console.log('➡️ Avanzando al paso:', this.currentStep + 1);
+            
+            // Si llegamos al paso 3, generar resumen
+            if (this.currentStep === 2) {
+                this.mappingSummary = this.generateMappingSummary();
+                console.log('📊 Resumen de mapeo generado:', this.mappingSummary);
+            }
         }
     }
 
@@ -583,44 +736,71 @@ export class AssetMappingComponent implements OnInit {
     }
 
     /**
-     * Enviar mapeo al backend
+     * ✅ MÉTODO MEJORADO: Enviar mapeo al backend
      */
     async submitMapping(): Promise<void> {
-        if (this.stepperData.selectedAssets.length === 0 || this.stepperData.selectedClinicIds.length === 0) {
+        console.log('🚀 Iniciando proceso de envío de mapeo...');
+
+        // Validar selecciones
+        const validation = this.validateSelections();
+        if (!validation.isValid) {
+            console.error('❌ Validación fallida:', validation.errors);
             this._snackBar.open(
-                '⚠️ Debes seleccionar al menos un activo y una clínica',
+                `⚠️ ${validation.errors.join('. ')}`,
                 'Cerrar',
                 { duration: 5000, panelClass: ['snackbar-warning'] }
             );
             return;
         }
 
-        console.log('🚀 Enviando mapeo al backend...');
         this.isSubmittingMapping = true;
+        this.submissionProgress = 0;
+        this.submissionErrors = [];
         this._cdr.detectChanges();
 
         try {
-            const mappingData = {
-                assets: this.stepperData.selectedAssets.map(asset => ({
-                    id: asset.id,
-                    name: asset.name,
-                    type: asset.type
-                })),
-                clinicaIds: this.stepperData.selectedClinicIds
-            };
+            const submissionData = this.prepareSubmissionData();
+            console.log('📤 Datos preparados para envío:', submissionData);
 
-            console.log('📤 Datos de mapeo:', mappingData);
+            let successfulSubmissions = 0;
+            const totalSubmissions = submissionData.length;
 
-            const response = await this._http.post<any>(
-                'https://autenticacion.clinicaclick.com/oauth/meta/map-assets',
-                mappingData
-            ).toPromise();
+            // Enviar mapeos para cada clínica
+            for (let i = 0; i < submissionData.length; i++) {
+                const data = submissionData[i];
+                console.log(`📤 Enviando mapeo ${i + 1}/${totalSubmissions} para clínica ${data.clinicaId}...`);
 
-            if (response && response.success) {
-                console.log('✅ Mapeo creado exitosamente');
+                try {
+                    const response = await this._http.post<any>(
+                        'https://autenticacion.clinicaclick.com/oauth/meta/map-assets',
+                        data
+                    ).toPromise();
+
+                    if (response && response.success) {
+                        successfulSubmissions++;
+                        console.log(`✅ Mapeo ${i + 1} enviado exitosamente`);
+                    } else {
+                        const error = `Error en clínica ${data.clinicaId}: ${response?.message || 'Error desconocido'}`;
+                        this.submissionErrors.push(error);
+                        console.error(`❌ ${error}`);
+                    }
+                } catch (error) {
+                    const errorMsg = `Error enviando mapeo para clínica ${data.clinicaId}: ${error}`;
+                    this.submissionErrors.push(errorMsg);
+                    console.error(`❌ ${errorMsg}`);
+                }
+
+                // Actualizar progreso
+                this.submissionProgress = Math.round(((i + 1) / totalSubmissions) * 100);
+                this._cdr.detectChanges();
+            }
+
+            // Evaluar resultado final
+            if (successfulSubmissions === totalSubmissions) {
+                console.log('✅ Todos los mapeos enviados exitosamente');
                 
                 this._snackBar.open(
-                    '✅ Activos mapeados correctamente',
+                    `✅ ${this.getTotalMappingsToCreate()} mapeos creados exitosamente`,
                     'Cerrar',
                     { duration: 5000, panelClass: ['snackbar-success'] }
                 );
@@ -632,21 +812,49 @@ export class AssetMappingComponent implements OnInit {
                 this.mappingComplete.emit({
                     success: true,
                     mappings: mappings,
-                    message: 'Mapeo completado exitosamente'
+                    message: `${successfulSubmissions} mapeos completados exitosamente`
                 });
 
                 // Recargar mapeos existentes
                 await this.loadExistingMappings();
 
+            } else if (successfulSubmissions > 0) {
+                console.log(`⚠️ Mapeos parcialmente exitosos: ${successfulSubmissions}/${totalSubmissions}`);
+                
+                this._snackBar.open(
+                    `⚠️ ${successfulSubmissions}/${totalSubmissions} mapeos completados. Revisa los errores.`,
+                    'Cerrar',
+                    { duration: 7000, panelClass: ['snackbar-warning'] }
+                );
+
+                // Emitir evento de éxito parcial
+                this.mappingComplete.emit({
+                    success: false,
+                    mappings: this.createMappingResult(),
+                    message: `Mapeos parcialmente completados: ${this.submissionErrors.join('. ')}`
+                });
+
             } else {
-                throw new Error(response?.message || 'Error desconocido');
+                console.error('❌ Todos los mapeos fallaron');
+                
+                this._snackBar.open(
+                    '❌ Error al crear los mapeos. Revisa los errores e inténtalo de nuevo.',
+                    'Cerrar',
+                    { duration: 7000, panelClass: ['snackbar-error'] }
+                );
+
+                this.mappingComplete.emit({
+                    success: false,
+                    mappings: [],
+                    message: `Error en todos los mapeos: ${this.submissionErrors.join('. ')}`
+                });
             }
 
         } catch (error) {
-            console.error('❌ Error enviando mapeo:', error);
+            console.error('❌ Error general enviando mapeos:', error);
             
             this._snackBar.open(
-                '❌ Error al crear el mapeo. Inténtalo de nuevo.',
+                '❌ Error inesperado al crear los mapeos. Inténtalo de nuevo.',
                 'Cerrar',
                 { duration: 5000, panelClass: ['snackbar-error'] }
             );
@@ -654,11 +862,12 @@ export class AssetMappingComponent implements OnInit {
             this.mappingComplete.emit({
                 success: false,
                 mappings: [],
-                message: 'Error al crear el mapeo'
+                message: `Error inesperado: ${error}`
             });
 
         } finally {
             this.isSubmittingMapping = false;
+            this.submissionProgress = 100;
             this._cdr.detectChanges();
         }
     }
@@ -694,6 +903,9 @@ export class AssetMappingComponent implements OnInit {
         this.stepperData.selectedAssets = [];
         this.stepperData.selectedClinicIds = [];
         this.currentStep = 0;
+        this.mappingSummary = null;
+        this.submissionProgress = 0;
+        this.submissionErrors = [];
         
         this.assetFormGroup.reset();
         this.clinicFormGroup.reset();
@@ -736,6 +948,36 @@ export class AssetMappingComponent implements OnInit {
     }
 
     /**
+     * Obtener nombre legible del tipo de activo
+     */
+    getAssetTypeDisplayName(type: string): string {
+        switch (type) {
+            case 'facebook_page':
+                return 'Página de Facebook';
+            case 'instagram_business':
+                return 'Cuenta de Instagram Business';
+            case 'ad_account':
+                return 'Cuenta Publicitaria';
+            default:
+                return 'Activo desconocido';
+        }
+    }
+
+    /**
+     * Verificar si hay errores de envío
+     */
+    hasSubmissionErrors(): boolean {
+        return this.submissionErrors.length > 0;
+    }
+
+    /**
+     * Obtener errores de envío
+     */
+    getSubmissionErrors(): string[] {
+        return this.submissionErrors;
+    }
+
+    /**
      * Track by function para ngFor - activos
      */
     trackByAssetId(index: number, asset: MetaAsset): string {
@@ -747,6 +989,13 @@ export class AssetMappingComponent implements OnInit {
      */
     trackByClinicId(index: number, clinic: Clinic): number {
         return clinic.id;
+    }
+
+    /**
+     * Track by function para ngFor - errores
+     */
+    trackByErrorIndex(index: number, error: string): number {
+        return index;
     }
 }
 
