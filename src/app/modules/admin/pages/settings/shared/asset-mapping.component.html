@@ -376,168 +376,125 @@
             <mat-step [stepControl]="confirmFormGroup" label="Confirmar">
                 <form [formGroup]="confirmFormGroup">
                     <div class="step-content">
-                        <h4 class="text-lg font-semibold mb-4">Confirma el mapeo de activos</h4>
+                        <h4 class="text-lg font-semibold mb-6">Mapeos que se van a realizar</h4>
                         
                         <!-- Estado: No enviando -->
                         @if (!isSubmittingMapping) {
-                            <!-- Resumen del mapeo -->
                             @if (mappingSummary) {
+                                <!-- Vista antes/después para cada clínica -->
                                 <div class="space-y-6">
-                                    <!-- Resumen general -->
-                                    <div class="bg-gradient-to-r from-primary-50 to-blue-50 dark:from-primary-900/20 dark:to-blue-900/20 rounded-lg p-6 border border-primary-200 dark:border-primary-800">
-                                        <div class="flex items-center mb-4">
-                                            <mat-icon class="text-primary mr-3 text-2xl" [svgIcon]="'heroicons_outline:clipboard-document-check'"></mat-icon>
-                                            <h5 class="text-xl font-semibold text-primary">Resumen del Mapeo</h5>
-                                        </div>
-                                        
-                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <div class="text-center">
-                                                <div class="text-3xl font-bold text-primary" [textContent]="mappingSummary.totalAssets"></div>
-                                                <div class="text-sm text-secondary">Activos seleccionados</div>
-                                            </div>
-                                            <div class="text-center">
-                                                <div class="text-3xl font-bold text-primary" [textContent]="mappingSummary.totalClinics"></div>
-                                                <div class="text-sm text-secondary">Clínicas seleccionadas</div>
-                                            </div>
-                                            <div class="text-center">
-                                                <div class="text-3xl font-bold text-green-600" [textContent]="mappingSummary.totalMappings"></div>
-                                                <div class="text-sm text-secondary">Mapeos a crear</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Activos por tipo -->
-                                    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                                        <h6 class="font-semibold mb-4 flex items-center">
-                                            <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:squares-2x2'"></mat-icon>
-                                            Activos por Tipo
-                                        </h6>
-                                        
-                                        <div class="space-y-4">
-                                            <!-- Facebook Pages -->
-                                            @if (mappingSummary.assetsByType.facebook_pages > 0) {
-                                                <div class="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                                    <div class="flex items-center">
-                                                        <mat-icon class="text-blue-600 mr-3" [svgIcon]="'heroicons_outline:globe-alt'"></mat-icon>
-                                                        <span class="font-medium">Páginas de Facebook</span>
-                                                    </div>
-                                                    <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm font-medium" 
-                                                          [textContent]="mappingSummary.assetsByType.facebook_pages"></span>
-                                                </div>
-                                            }
-                                            
-                                            <!-- Instagram Business -->
-                                            @if (mappingSummary.assetsByType.instagram_business > 0) {
-                                                <div class="flex items-center justify-between p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg border border-pink-200 dark:border-pink-800">
-                                                    <div class="flex items-center">
-                                                        <mat-icon class="text-pink-600 mr-3" [svgIcon]="'heroicons_outline:camera'"></mat-icon>
-                                                        <span class="font-medium">Cuentas de Instagram</span>
-                                                    </div>
-                                                    <span class="px-3 py-1 bg-pink-100 dark:bg-pink-900 text-pink-800 dark:text-pink-200 rounded-full text-sm font-medium" 
-                                                          [textContent]="mappingSummary.assetsByType.instagram_business"></span>
-                                                </div>
-                                            }
-                                            
-                                            <!-- Ad Accounts -->
-                                            @if (mappingSummary.assetsByType.ad_accounts > 0) {
-                                                <div class="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                                                    <div class="flex items-center">
-                                                        <mat-icon class="text-green-600 mr-3" [svgIcon]="'heroicons_outline:megaphone'"></mat-icon>
-                                                        <span class="font-medium">Cuentas Publicitarias</span>
-                                                    </div>
-                                                    <span class="px-3 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full text-sm font-medium" 
-                                                          [textContent]="mappingSummary.assetsByType.ad_accounts"></span>
-                                                </div>
-                                            }
-                                        </div>
-                                    </div>
-
-                                    <!-- Lista detallada de activos -->
-                                    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                                        <h6 class="font-semibold mb-4 flex items-center">
-                                            <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:list-bullet'"></mat-icon>
-                                            Activos Seleccionados
-                                        </h6>
-                                        
-                                        <div class="space-y-3 max-h-60 overflow-y-auto">
-                                            @for (asset of mappingSummary.selectedAssets; track asset.id) {
-                                                <div class="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                                    <!-- Icono del tipo -->
-                                                    <mat-icon [class]="getAssetTypeColor(asset.type)" [svgIcon]="getAssetTypeIcon(asset.type)"></mat-icon>
-                                                    
-                                                    <!-- Info del activo -->
-                                                    <div class="flex-1">
-                                                        <div class="font-medium" [textContent]="asset.name"></div>
-                                                        <div class="text-sm text-secondary" [textContent]="getAssetTypeDisplayName(asset.type)"></div>
+                                    @for (clinicId of stepperData.selectedClinicIds; track clinicId) {
+                                        @if (getClinicById(clinicId); as clinic) {
+                                            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                                                    <!-- ANTES -->
+                                                    <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
+                                                        <h6 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3 text-center">Ahora</h6>
+                                                        
+                                                        <div class="flex items-center space-x-3 mb-3">
+                                                            <!-- Avatar de clínica -->
+                                                            <div class="w-12 h-12 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                                                                @if (clinic.avatar) {
+                                                                    <img [src]="clinic.avatar" 
+                                                                         [alt]="clinic.name"
+                                                                         class="w-full h-full object-cover rounded-full">
+                                                                } @else {
+                                                                    <div class="w-full h-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-medium text-sm rounded-full">
+                                                                        <mat-icon [svgIcon]="'heroicons_outline:building-office'"></mat-icon>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                            
+                                                            <div>
+                                                                <div class="font-medium" [textContent]="clinic.name"></div>
+                                                                <div class="text-sm text-gray-500" [textContent]="getExistingMappingsForClinic(clinicId).length + ' activos'"></div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="text-center">
+                                                            <div class="text-sm text-gray-500 mb-2">Mapeos actuales</div>
+                                                            @if (getExistingMappingsForClinic(clinicId).length > 0) {
+                                                                <div class="space-y-1">
+                                                                    @for (mapping of getExistingMappingsForClinic(clinicId); track mapping.assetId) {
+                                                                        <div class="text-xs text-gray-600 dark:text-gray-400" [textContent]="mapping.assetName"></div>
+                                                                    }
+                                                                </div>
+                                                            } @else {
+                                                                <div class="text-gray-400 italic">Sin activos</div>
+                                                            }
+                                                        </div>
                                                     </div>
                                                     
-                                                    <!-- Badge del tipo -->
-                                                    <span class="px-2 py-1 text-xs rounded-full"
-                                                          [ngClass]="{
-                                                            'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200': asset.type === 'facebook_page',
-                                                            'bg-pink-100 dark:bg-pink-900 text-pink-800 dark:text-pink-200': asset.type === 'instagram_business',
-                                                            'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200': asset.type === 'ad_account'
-                                                          }"
-                                                          [textContent]="asset.type"></span>
-                                                </div>
-                                            }
-                                        </div>
-                                    </div>
-
-                                    <!-- Lista de clínicas -->
-                                    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                                        <h6 class="font-semibold mb-4 flex items-center">
-                                            <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:building-office'"></mat-icon>
-                                            Clínicas Seleccionadas
-                                        </h6>
-                                        
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            @for (clinic of mappingSummary.selectedClinics; track clinic.id) {
-                                                <div class="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                                    <!-- Avatar de clínica -->
-                                                    <div class="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
-                                                        @if (hasClinicAvatar(clinic)) {
-                                                            <img [src]="getClinicAvatarUrl(clinic)" 
-                                                                 [alt]="clinic.name"
-                                                                 class="w-full h-full object-cover"
-                                                                 (error)="$event.target.style.display='none'; $event.target.nextElementSibling.style.display='flex'">
-                                                            <div class="w-full h-full bg-gray-100 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-medium text-sm" style="display: none;"
-                                                                 [textContent]="getClinicInitials(clinic.name)"></div>
-                                                        } @else {
-                                                            <div class="w-full h-full bg-gray-100 dark:bg-gray-600 flex items-center justify-center text-gray-600 dark:text-gray-300 font-medium text-sm"
-                                                                 [textContent]="getClinicInitials(clinic.name)"></div>
-                                                        }
+                                                    <!-- FLECHA -->
+                                                    <div class="flex justify-center">
+                                                        <mat-icon class="text-gray-400 text-4xl" [svgIcon]="'heroicons_outline:arrow-right'"></mat-icon>
                                                     </div>
                                                     
-                                                    <!-- Info de clínica -->
-                                                    <div class="flex-1">
-                                                        <div class="font-medium" [textContent]="clinic.name"></div>
-                                                        @if (clinic.location) {
-                                                            <div class="text-sm text-secondary" [textContent]="clinic.location"></div>
-                                                        }
+                                                    <!-- DESPUÉS -->
+                                                    <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                                                        <h6 class="text-sm font-medium text-green-600 dark:text-green-400 mb-3 text-center">Después</h6>
+                                                        
+                                                        <div class="flex items-center space-x-3 mb-3">
+                                                            <!-- Avatar de clínica -->
+                                                            <div class="w-12 h-12 rounded-full bg-green-200 dark:bg-green-800 flex items-center justify-center">
+                                                                @if (clinic.avatar) {
+                                                                    <img [src]="clinic.avatar" 
+                                                                         [alt]="clinic.name"
+                                                                         class="w-full h-full object-cover rounded-full">
+                                                                } @else {
+                                                                    <div class="w-full h-full bg-green-200 dark:bg-green-800 flex items-center justify-center text-green-700 dark:text-green-300 font-medium text-sm rounded-full">
+                                                                        <mat-icon [svgIcon]="'heroicons_outline:building-office'"></mat-icon>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                            
+                                                            <div>
+                                                                <div class="font-medium" [textContent]="clinic.name"></div>
+                                                                <div class="text-sm text-green-600" [textContent]="stepperData.selectedAssets.length + ' activos'"></div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="text-center">
+                                                            <div class="text-sm text-green-600 mb-3">Nuevos mapeos</div>
+                                                            <!-- Tarjetas de activos como en el paso 1 -->
+                                                            <div class="space-y-2">
+                                                                @for (asset of stepperData.selectedAssets; track asset.id) {
+                                                                    <div class="flex items-center space-x-3 p-2 rounded-lg border"
+                                                                         [ngClass]="{
+                                                                           'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800': asset.type === 'facebook_page',
+                                                                           'bg-pink-50 dark:bg-pink-900/20 border-pink-200 dark:border-pink-800': asset.type === 'instagram_business',
+                                                                           'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800': asset.type === 'ad_account'
+                                                                         }">
+                                                                        <!-- Icono del tipo de activo -->
+                                                                        <div class="flex-shrink-0">
+                                                                            @if (asset.type === 'facebook_page') {
+                                                                                <mat-icon class="text-blue-600" [svgIcon]="'heroicons_outline:globe-alt'"></mat-icon>
+                                                                            } @else if (asset.type === 'instagram_business') {
+                                                                                <mat-icon class="text-pink-600" [svgIcon]="'heroicons_outline:camera'"></mat-icon>
+                                                                            } @else if (asset.type === 'ad_account') {
+                                                                                <mat-icon class="text-green-600" [svgIcon]="'heroicons_outline:megaphone'"></mat-icon>
+                                                                            }
+                                                                        </div>
+                                                                        
+                                                                        <!-- Nombre del activo -->
+                                                                        <div class="flex-1 text-left">
+                                                                            <div class="text-sm font-medium"
+                                                                                 [ngClass]="{
+                                                                                   'text-blue-800 dark:text-blue-200': asset.type === 'facebook_page',
+                                                                                   'text-pink-800 dark:text-pink-200': asset.type === 'instagram_business',
+                                                                                   'text-green-800 dark:text-green-200': asset.type === 'ad_account'
+                                                                                 }"
+                                                                                 [textContent]="asset.name"></div>
+                                                                        </div>
+                                                                    </div>
+                                                                }
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            }
-                                        </div>
-                                    </div>
-
-                                    <!-- Confirmación final -->
-                                    <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 p-6">
-                                        <div class="flex items-start space-x-3">
-                                            <mat-icon class="text-amber-600 mt-1" [svgIcon]="'heroicons_outline:exclamation-triangle'"></mat-icon>
-                                            <div class="flex-1">
-                                                <h6 class="font-semibold text-amber-900 dark:text-amber-100 mb-2">Confirmación Requerida</h6>
-                                                <p class="text-amber-800 dark:text-amber-200 text-sm mb-4">
-                                                    Estás a punto de crear <strong [textContent]="mappingSummary.totalMappings"></strong> mapeos de activos. 
-                                                    Esta acción conectará tus activos de Meta con las clínicas seleccionadas.
-                                                </p>
-                                                
-                                                <mat-checkbox formControlName="confirmed" class="text-amber-900 dark:text-amber-100">
-                                                    Confirmo que quiero crear estos mapeos de activos
-                                                </mat-checkbox>
                                             </div>
-                                        </div>
-                                    </div>
+                                        }
+                                    }
                                 </div>
                             }
                         }
@@ -600,7 +557,7 @@
                                 <button mat-flat-button 
                                         color="primary" 
                                         (click)="submitMapping()"
-                                        [disabled]="!confirmFormGroup.valid || isSubmittingMapping">
+                                        [disabled]="!canSubmitMapping()">
                                     @if (isSubmittingMapping) {
                                         <mat-progress-spinner diameter="20" mode="indeterminate" class="mr-2"></mat-progress-spinner>
                                         Creando Mapeos...

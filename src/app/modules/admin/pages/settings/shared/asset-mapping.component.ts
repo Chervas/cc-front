@@ -69,6 +69,7 @@ export interface ExistingMapping {
     assetName: string;
     assetType: string;
     clinicId: number;
+    clinicName: string; // ✅ AÑADIDO: Propiedad clinicName
 }
 
 export interface MappingResult {
@@ -153,6 +154,62 @@ export class AssetMappingComponent implements OnInit {
         subtitle: 'Selecciona y asigna tus activos a clínicas específicas'
     };
 
+    @Input() set existingMappings(mappings: any[]) {
+        if (mappings && mappings.length > 0) {
+            // Convertir metaMappings al formato ExistingMapping
+            this._existingMappings = [];
+            
+            mappings.forEach(mapping => {
+                // Procesar cada tipo de activo
+                const clinicId = mapping.clinica?.id || mapping.clinica?.id_clinica;
+                const clinicName = mapping.clinica?.nombre || mapping.clinica?.nombre_clinica || 'Clínica desconocida';
+                
+                // Facebook Pages
+                if (mapping.assets?.facebook_pages) {
+                    mapping.assets.facebook_pages.forEach(asset => {
+                        this._existingMappings.push({
+                            assetId: asset.metaAssetId,
+                            assetName: asset.metaAssetName,
+                            clinicId: clinicId,
+                            clinicName: clinicName,
+                            assetType: 'facebook_page'
+                        });
+                    });
+                }
+                
+                // Instagram Business
+                if (mapping.assets?.instagram_business) {
+                    mapping.assets.instagram_business.forEach(asset => {
+                        this._existingMappings.push({
+                            assetId: asset.metaAssetId,
+                            assetName: asset.metaAssetName,
+                            clinicId: clinicId,
+                            clinicName: clinicName,
+                            assetType: 'instagram_business'
+                        });
+                    });
+                }
+                
+                // Ad Accounts
+                if (mapping.assets?.ad_accounts) {
+                    mapping.assets.ad_accounts.forEach(asset => {
+                        this._existingMappings.push({
+                            assetId: asset.metaAssetId,
+                            assetName: asset.metaAssetName,
+                            clinicId: clinicId,
+                            clinicName: clinicName,
+                            assetType: 'ad_account'
+                        });
+                    });
+                }
+            });
+            
+            console.log('🔍 DEBUG - Converted existingMappings:', this._existingMappings);
+        } else {
+            this._existingMappings = [];
+        }
+    }
+
     @Output() mappingComplete = new EventEmitter<MappingResult>();
     @Output() cancelled = new EventEmitter<void>();
 
@@ -178,7 +235,12 @@ export class AssetMappingComponent implements OnInit {
         ad_accounts: []
     };
     availableClinics: Clinic[] = [];
-    existingMappings: ExistingMapping[] = [];
+    private _existingMappings: ExistingMapping[] = [];
+
+    // Getter para acceder a los mapeos existentes
+    get existingMappings(): ExistingMapping[] {
+        return this._existingMappings;
+    }
 
     // Estado del stepper
     stepperData: StepperData = {
@@ -212,7 +274,7 @@ export class AssetMappingComponent implements OnInit {
         });
 
         this.confirmFormGroup = this._formBuilder.group({
-            confirmed: [false, Validators.requiredTrue]
+            // ✅ CAMBIO MÍNIMO: Sin validación de checkbox
         });
     }
 
@@ -552,7 +614,12 @@ export class AssetMappingComponent implements OnInit {
      * Obtener mapeos existentes para una clínica
      */
     getExistingMappingsForClinic(clinicId: number): ExistingMapping[] {
-        return this.existingMappings.filter(mapping => mapping.clinicId === clinicId);
+        console.log('🔍 Debug getExistingMappingsForClinic:', {
+            clinicId,
+            existingMappings: this.existingMappings,
+            filtered: this.existingMappings.filter(mapping => Number(mapping.clinicId) === Number(clinicId))
+        });
+        return this.existingMappings.filter(mapping => Number(mapping.clinicId) === Number(clinicId));
     }
 
     /**
@@ -1001,6 +1068,22 @@ export class AssetMappingComponent implements OnInit {
      */
     trackByClinicId(index: number, clinic: Clinic): number {
         return clinic.id;
+    }
+
+    /**
+     * ✅ NUEVO: Verifica si se puede enviar el mapeo (sin checkbox)
+     */
+    canSubmitMapping(): boolean {
+        return this.stepperData.selectedAssets.length > 0 &&
+               this.stepperData.selectedClinicIds.length > 0 &&
+               !this.isSubmittingMapping;
+    }
+
+    /**
+     * ✅ NUEVO: Obtiene una clínica por su ID
+     */
+    getClinicById(clinicId: number): Clinic | undefined {
+        return this.availableClinics.find(clinic => clinic.id === clinicId);
     }
 
     /**

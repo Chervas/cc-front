@@ -184,6 +184,7 @@
                         <div class="border-t pt-4 mt-4">
                             <app-asset-mapping
                                 [config]="assetMappingConfig"
+                                [existingMappings]="metaMappings"
                                 (mappingComplete)="onMappingComplete($event)"
                                 (cancelled)="onMappingCancelled()">
                             </app-asset-mapping>

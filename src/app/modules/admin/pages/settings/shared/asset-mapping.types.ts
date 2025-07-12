@@ -109,3 +109,13 @@ export interface AssetSelectionConfig extends AssetMappingConfig {
     mode: 'asset-selection';
     allowMultipleClinics: false;
 }
+
+// ✅ NUEVO: Interface para mapeos existentes
+export interface ExistingMapping {
+    assetId: string;
+    assetName: string;
+    clinicId: number;
+    clinicName: string;
+    assetType: MetaAsset['type'];
+}
+
