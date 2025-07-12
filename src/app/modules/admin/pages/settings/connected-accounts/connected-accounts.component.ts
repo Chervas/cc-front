@@ -38,6 +38,21 @@ interface ConnectedAccount {
     userEmail?: string;
 }
 
+// ✅ NUEVO: Interface para mapeos existentes
+interface MetaMapping {
+    clinica: {
+        id: number;
+        nombre: string;
+        avatar_url?: string;
+    };
+    assets: {
+        facebook_pages: any[];
+        instagram_business: any[];
+        ad_accounts: any[];
+    };
+    totalAssets: number;
+}
+
 @Component({
     selector: 'settings-connected-accounts',
     templateUrl: './connected-accounts.component.html',
@@ -60,6 +75,10 @@ export class SettingsConnectedAccountsComponent implements OnInit {
 
     // Estado del mapeo de activos
     showAssetMapping = false;
+    
+    // ✅ NUEVO: Propiedades para mapeos existentes
+    metaMappings: MetaMapping[] = [];
+    isLoadingMappings = false;
     
     // ✅ CONFIGURACIÓN CORRECTA: Usando la interfaz del shared
     assetMappingConfig: AssetMappingConfig = {
@@ -157,6 +176,9 @@ export class SettingsConnectedAccountsComponent implements OnInit {
                         metaAccount.userName = response.userName;
                         metaAccount.userEmail = response.userEmail;
                         console.log('Estado de conexión Meta cargado desde el backend.');
+                        
+                        // ✅ NUEVO: Cargar mapeos existentes si está conectado
+                        this._loadMetaMappings();
                     } else {
                         console.log('No hay conexión Meta activa para este usuario.');
                     }
@@ -170,6 +192,70 @@ export class SettingsConnectedAccountsComponent implements OnInit {
                 this._changeDetectorRef.markForCheck();
             }
         );
+    }
+
+    /**
+     * ✅ NUEVO: Cargar mapeos existentes de Meta
+     */
+    private _loadMetaMappings(): void {
+        this.isLoadingMappings = true;
+        this._changeDetectorRef.markForCheck();
+
+        this._httpClient.get<any>('https://autenticacion.clinicaclick.com/oauth/meta/mappings').subscribe(
+            (response) => {
+                if (response && response.success) {
+                    this.metaMappings = response.mappings || [];
+                    console.log('✅ Mapeos de Meta cargados:', this.metaMappings);
+                } else {
+                    this.metaMappings = [];
+                    console.log('No hay mapeos de Meta disponibles');
+                }
+                this.isLoadingMappings = false;
+                this._changeDetectorRef.markForCheck();
+            },
+            (error) => {
+                console.error('❌ Error al cargar mapeos de Meta:', error);
+                this.metaMappings = [];
+                this.isLoadingMappings = false;
+                this._changeDetectorRef.markForCheck();
+            }
+        );
+    }
+
+    /**
+     * ✅ NUEVO: Obtener iniciales de clínica para avatar fallback
+     */
+    getClinicInitials(name: string): string {
+        return name
+            .split(' ')
+            .map(word => word.charAt(0))
+            .join('')
+            .toUpperCase()
+            .substring(0, 2);
+    }
+
+    /**
+     * ✅ NUEVO: Obtener icono para tipo de activo
+     */
+    getAssetTypeIcon(type: string): string {
+        switch (type) {
+            case 'facebook_page': return 'heroicons_outline:globe-alt';
+            case 'instagram_business': return 'heroicons_outline:camera';
+            case 'ad_account': return 'heroicons_outline:megaphone';
+            default: return 'heroicons_outline:squares-2x2';
+        }
+    }
+
+    /**
+     * ✅ NUEVO: Obtener nombre amigable para tipo de activo
+     */
+    getAssetTypeName(type: string): string {
+        switch (type) {
+            case 'facebook_page': return 'Página Facebook';
+            case 'instagram_business': return 'Instagram Business';
+            case 'ad_account': return 'Cuenta Publicitaria';
+            default: return type;
+        }
     }
 
     /**
@@ -375,6 +461,9 @@ export class SettingsConnectedAccountsComponent implements OnInit {
                 duration: 5000,
                 panelClass: ['snackbar-success']
             });
+            
+            // ✅ NUEVO: Recargar mapeos después de un mapeo exitoso
+            this._loadMetaMappings();
         } else {
             this._snackBar.open('❌ Error al guardar el mapeo de activos', '', {
                 duration: 5000,

@@ -96,6 +96,87 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- ✅ NUEVO: Sección de Mapeos Existentes -->
+                        @if (isLoadingMappings) {
+                            <div class="mb-4 p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg border border-gray-200 dark:border-gray-800">
+                                <div class="flex items-center justify-center">
+                                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mr-3"></div>
+                                    <span class="text-sm text-secondary">Cargando mapeos...</span>
+                                </div>
+                            </div>
+                        } @else if (metaMappings.length > 0) {
+                            <div class="mb-4">
+                                <h4 class="text-lg font-semibold mb-3 text-gray-900 dark:text-gray-100">Activos Mapeados</h4>
+                                
+                                <!-- Tarjetas de mapeos por clínica -->
+                                <div class="space-y-3">
+                                    @for (mapping of metaMappings; track mapping.clinica.id) {
+                                        <div class="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                                            <!-- Header de la clínica -->
+                                            <div class="flex items-center mb-3">
+                                                @if (mapping.clinica.avatar_url) {
+                                                    <img 
+                                                        [src]="mapping.clinica.avatar_url" 
+                                                        [alt]="mapping.clinica.nombre"
+                                                        class="w-10 h-10 rounded-full object-cover mr-3">
+                                                } @else {
+                                                    <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-sm font-semibold mr-3">
+                                                        {{ getClinicInitials(mapping.clinica.nombre) }}
+                                                    </div>
+                                                }
+                                                <div>
+                                                    <h5 class="font-medium text-gray-900 dark:text-gray-100">{{ mapping.clinica.nombre }}</h5>
+                                                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ mapping.totalAssets }} activos mapeados</p>
+                                                </div>
+                                            </div>
+
+                                            <!-- Activos agrupados -->
+                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                <!-- Facebook Pages -->
+                                                @if (mapping.assets.facebook_pages.length > 0) {
+                                                    <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                                        <div class="flex items-center mb-2">
+                                                            <mat-icon class="text-blue-600 dark:text-blue-400 mr-2 text-sm" [svgIcon]="'heroicons_outline:globe-alt'"></mat-icon>
+                                                            <span class="text-sm font-medium text-blue-900 dark:text-blue-100">Páginas Facebook</span>
+                                                        </div>
+                                                        @for (asset of mapping.assets.facebook_pages; track asset.id) {
+                                                            <div class="text-xs text-blue-800 dark:text-blue-200 mb-1">{{ asset.metaAssetName }}</div>
+                                                        }
+                                                    </div>
+                                                }
+
+                                                <!-- Instagram Business -->
+                                                @if (mapping.assets.instagram_business.length > 0) {
+                                                    <div class="p-3 bg-pink-50 dark:bg-pink-900/20 rounded-lg border border-pink-200 dark:border-pink-800">
+                                                        <div class="flex items-center mb-2">
+                                                            <mat-icon class="text-pink-600 dark:text-pink-400 mr-2 text-sm" [svgIcon]="'heroicons_outline:camera'"></mat-icon>
+                                                            <span class="text-sm font-medium text-pink-900 dark:text-pink-100">Instagram Business</span>
+                                                        </div>
+                                                        @for (asset of mapping.assets.instagram_business; track asset.id) {
+                                                            <div class="text-xs text-pink-800 dark:text-pink-200 mb-1">{{ asset.metaAssetName }}</div>
+                                                        }
+                                                    </div>
+                                                }
+
+                                                <!-- Ad Accounts -->
+                                                @if (mapping.assets.ad_accounts.length > 0) {
+                                                    <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                                                        <div class="flex items-center mb-2">
+                                                            <mat-icon class="text-green-600 dark:text-green-400 mr-2 text-sm" [svgIcon]="'heroicons_outline:megaphone'"></mat-icon>
+                                                            <span class="text-sm font-medium text-green-900 dark:text-green-100">Cuentas Publicitarias</span>
+                                                        </div>
+                                                        @for (asset of mapping.assets.ad_accounts; track asset.id) {
+                                                            <div class="text-xs text-green-800 dark:text-green-200 mb-1">{{ asset.metaAssetName }}</div>
+                                                        }
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
                     }
 
                     <!-- Asset Mapping Component (dentro de la tarjeta de Meta) -->
@@ -112,28 +193,34 @@
                     <!-- Account Actions (Botones movidos abajo) -->
                     @if (account.connected && account.id === 'meta' && !showAssetMapping) {
                         <div class="border-t pt-4 mt-4">
-                            <!-- Información explicativa sobre mapeo -->
-                            <div class="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                                <div class="flex items-start">
-                                    <mat-icon class="text-amber-600 dark:text-amber-400 mr-3 mt-0.5" [svgIcon]="'heroicons_outline:squares-2x2'"></mat-icon>
-                                    <div>
-                                        <h4 class="font-medium text-amber-900 dark:text-amber-100 mb-1">Mapeo de Activos</h4>
-                                        <p class="text-amber-800 dark:text-amber-200 text-sm">
-                                            Asigna tus páginas de Facebook, cuentas de Instagram y cuentas publicitarias a clínicas específicas. 
-                                            Esto te permitirá gestionar campañas y analizar métricas por clínica de forma organizada.
-                                        </p>
+                            <!-- Información explicativa sobre mapeo (solo si no hay mapeos) -->
+                            @if (metaMappings.length === 0 && !isLoadingMappings) {
+                                <div class="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                                    <div class="flex items-start">
+                                        <mat-icon class="text-amber-600 dark:text-amber-400 mr-3 mt-0.5" [svgIcon]="'heroicons_outline:squares-2x2'"></mat-icon>
+                                        <div>
+                                            <h4 class="font-medium text-amber-900 dark:text-amber-100 mb-1">Mapeo de Activos</h4>
+                                            <p class="text-amber-800 dark:text-amber-200 text-sm">
+                                                Asigna tus páginas de Facebook, cuentas de Instagram y cuentas publicitarias a clínicas específicas. 
+                                                Esto te permitirá gestionar campañas y analizar métricas por clínica de forma organizada.
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            }
                             
                             <div class="flex justify-center">
-                                <!-- Botón de Mapear Activos -->
+                                <!-- ✅ BOTÓN DINÁMICO: Cambia según si hay mapeos existentes -->
                                 <button 
                                     mat-flat-button
                                     color="primary"
                                     (click)="openAssetMapping()">
                                     <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:squares-2x2'"></mat-icon>
-                                    Mapear Activos
+                                    @if (metaMappings.length > 0) {
+                                        Volver a mapear
+                                    } @else {
+                                        Mapear Activos
+                                    }
                                 </button>
                             </div>
                         </div>
