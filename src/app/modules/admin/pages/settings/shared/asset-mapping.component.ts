@@ -1,6 +1,6 @@
-// ARCHIVO COMPLETO Y VERIFICADO: src/app/modules/admin/pages/settings/shared/asset-mapping.component.ts
-// ✅ INTEGRADO CON FUNCIONALIDAD DE CLÍNICAS REALES
-// ✅ PASO 3 COMPLETO IMPLEMENTADO
+// ARCHIVO DEFINITIVAMENTE CORREGIDO: src/app/modules/admin/pages/settings/shared/asset-mapping.component.ts
+// ✅ ELIMINADO: loadExistingMappings() que causaba error 404
+// ✅ AÑADIDO: onStepChange() para detectar paso 3
 
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import { ChangeDetectorRef, Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
@@ -235,7 +235,7 @@ export class AssetMappingComponent implements OnInit {
     }
 
     /**
-     * Cargar datos iniciales
+     * ✅ CORREGIDO: Cargar datos iniciales SIN mapeos existentes
      */
     private async loadInitialData(): Promise<void> {
         console.log('🔄 Iniciando carga de datos...');
@@ -249,8 +249,8 @@ export class AssetMappingComponent implements OnInit {
             // Cargar clínicas disponibles
             await this.loadAvailableClinics();
             
-            // Cargar mapeos existentes
-            await this.loadExistingMappings();
+            // ✅ ELIMINADO: Ya no cargamos mapeos existentes (causaba error 404)
+            // await this.loadExistingMappings();
 
         } catch (error) {
             console.error('❌ Error cargando datos iniciales:', error);
@@ -264,6 +264,22 @@ export class AssetMappingComponent implements OnInit {
             console.log('🏁 Estado de loading actualizado a false');
             this._cdr.detectChanges();
             console.log('✅ Carga de datos completada');
+        }
+    }
+
+    /**
+     * ✅ MÉTODO AÑADIDO: Manejar cambio de paso del stepper
+     */
+    onStepChange(event: any): void {
+        const stepIndex = event.selectedIndex;
+        console.log('📍 Cambio de paso detectado:', stepIndex);
+        
+        // Si llegamos al paso 3 (índice 2), generar resumen
+        if (stepIndex === 2) {
+            console.log('🎯 Llegando al paso 3, generando resumen...');
+            this.mappingSummary = this.generateMappingSummary();
+            console.log('📊 Resumen de mapeo generado:', this.mappingSummary);
+            this._cdr.detectChanges();
         }
     }
 
@@ -349,34 +365,7 @@ export class AssetMappingComponent implements OnInit {
         }
     }
 
-    /**
-     * Cargar mapeos existentes
-     */
-    private async loadExistingMappings(): Promise<void> {
-        console.log('🔗 Cargando mapeos existentes...');
-        this.isLoadingMappings = true;
-        this._cdr.detectChanges();
-
-        try {
-            const response = await this._http.get<any>('https://autenticacion.clinicaclick.com/oauth/meta/mappings').toPromise();
-            
-            if (response && response.success && response.data && response.data.mappings) {
-                this.existingMappings = response.data.mappings;
-                console.log('✅ Mapeos existentes cargados:', this.existingMappings.length);
-            } else {
-                console.log('ℹ️ No hay mapeos existentes');
-                this.existingMappings = [];
-            }
-
-        } catch (error) {
-            console.error('❌ Error cargando mapeos existentes:', error);
-            // No es crítico, continuamos sin mapeos existentes
-            this.existingMappings = [];
-        } finally {
-            this.isLoadingMappings = false;
-            this._cdr.detectChanges();
-        }
-    }
+    // ✅ ELIMINADO COMPLETAMENTE: método loadExistingMappings()
 
     /**
      * Procesar activos de Meta
@@ -677,6 +666,18 @@ export class AssetMappingComponent implements OnInit {
     }
 
     /**
+     * ✅ MÉTODO AÑADIDO: Mapear tipo de activo para el backend
+     */
+    private mapAssetTypeForBackend(frontendType: string): string {
+        switch (frontendType) {
+            case 'facebook_page': return 'facebook_page';
+            case 'instagram_business': return 'instagram_business';
+            case 'ad_account': return 'ad_account';
+            default: return frontendType;
+        }
+    }
+
+    /**
      * Preparar datos para envío al backend
      */
     prepareSubmissionData(): SubmissionData[] {
@@ -686,10 +687,11 @@ export class AssetMappingComponent implements OnInit {
             const selectedAssets = this.stepperData.selectedAssets.map(asset => ({
                 id: asset.id,
                 name: asset.name,
-                type: asset.type,
+                type: this.mapAssetTypeForBackend(asset.type), // ✅ MAPEO CORREGIDO
                 assetAvatarUrl: asset.assetAvatarUrl,
-                pageAccessToken: asset.pageAccessToken,
-                additionalData: asset.additionalData
+                pageAccessToken: asset.pageAccessToken || null, // ✅ CORREGIDO: null en lugar de undefined
+                additionalData: asset.additionalData,
+                isActive: true // ✅ AÑADIDO: Campo requerido por el modelo
             }));
 
             submissionData.push({
@@ -697,6 +699,8 @@ export class AssetMappingComponent implements OnInit {
                 selectedAssets
             });
         });
+
+         console.log('📤 Datos preparados para envío:', submissionData);
 
         return submissionData;
     }
@@ -776,9 +780,17 @@ export class AssetMappingComponent implements OnInit {
                         data
                     ).toPromise();
 
-                    if (response && response.success) {
+                    // 🔍 DEBUG: Logs para entender la respuesta
+                    console.log('🔍 DEBUG - Respuesta completa:', response);
+                    console.log('🔍 DEBUG - response.message:', response?.message);
+                    console.log('🔍 DEBUG - response.assets:', response?.assets);
+                    console.log('🔍 DEBUG - Validación response && response.message:', !!(response && response.message));
+                    console.log('🔍 DEBUG - Validación response.assets:', !!response?.assets);
+
+                    // ✅ CORREGIDO: El backend responde con message y assets, no con success
+                    if (response && response.message && response.assets) {
                         successfulSubmissions++;
-                        console.log(`✅ Mapeo ${i + 1} enviado exitosamente`);
+                        console.log(`✅ Mapeo ${i + 1} enviado exitosamente: ${response.message}`);
                     } else {
                         const error = `Error en clínica ${data.clinicaId}: ${response?.message || 'Error desconocido'}`;
                         this.submissionErrors.push(error);
@@ -815,8 +827,8 @@ export class AssetMappingComponent implements OnInit {
                     message: `${successfulSubmissions} mapeos completados exitosamente`
                 });
 
-                // Recargar mapeos existentes
-                await this.loadExistingMappings();
+                // ✅ ELIMINADO: Ya no recargamos mapeos existentes
+                // await this.loadExistingMappings();
 
             } else if (successfulSubmissions > 0) {
                 console.log(`⚠️ Mapeos parcialmente exitosos: ${successfulSubmissions}/${totalSubmissions}`);

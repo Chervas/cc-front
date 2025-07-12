@@ -18,7 +18,8 @@
 
     <!-- Stepper Principal -->
     @if (!stepperData.isLoading && !isLoadingAssets) {
-        <mat-stepper #stepper orientation="horizontal" [linear]="true">
+        <mat-stepper #stepper orientation="horizontal" [linear]="true" (selectionChange)="onStepChange($event)">
+
             
             <!-- PASO 1: Selección de Activos -->
             <mat-step [stepControl]="assetFormGroup" label="Seleccionar Activos">
