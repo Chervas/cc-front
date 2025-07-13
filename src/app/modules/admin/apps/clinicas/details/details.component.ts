@@ -30,6 +30,9 @@ import { GroupsService } from 'app/modules/admin/apps/clinicas/groups/groups.ser
 // Importa el componente del diálogo para crear grupo
 import { GroupDialogComponent } from 'app/modules/admin/apps/clinicas/groups/group-dialog.component';
 import { environment } from 'environments/environment';
+// ✅ AÑADIDO: Importaciones para activos Meta
+import { HttpClient } from '@angular/common/http';
+import { AssetMappingComponent } from 'app/modules/admin/pages/settings/shared/asset-mapping.component';
 
 @Component({
     selector: 'clinicas-details',
@@ -81,6 +84,11 @@ export class ClinicasDetailsComponent implements OnInit, OnDestroy {
         domingo: { abierto: false, apertura: '09:00', cierre: '14:00' }
     };
     
+    // ✅ AÑADIDO: Propiedades para activos Meta
+    metaAssets: any = null;
+    isLoadingMetaAssets: boolean = false;
+    hasMetaConnection: boolean = false;
+    
     private _unsubscribeAll: Subject<any> = new Subject<any>();
 
     constructor(
@@ -97,7 +105,8 @@ export class ClinicasDetailsComponent implements OnInit, OnDestroy {
         private _viewContainerRef: ViewContainerRef,
         private _groupsService: GroupsService, // Inyectamos el servicio de grupos
         private _dialog: MatDialog, // Inyectamos MatDialog para el modal de grupo
-        private _location: Location
+        private _location: Location,
+        private _http: HttpClient // ✅ AÑADIDO: Para llamadas a API de activos Meta
     ) { }
 
     ngOnInit(): void {
@@ -205,6 +214,9 @@ export class ClinicasDetailsComponent implements OnInit, OnDestroy {
                 
                 // ✅ AÑADIDO: Parsear horarios existentes si los hay
                 this.parseHorarioExistente(clinica.horario_atencion);
+                
+                // ✅ AÑADIDO: Cargar activos Meta para esta clínica
+                this.loadMetaAssets(Number(clinica.id_clinica));
                 
                 this._changeDetectorRef.markForCheck();
             });
@@ -668,6 +680,125 @@ updateClinica(): void {
 
     getHorarioPreview(): string {
         return this.generarHorarioTexto();
+    }
+
+    // ✅ AÑADIDO: Métodos para gestión de activos Meta
+    
+    /**
+     * Cargar activos Meta para la clínica actual
+     */
+    async loadMetaAssets(clinicaId: number): Promise<void> {
+        try {
+            this.isLoadingMetaAssets = true;
+            this._changeDetectorRef.markForCheck();
+            
+            const response = await this._http.get<any>(
+                `https://autenticacion.clinicaclick.com/oauth/meta/mappings/${clinicaId}`
+            ).toPromise();
+            
+            if (response && response.success) {
+                this.metaAssets = response.mappings;
+                this.hasMetaConnection = response.totalAssets > 0;
+                console.log(`✅ Activos Meta cargados para clínica ${clinicaId}:`, this.metaAssets);
+            } else {
+                this.metaAssets = null;
+                this.hasMetaConnection = false;
+                console.log(`⚠️ No se encontraron activos Meta para clínica ${clinicaId}`);
+            }
+        } catch (error) {
+            console.error('❌ Error cargando activos Meta:', error);
+            this.metaAssets = null;
+            this.hasMetaConnection = false;
+        } finally {
+            this.isLoadingMetaAssets = false;
+            this._changeDetectorRef.markForCheck();
+        }
+    }
+    
+    /**
+     * Abrir modal de mapeo de activos Meta
+     */
+    openMetaAssetMapping(): void {
+        const dialogRef = this._dialog.open(AssetMappingComponent, {
+            width: '90vw',
+            maxWidth: '1200px',
+            height: '80vh',
+            disableClose: false,
+            data: {
+                clinicaId: Number(this.clinica?.id_clinica),
+                clinicaName: this.clinica?.nombre_clinica
+            }
+        });
+        
+        dialogRef.afterClosed().subscribe(result => {
+            if (result && result.success) {
+                console.log('✅ Mapeo completado, recargando activos Meta...');
+                this.loadMetaAssets(Number(this.clinica.id_clinica));
+                this._snackBar.open('Activos Meta actualizados correctamente', 'Cerrar', { 
+                    duration: 3000 
+                });
+            }
+        });
+    }
+    
+    /**
+     * Obtener chips de activos Meta para mostrar en la vista
+     */
+    getMetaAssetChips(): any[] {
+        if (!this.metaAssets) return [];
+        
+        const chips = [];
+        
+        // Facebook Pages
+        if (this.metaAssets.facebook_pages) {
+            this.metaAssets.facebook_pages.forEach(page => {
+                chips.push({
+                    type: 'facebook_page',
+                    name: page.metaAssetName,
+                    url: page.assetUrl,
+                    icon: 'heroicons_outline:share',
+                    color: 'blue'
+                });
+            });
+        }
+        
+        // Instagram Business
+        if (this.metaAssets.instagram_business) {
+            this.metaAssets.instagram_business.forEach(account => {
+                chips.push({
+                    type: 'instagram_business',
+                    name: account.metaAssetName,
+                    url: account.assetUrl,
+                    icon: 'heroicons_outline:camera',
+                    color: 'pink'
+                });
+            });
+        }
+        
+        // Ad Accounts
+        if (this.metaAssets.ad_accounts) {
+            this.metaAssets.ad_accounts.forEach(account => {
+                chips.push({
+                    type: 'ad_account',
+                    name: account.metaAssetName,
+                    url: account.assetUrl,
+                    icon: 'heroicons_outline:chart-bar',
+                    color: 'green'
+                });
+            });
+        }
+        
+        return chips;
+    }
+    
+    /**
+     * Verificar si hay activos Meta conectados
+     */
+    hasMetaAssets(): boolean {
+        return this.hasMetaConnection && this.metaAssets && 
+               (this.metaAssets.facebook_pages?.length > 0 || 
+                this.metaAssets.instagram_business?.length > 0 || 
+                this.metaAssets.ad_accounts?.length > 0);
     }
 }
 

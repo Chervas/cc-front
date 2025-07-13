@@ -132,24 +132,55 @@
                         <p class="text-secondary">{{ clinica.servicios }}</p>
                     </div>
 
-                    <!-- ✅ CORREGIDO: Redes sociales con enlaces funcionales -->
-                    <div *ngIf="clinica.redes_sociales && hasAnySocialMedia()">
-                        <h3 class="text-lg font-medium mb-3">Redes Sociales</h3>
+                    <!-- ✅ ACTUALIZADO: Activos Meta con chips interactivos -->
+                    <div *ngIf="hasMetaAssets() || isLoadingMetaAssets">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-lg font-medium">Activos Meta Conectados</h3>
+                            <button mat-icon-button 
+                                    (click)="openMetaAssetMapping()"
+                                    matTooltip="Editar mapeo de activos Meta"
+                                    class="text-gray-500 hover:text-gray-700">
+                                <mat-icon [svgIcon]="'heroicons_outline:pencil'"></mat-icon>
+                            </button>
+                        </div>
+                        
+                        <!-- Loading state -->
+                        <div *ngIf="isLoadingMetaAssets" class="flex items-center gap-2 text-gray-500">
+                            <mat-icon class="animate-spin">refresh</mat-icon>
+                            <span>Cargando activos Meta...</span>
+                        </div>
+                        
+                        <!-- Chips de activos Meta -->
+                        <div *ngIf="!isLoadingMetaAssets && hasMetaAssets()" class="flex flex-wrap gap-2">
+                            <div *ngFor="let chip of getMetaAssetChips()" 
+                                 class="px-3 py-1 rounded-full text-xs border cursor-pointer inline-flex items-center gap-1"
+                                 [ngClass]="{
+                                     'bg-blue-50 text-blue-700 border-blue-200': chip.color === 'blue',
+                                     'bg-pink-50 text-pink-700 border-pink-200': chip.color === 'pink',
+                                     'bg-green-50 text-green-700 border-green-200': chip.color === 'green'
+                                 }">
+                                <a [href]="chip.url" target="_blank" class="flex items-center gap-1 no-underline text-inherit">
+                                    <mat-icon [svgIcon]="chip.icon" class="w-4 h-4"></mat-icon>
+                                    <span>{{ chip.name }}</span>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Estado sin activos -->
+                        <div *ngIf="!isLoadingMetaAssets && !hasMetaAssets()" class="text-gray-500 text-sm">
+                            No hay activos Meta conectados. 
+                            <button mat-button 
+                                    (click)="openMetaAssetMapping()"
+                                    class="text-blue-600 hover:text-blue-700 p-0 min-w-0">
+                                Conectar activos
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ✅ MANTENIDO: Otras redes sociales (TikTok, LinkedIn, Doctoralia) -->
+                    <div *ngIf="clinica.redes_sociales && (clinica.redes_sociales.tiktok || clinica.redes_sociales.linkedin || clinica.redes_sociales.doctoralia)">
+                        <h3 class="text-lg font-medium mb-3">Otras Redes Sociales</h3>
                         <div class="flex flex-wrap gap-4">
-                            <a *ngIf="clinica.redes_sociales.instagram" 
-                               [href]="clinica.redes_sociales.instagram" 
-                               target="_blank"
-                               class="flex items-center text-pink-600 hover:text-pink-700">
-                                <mat-icon [svgIcon]="'heroicons_outline:camera'"></mat-icon>
-                                <span class="ml-2">Instagram</span>
-                            </a>
-                            <a *ngIf="clinica.redes_sociales.facebook" 
-                               [href]="clinica.redes_sociales.facebook" 
-                               target="_blank"
-                               class="flex items-center text-blue-600 hover:text-blue-700">
-                                <mat-icon [svgIcon]="'heroicons_outline:share'"></mat-icon>
-                                <span class="ml-2">Facebook</span>
-                            </a>
                             <a *ngIf="clinica.redes_sociales.tiktok" 
                                [href]="clinica.redes_sociales.tiktok" 
                                target="_blank"
