@@ -15,6 +15,8 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { UserService } from 'app/core/user/user.service';
+// ✅ AÑADIDO: Para poder cerrar el modal
+import { MatDialogRef } from '@angular/material/dialog';
 
 // Tipos TypeScript
 export interface MetaAsset {
@@ -263,7 +265,9 @@ export class AssetMappingComponent implements OnInit {
     submissionProgress = 0;
     submissionErrors: string[] = [];
 
-    constructor() {
+    constructor(
+        private dialogRef?: MatDialogRef<AssetMappingComponent>
+    ) {
         // Inicializar formularios
         this.assetFormGroup = this._formBuilder.group({
             selectedAssets: [[], Validators.required]
@@ -803,7 +807,12 @@ export class AssetMappingComponent implements OnInit {
      */
     cancel(): void {
         console.log('❌ Mapeo cancelado por el usuario');
-        this.cancelled.emit();
+        // ✅ AÑADIDO: Cerrar modal si está disponible
+        if (this.dialogRef) {
+            this.dialogRef.close({ success: false, cancelled: true });
+        } else {
+            this.cancelled.emit();
+        }
     }
 
     /**
@@ -893,6 +902,15 @@ export class AssetMappingComponent implements OnInit {
                     mappings: mappings,
                     message: `${successfulSubmissions} mapeos completados exitosamente`
                 });
+
+                // ✅ AÑADIDO: Cerrar modal automáticamente al completar
+                if (this.dialogRef) {
+                    this.dialogRef.close({
+                        success: true,
+                        mappings: mappings,
+                        message: `${successfulSubmissions} mapeos completados exitosamente`
+                    });
+                }
 
                 // ✅ ELIMINADO: Ya no recargamos mapeos existentes
                 // await this.loadExistingMappings();

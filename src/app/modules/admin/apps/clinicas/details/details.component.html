@@ -134,15 +134,7 @@
 
                     <!-- ✅ ACTUALIZADO: Activos Meta con chips interactivos -->
                     <div *ngIf="hasMetaAssets() || isLoadingMetaAssets">
-                        <div class="flex items-center justify-between mb-3">
-                            <h3 class="text-lg font-medium">Activos Meta Conectados</h3>
-                            <button mat-icon-button 
-                                    (click)="openMetaAssetMapping()"
-                                    matTooltip="Editar mapeo de activos Meta"
-                                    class="text-gray-500 hover:text-gray-700">
-                                <mat-icon [svgIcon]="'heroicons_outline:pencil'"></mat-icon>
-                            </button>
-                        </div>
+                        <h3 class="text-lg font-medium mb-3">Activos Meta Conectados</h3>
                         
                         <!-- Loading state -->
                         <div *ngIf="isLoadingMetaAssets" class="flex items-center gap-2 text-gray-500">
@@ -335,10 +327,41 @@
                                 <input matInput formControlName="url_publicidad_google" placeholder="https://...">
                             </mat-form-field>
 
-                            <mat-form-field appearance="fill">
-                                <mat-label>URL Publicidad Meta</mat-label>
-                                <input matInput formControlName="url_publicidad_meta" placeholder="https://...">
-                            </mat-form-field>
+                            <!-- ✅ AUTOMATIZADO: URL Publicidad Meta -->
+                            <div class="flex flex-col">
+                                <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">URL Publicidad Meta</label>
+                                
+                                <!-- Chip si hay activo conectado -->
+                                <div *ngIf="shouldShowAsChip('meta_ads')" class="flex items-center gap-2">
+                                    <div class="px-3 py-2 rounded-lg border bg-green-50 text-green-700 border-green-200 inline-flex items-center gap-2">
+                                        <!-- ✅ CONSISTENTE: Icono chart-bar para cuenta publicitaria -->
+                                        <mat-icon [svgIcon]="'heroicons_outline:chart-bar'" class="w-4 h-4"></mat-icon>
+                                        <a [href]="getSocialChipInfo('meta_ads')?.url" target="_blank" class="text-inherit no-underline">
+                                            {{ getSocialChipInfo('meta_ads')?.name }}
+                                        </a>
+                                    </div>
+                                    <button mat-icon-button 
+                                            (click)="openMetaAssetMapping()"
+                                            matTooltip="Editar conexión"
+                                            class="text-gray-500 hover:text-gray-700">
+                                        <mat-icon [svgIcon]="'heroicons_outline:pencil'" class="w-4 h-4"></mat-icon>
+                                    </button>
+                                </div>
+                                
+                                <!-- Botón conectar si no hay activo -->
+                                <div *ngIf="!shouldShowAsChip('meta_ads')" class="flex items-center gap-2">
+                                    <button mat-flat-button 
+                                            color="primary"
+                                            (click)="openMetaAssetMapping()"
+                                            class="flex items-center">
+                                        <mat-icon [svgIcon]="'heroicons_outline:plus'" class="mr-1"></mat-icon>
+                                        Conectar Publicidad Meta
+                                    </button>
+                                </div>
+                                
+                                <!-- Input oculto para mantener compatibilidad con formulario -->
+                                <input type="hidden" formControlName="url_publicidad_meta">
+                            </div>
                         </div>
 
                         <mat-form-field class="w-full" appearance="fill">
@@ -537,15 +560,77 @@
                         <h3 class="text-lg font-medium">Redes Sociales</h3>
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <mat-form-field appearance="fill">
-                                <mat-label>Instagram</mat-label>
-                                <input matInput formControlName="instagram" placeholder="https://instagram.com/...">
-                            </mat-form-field>
+                            <!-- ✅ AUTOMATIZADO: Instagram -->
+                            <div class="flex flex-col">
+                                <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Instagram</label>
+                                
+                                <!-- Chip si hay activo conectado -->
+                                <div *ngIf="shouldShowAsChip('instagram')" class="flex items-center gap-2">
+                                    <div class="px-3 py-2 rounded-lg border bg-pink-50 text-pink-700 border-pink-200 inline-flex items-center gap-2">
+                                        <!-- ✅ CONSISTENTE: Icono Feather para Instagram -->
+                                        <mat-icon [svgIcon]="'feather:instagram'" class="w-4 h-4"></mat-icon>
+                                        <a [href]="getSocialChipInfo('instagram')?.url" target="_blank" class="text-inherit no-underline">
+                                            {{ getSocialChipInfo('instagram')?.name }}
+                                        </a>
+                                    </div>
+                                    <button mat-icon-button 
+                                            (click)="openMetaAssetMapping()"
+                                            matTooltip="Editar conexión"
+                                            class="text-gray-500 hover:text-gray-700">
+                                        <mat-icon [svgIcon]="'heroicons_outline:pencil'" class="w-4 h-4"></mat-icon>
+                                    </button>
+                                </div>
+                                
+                                <!-- Botón conectar si no hay activo -->
+                                <div *ngIf="!shouldShowAsChip('instagram')" class="flex items-center gap-2">
+                                    <button mat-flat-button 
+                                            color="primary"
+                                            (click)="openMetaAssetMapping()"
+                                            class="flex items-center">
+                                        <mat-icon [svgIcon]="'heroicons_outline:plus'" class="mr-1"></mat-icon>
+                                        Conectar Instagram
+                                    </button>
+                                </div>
+                                
+                                <!-- Input oculto para mantener compatibilidad con formulario -->
+                                <input type="hidden" formControlName="instagram">
+                            </div>
 
-                            <mat-form-field appearance="fill">
-                                <mat-label>Meta/Facebook</mat-label>
-                                <input matInput formControlName="meta" placeholder="https://facebook.com/...">
-                            </mat-form-field>
+                            <!-- ✅ AUTOMATIZADO: Meta/Facebook -->
+                            <div class="flex flex-col">
+                                <label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Meta/Facebook</label>
+                                
+                                <!-- Chip si hay activo conectado -->
+                                <div *ngIf="shouldShowAsChip('facebook')" class="flex items-center gap-2">
+                                    <div class="px-3 py-2 rounded-lg border bg-blue-50 text-blue-700 border-blue-200 inline-flex items-center gap-2">
+                                        <!-- ✅ CONSISTENTE: Icono Feather para Facebook -->
+                                        <mat-icon [svgIcon]="'feather:facebook'" class="w-4 h-4"></mat-icon>
+                                        <a [href]="getSocialChipInfo('facebook')?.url" target="_blank" class="text-inherit no-underline">
+                                            {{ getSocialChipInfo('facebook')?.name }}
+                                        </a>
+                                    </div>
+                                    <button mat-icon-button 
+                                            (click)="openMetaAssetMapping()"
+                                            matTooltip="Editar conexión"
+                                            class="text-gray-500 hover:text-gray-700">
+                                        <mat-icon [svgIcon]="'heroicons_outline:pencil'" class="w-4 h-4"></mat-icon>
+                                    </button>
+                                </div>
+                                
+                                <!-- Botón conectar si no hay activo -->
+                                <div *ngIf="!shouldShowAsChip('facebook')" class="flex items-center gap-2">
+                                    <button mat-flat-button 
+                                            color="primary"
+                                            (click)="openMetaAssetMapping()"
+                                            class="flex items-center">
+                                        <mat-icon [svgIcon]="'heroicons_outline:plus'" class="mr-1"></mat-icon>
+                                        Conectar Facebook
+                                    </button>
+                                </div>
+                                
+                                <!-- Input oculto para mantener compatibilidad con formulario -->
+                                <input type="hidden" formControlName="meta">
+                            </div>
 
                             <mat-form-field appearance="fill">
                                 <mat-label>TikTok</mat-label>
@@ -561,6 +646,65 @@
                                 <mat-label>Doctoralia</mat-label>
                                 <input matInput formControlName="doctoralia" placeholder="https://doctoralia.es/...">
                             </mat-form-field>
+                        </div>
+                    </div>
+
+                    <!-- ✅ AÑADIDO: Activos Conectados en modo edit -->
+                    <div class="mt-8 space-y-6">
+                        <h3 class="text-lg font-medium">Activos Conectados</h3>
+                        
+                        <!-- Subsección Meta -->
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-md font-medium text-gray-700 dark:text-gray-300">Meta (Facebook & Instagram)</h4>
+                                    <!-- ✅ CORREGIDO: Botón estilo FUSE como en demo -->
+                                    <div class="inline-flex items-center gap-2">
+                                        <span class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full text-sm">
+                                            Meta Assets
+                                        </span>
+                                        <button mat-stroked-button 
+                                                (click)="openMetaAssetMapping()"
+                                                class="flex items-center px-3 py-1 text-sm">
+                                            <mat-icon [svgIcon]="'heroicons_outline:pencil'" class="w-4 h-4 mr-1"></mat-icon>
+                                            Edit
+                                        </button>
+                                    </div>
+                            </div>
+                            
+                            <!-- Loading state -->
+                            <div *ngIf="isLoadingMetaAssets" class="flex items-center gap-2 text-gray-500 text-sm">
+                                <mat-icon class="animate-spin w-4 h-4">refresh</mat-icon>
+                                <span>Cargando activos Meta...</span>
+                            </div>
+                            
+                            <!-- Chips de activos Meta -->
+                            <div *ngIf="!isLoadingMetaAssets && hasMetaAssets()" class="flex flex-wrap gap-2">
+                                <div *ngFor="let chip of getMetaAssetChips()" 
+                                     class="px-3 py-1 rounded-lg text-xs border cursor-pointer inline-flex items-center gap-1"
+                                     [ngClass]="{
+                                         'bg-blue-50 text-blue-700 border-blue-200': chip.color === 'blue',
+                                         'bg-pink-50 text-pink-700 border-pink-200': chip.color === 'pink',
+                                         'bg-green-50 text-green-700 border-green-200': chip.color === 'green'
+                                     }">
+                                    <a [href]="chip.url" target="_blank" class="flex items-center gap-1 no-underline text-inherit">
+                                        <!-- ✅ CONSISTENTE: Iconos específicos para cada tipo -->
+                                        <mat-icon *ngIf="chip.type === 'facebook_page'" [svgIcon]="'feather:facebook'" class="w-4 h-4"></mat-icon>
+                                        <mat-icon *ngIf="chip.type === 'instagram_business'" [svgIcon]="'feather:instagram'" class="w-4 h-4"></mat-icon>
+                                        <mat-icon *ngIf="chip.type === 'ad_account'" [svgIcon]="'heroicons_outline:chart-bar'" class="w-4 h-4"></mat-icon>
+                                        <span>{{ chip.name }}</span>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- Estado sin activos -->
+                            <div *ngIf="!isLoadingMetaAssets && !hasMetaAssets()" class="text-gray-500 text-sm">
+                                No hay activos Meta conectados. 
+                                <button mat-button 
+                                        (click)="openMetaAssetMapping()"
+                                        class="text-blue-600 hover:text-blue-700 p-0 min-w-0 text-sm">
+                                    Conectar activos
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -622,22 +766,22 @@
                         </mat-slide-toggle>
                     </div>
 
-                    <!-- Botones de acción -->
-                    <div class="flex items-center justify-between pt-6 border-t mt-8">
-                        <button mat-stroked-button type="button" (click)="deleteClinica()" color="warn">
-                            <mat-icon [svgIcon]="'heroicons_outline:trash'"></mat-icon>
-                            <span class="ml-2">Eliminar</span>
+                    <!-- ✅ CORREGIDO: Botones de acción estilo FUSE sin padding extra -->
+                    <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-800 -mx-6 px-6 py-4 mt-8">
+                        <button mat-button type="button" (click)="deleteClinica()" class="text-red-600 hover:bg-red-50">
+                            Delete
                         </button>
                         
-                        <div class="flex items-center space-x-4">
-                            <button mat-stroked-button type="button" (click)="toggleEditMode(false)">
-                                Cancelar
+                        <div class="flex items-center space-x-3">
+                            <button mat-button type="button" (click)="toggleEditMode(false)" class="text-gray-600">
+                                Cancel
                             </button>
                             
                             <button mat-flat-button color="primary" type="button" 
                                     (click)="updateClinica()"
-                                    [disabled]="clinicaForm.invalid">
-                                Guardar Cambios
+                                    [disabled]="clinicaForm.invalid"
+                                    class="px-6">
+                                Save
                             </button>
                         </div>
                     </div>

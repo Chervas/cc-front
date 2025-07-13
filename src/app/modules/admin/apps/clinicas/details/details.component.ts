@@ -700,6 +700,9 @@ updateClinica(): void {
                 this.metaAssets = response.mappings;
                 this.hasMetaConnection = response.totalAssets > 0;
                 console.log(`✅ Activos Meta cargados para clínica ${clinicaId}:`, this.metaAssets);
+                
+                // ✅ AÑADIDO: Actualizar formulario con URLs automáticas
+                this.updateFormWithMetaUrls();
             } else {
                 this.metaAssets = null;
                 this.hasMetaConnection = false;
@@ -737,6 +740,8 @@ updateClinica(): void {
                 this._snackBar.open('Activos Meta actualizados correctamente', 'Cerrar', { 
                     duration: 3000 
                 });
+                // ✅ AÑADIDO: Actualizar formulario después de mapeo
+                setTimeout(() => this.updateFormWithMetaUrls(), 1000);
             }
         });
     }
@@ -799,6 +804,113 @@ updateClinica(): void {
                (this.metaAssets.facebook_pages?.length > 0 || 
                 this.metaAssets.instagram_business?.length > 0 || 
                 this.metaAssets.ad_accounts?.length > 0);
+    }
+
+    // ✅ AÑADIDO: Métodos para automatización de URLs de redes sociales
+
+    /**
+     * Obtener URL de Instagram automáticamente desde activos conectados
+     */
+    getInstagramUrl(): string | null {
+        if (!this.metaAssets?.instagram_business?.length) return null;
+        // Usar el primer Instagram Business conectado
+        return this.metaAssets.instagram_business[0].assetUrl || null;
+    }
+
+    /**
+     * Obtener URL de Facebook automáticamente desde activos conectados
+     */
+    getFacebookUrl(): string | null {
+        if (!this.metaAssets?.facebook_pages?.length) return null;
+        // Usar la primera página de Facebook conectada
+        return this.metaAssets.facebook_pages[0].assetUrl || null;
+    }
+
+    /**
+     * Obtener URL de publicidad Meta automáticamente desde activos conectados
+     */
+    getMetaAdsUrl(): string | null {
+        if (!this.metaAssets?.ad_accounts?.length) return null;
+        // Usar la primera cuenta publicitaria conectada
+        return this.metaAssets.ad_accounts[0].assetUrl || null;
+    }
+
+    /**
+     * Actualizar formulario con URLs automáticas de activos Meta
+     */
+    updateFormWithMetaUrls(): void {
+        if (!this.clinicaForm || !this.hasMetaAssets()) return;
+
+        const instagramUrl = this.getInstagramUrl();
+        const facebookUrl = this.getFacebookUrl();
+        const metaAdsUrl = this.getMetaAdsUrl();
+
+        // Actualizar formulario solo si hay URLs disponibles
+        if (instagramUrl) {
+            this.clinicaForm.patchValue({ instagram: instagramUrl });
+        }
+        if (facebookUrl) {
+            this.clinicaForm.patchValue({ meta: facebookUrl });
+        }
+        if (metaAdsUrl) {
+            this.clinicaForm.patchValue({ url_publicidad_meta: metaAdsUrl });
+        }
+
+        console.log('✅ URLs de redes sociales actualizadas automáticamente:', {
+            instagram: instagramUrl,
+            facebook: facebookUrl,
+            metaAds: metaAdsUrl
+        });
+    }
+
+    /**
+     * Verificar si un campo de red social debe mostrarse como chip o input
+     */
+    shouldShowAsChip(socialNetwork: 'instagram' | 'facebook' | 'meta_ads'): boolean {
+        switch (socialNetwork) {
+            case 'instagram':
+                return !!this.getInstagramUrl();
+            case 'facebook':
+                return !!this.getFacebookUrl();
+            case 'meta_ads':
+                return !!this.getMetaAdsUrl();
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Obtener información del chip para una red social específica
+     */
+    getSocialChipInfo(socialNetwork: 'instagram' | 'facebook' | 'meta_ads'): any {
+        switch (socialNetwork) {
+            case 'instagram':
+                const instagramAsset = this.metaAssets?.instagram_business?.[0];
+                return instagramAsset ? {
+                    name: instagramAsset.metaAssetName,
+                    url: instagramAsset.assetUrl,
+                    icon: 'feather:instagram', // ✅ CAMBIADO: Icono Feather
+                    color: 'pink'
+                } : null;
+            case 'facebook':
+                const facebookAsset = this.metaAssets?.facebook_pages?.[0];
+                return facebookAsset ? {
+                    name: facebookAsset.metaAssetName,
+                    url: facebookAsset.assetUrl,
+                    icon: 'feather:facebook', // ✅ CAMBIADO: Icono Feather
+                    color: 'blue'
+                } : null;
+            case 'meta_ads':
+                const adsAsset = this.metaAssets?.ad_accounts?.[0];
+                return adsAsset ? {
+                    name: adsAsset.metaAssetName,
+                    url: adsAsset.assetUrl,
+                    icon: 'heroicons_outline:chart-bar', // ✅ MANTENIDO: No es red social
+                    color: 'green'
+                } : null;
+            default:
+                return null;
+        }
     }
 }
 
