@@ -657,15 +657,15 @@
                         <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                             <div class="flex items-center justify-between mb-3">
                                 <h4 class="text-md font-medium text-gray-700 dark:text-gray-300">Meta (Facebook & Instagram)</h4>
-                                    <!-- ✅ CORREGIDO: Botón estilo FUSE como en demo -->
+                                    <!-- ✅ CORREGIDO: Botón exactamente como demo FUSE -->
                                     <div class="inline-flex items-center gap-2">
-                                        <span class="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full text-sm">
+                                        <span class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full text-sm font-medium">
                                             Meta Assets
                                         </span>
-                                        <button mat-stroked-button 
+                                        <button mat-button 
                                                 (click)="openMetaAssetMapping()"
-                                                class="flex items-center px-3 py-1 text-sm">
-                                            <mat-icon [svgIcon]="'heroicons_outline:pencil'" class="w-4 h-4 mr-1"></mat-icon>
+                                                class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">
+                                            <mat-icon [svgIcon]="'heroicons_outline:pencil'" class="w-4 h-4 mr-1.5"></mat-icon>
                                             Edit
                                         </button>
                                     </div>
@@ -766,8 +766,8 @@
                         </mat-slide-toggle>
                     </div>
 
-                    <!-- ✅ CORREGIDO: Botones de acción estilo FUSE sin padding extra -->
-                    <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-800 -mx-6 px-6 py-4 mt-8">
+                    <!-- ✅ CORREGIDO: Sin padding extra, estructura FUSE limpia -->
+                    <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-800 -mx-6 px-6 py-4">
                         <button mat-button type="button" (click)="deleteClinica()" class="text-red-600 hover:bg-red-50">
                             Delete
                         </button>

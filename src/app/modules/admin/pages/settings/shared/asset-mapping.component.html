@@ -1,8 +1,16 @@
 <div class="asset-mapping-container">
-    <!-- Header del Mapeo -->
-    <div class="mb-6">
-        <h3 class="text-2xl font-bold text-primary mb-2">{{config.title}}</h3>
-        <p class="text-secondary">{{config.subtitle}}</p>
+    <!-- ✅ AÑADIDO: Header con botón de cerrar -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h3 class="text-2xl font-bold text-primary mb-2">{{config.title}}</h3>
+            <p class="text-secondary">{{config.subtitle}}</p>
+        </div>
+        <button mat-icon-button 
+                (click)="cancel()"
+                matTooltip="Cerrar"
+                class="text-gray-500 hover:text-gray-700">
+            <mat-icon [svgIcon]="'heroicons_outline:x-mark'"></mat-icon>
+        </button>
     </div>
 
     <!-- Progress Bar -->
@@ -49,7 +57,7 @@
                                     <mat-expansion-panel-header>
                                         <mat-panel-title>
                                             <div class="flex items-center">
-                                                <mat-icon class="text-blue-600 mr-2" [svgIcon]="'heroicons_outline:globe-alt'"></mat-icon>
+                                                <mat-icon class="text-blue-600 mr-2" [svgIcon]="'feather:facebook'"></mat-icon>
                                                 <span>Páginas de Facebook</span>
                                                 <span class="ml-2 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs font-medium" [textContent]="assetsByType.facebook_pages.length"></span>
                                             </div>
@@ -108,7 +116,7 @@
                                     <mat-expansion-panel-header>
                                         <mat-panel-title>
                                             <div class="flex items-center">
-                                                <mat-icon class="text-pink-600 mr-2" [svgIcon]="'heroicons_outline:camera'"></mat-icon>
+                                                <mat-icon class="text-pink-600 mr-2" [svgIcon]="'feather:instagram'"></mat-icon>
                                                 <span>Cuentas de Instagram</span>
                                                 <span class="ml-2 px-2 py-1 bg-pink-100 dark:bg-pink-900 text-pink-800 dark:text-pink-200 rounded-full text-xs font-medium" [textContent]="assetsByType.instagram_business.length"></span>
                                             </div>
@@ -465,14 +473,14 @@
                                                                            'bg-pink-50 dark:bg-pink-900/20 border-pink-200 dark:border-pink-800': asset.type === 'instagram_business',
                                                                            'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800': asset.type === 'ad_account'
                                                                          }">
-                                                                        <!-- Icono del tipo de activo -->
+                                                                        <!-- Icono del tipo de activo con Feather -->
                                                                         <div class="flex-shrink-0">
                                                                             @if (asset.type === 'facebook_page') {
-                                                                                <mat-icon class="text-blue-600" [svgIcon]="'heroicons_outline:globe-alt'"></mat-icon>
+                                                                                <mat-icon class="text-blue-600" [svgIcon]="'feather:facebook'"></mat-icon>
                                                                             } @else if (asset.type === 'instagram_business') {
-                                                                                <mat-icon class="text-pink-600" [svgIcon]="'heroicons_outline:camera'"></mat-icon>
+                                                                                <mat-icon class="text-pink-600" [svgIcon]="'feather:instagram'"></mat-icon>
                                                                             } @else if (asset.type === 'ad_account') {
-                                                                                <mat-icon class="text-green-600" [svgIcon]="'heroicons_outline:megaphone'"></mat-icon>
+                                                                                <mat-icon class="text-green-600" [svgIcon]="'heroicons_outline:chart-bar'"></mat-icon>
                                                                             }
                                                                         </div>
                                                                         
@@ -538,37 +546,39 @@
                             </div>
                         }
 
-                        <!-- Navegación -->
-                        <div class="flex justify-between mt-8">
+                        <!-- Nave                        <!-- ✅ CORREGIDO: Botones del paso 3 con mejor estructura -->
+                        <div class="flex items-center justify-between mt-6 pt-4 border-t">
                             <button mat-stroked-button 
                                     matStepperPrevious
-                                    [disabled]="isSubmittingMapping">
+                                    [disabled]="isSubmittingMapping"
+                                    class="flex items-center">
                                 <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:arrow-left'"></mat-icon>
                                 Anterior
                             </button>
                             
-                            <div class="space-x-3">
+                            <div class="flex items-center space-x-3">
                                 <button mat-stroked-button 
                                         (click)="cancel()"
-                                        [disabled]="isSubmittingMapping">
+                                        [disabled]="isSubmittingMapping"
+                                        class="flex items-center">
                                     Cancelar
                                 </button>
                                 
                                 <button mat-flat-button 
                                         color="primary" 
                                         (click)="submitMapping()"
-                                        [disabled]="!canSubmitMapping()">
+                                        [disabled]="!canSubmitMapping()"
+                                        class="flex items-center min-w-[140px] justify-center">
                                     @if (isSubmittingMapping) {
                                         <mat-progress-spinner diameter="20" mode="indeterminate" class="mr-2"></mat-progress-spinner>
-                                        Creando Mapeos...
+                                        <span>Creando Mapeos...</span>
                                     } @else {
                                         <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:check'"></mat-icon>
-                                        Crear Mapeos
+                                        <span>Crear Mapeos</span>
                                     }
                                 </button>
                             </div>
-                        </div>
-                    </div>
+                        </div>                   </div>
                 </form>
             </mat-step>
         </mat-stepper>
