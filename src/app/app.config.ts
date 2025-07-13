@@ -13,6 +13,7 @@ import { provideIcons } from 'app/core/icons/icons.provider';
 import { mockApiServices } from 'app/mock-api';
 import { TranslocoHttpLoader } from './core/transloco/transloco.http-loader';
 import { VentasModule } from './modules/admin/apps/ventas/ventas.module'; // Importar VentasModule
+import { RoleService } from './core/services/role.service'; // ✅ YA TIENES ESTE IMPORT
 
 export const appConfig: ApplicationConfig = {
     providers: [
@@ -111,5 +112,7 @@ export const appConfig: ApplicationConfig = {
             },
         }),
         VentasModule, // Asegúrate de agregar esta línea para incluir VentasModule
+        RoleService, // ✅ AGREGAR ESTA LÍNEA AQUÍ
     ],
 };
+
