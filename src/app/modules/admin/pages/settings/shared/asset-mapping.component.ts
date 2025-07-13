@@ -15,8 +15,6 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { UserService } from 'app/core/user/user.service';
-// ✅ AÑADIDO: Para poder cerrar el modal
-import { MatDialogRef } from '@angular/material/dialog';
 
 // Tipos TypeScript
 export interface MetaAsset {
@@ -71,7 +69,6 @@ export interface ExistingMapping {
     assetName: string;
     assetType: string;
     clinicId: number;
-    clinicName: string; // ✅ AÑADIDO: Propiedad clinicName
 }
 
 export interface MappingResult {
@@ -159,54 +156,13 @@ export class AssetMappingComponent implements OnInit {
     @Input() set existingMappings(mappings: any[]) {
         if (mappings && mappings.length > 0) {
             // Convertir metaMappings al formato ExistingMapping
-            this._existingMappings = [];
-            
-            mappings.forEach(mapping => {
-                // Procesar cada tipo de activo
-                const clinicId = mapping.clinica?.id || mapping.clinica?.id_clinica;
-                const clinicName = mapping.clinica?.nombre || mapping.clinica?.nombre_clinica || 'Clínica desconocida';
-                
-                // Facebook Pages
-                if (mapping.assets?.facebook_pages) {
-                    mapping.assets.facebook_pages.forEach(asset => {
-                        this._existingMappings.push({
-                            assetId: asset.metaAssetId,
-                            assetName: asset.metaAssetName,
-                            clinicId: clinicId,
-                            clinicName: clinicName,
-                            assetType: 'facebook_page'
-                        });
-                    });
-                }
-                
-                // Instagram Business
-                if (mapping.assets?.instagram_business) {
-                    mapping.assets.instagram_business.forEach(asset => {
-                        this._existingMappings.push({
-                            assetId: asset.metaAssetId,
-                            assetName: asset.metaAssetName,
-                            clinicId: clinicId,
-                            clinicName: clinicName,
-                            assetType: 'instagram_business'
-                        });
-                    });
-                }
-                
-                // Ad Accounts
-                if (mapping.assets?.ad_accounts) {
-                    mapping.assets.ad_accounts.forEach(asset => {
-                        this._existingMappings.push({
-                            assetId: asset.metaAssetId,
-                            assetName: asset.metaAssetName,
-                            clinicId: clinicId,
-                            clinicName: clinicName,
-                            assetType: 'ad_account'
-                        });
-                    });
-                }
-            });
-            
-            console.log('🔍 DEBUG - Converted existingMappings:', this._existingMappings);
+            this._existingMappings = mappings.map(mapping => ({
+                assetId: mapping.metaAssetId,
+                assetName: mapping.metaAssetName,
+                clinicId: mapping.clinicaId,
+                clinicName: mapping.clinica?.name || 'Clínica desconocida',
+                assetType: mapping.assetType
+            }));
         } else {
             this._existingMappings = [];
         }
@@ -265,9 +221,7 @@ export class AssetMappingComponent implements OnInit {
     submissionProgress = 0;
     submissionErrors: string[] = [];
 
-    constructor(
-        private dialogRef?: MatDialogRef<AssetMappingComponent>
-    ) {
+    constructor() {
         // Inicializar formularios
         this.assetFormGroup = this._formBuilder.group({
             selectedAssets: [[], Validators.required]
@@ -621,9 +575,9 @@ export class AssetMappingComponent implements OnInit {
         console.log('🔍 Debug getExistingMappingsForClinic:', {
             clinicId,
             existingMappings: this.existingMappings,
-            filtered: this.existingMappings.filter(mapping => Number(mapping.clinicId) === Number(clinicId))
+            filtered: this.existingMappings.filter(mapping => mapping.clinicId === clinicId)
         });
-        return this.existingMappings.filter(mapping => Number(mapping.clinicId) === Number(clinicId));
+        return this.existingMappings.filter(mapping => mapping.clinicId === clinicId);
     }
 
     /**
@@ -807,12 +761,7 @@ export class AssetMappingComponent implements OnInit {
      */
     cancel(): void {
         console.log('❌ Mapeo cancelado por el usuario');
-        // ✅ AÑADIDO: Cerrar modal si está disponible
-        if (this.dialogRef) {
-            this.dialogRef.close({ success: false, cancelled: true });
-        } else {
-            this.cancelled.emit();
-        }
+        this.cancelled.emit();
     }
 
     /**
@@ -902,15 +851,6 @@ export class AssetMappingComponent implements OnInit {
                     mappings: mappings,
                     message: `${successfulSubmissions} mapeos completados exitosamente`
                 });
-
-                // ✅ AÑADIDO: Cerrar modal automáticamente al completar
-                if (this.dialogRef) {
-                    this.dialogRef.close({
-                        success: true,
-                        mappings: mappings,
-                        message: `${successfulSubmissions} mapeos completados exitosamente`
-                    });
-                }
 
                 // ✅ ELIMINADO: Ya no recargamos mapeos existentes
                 // await this.loadExistingMappings();
