@@ -1,330 +1,376 @@
-import { Injectable } from '@angular/core';
-import { Observable, of, map, catchError } from 'rxjs';
-import { RoleService, UserRole } from './role.service';
-import { ROLE_CONFIG } from '../constants/role.constants';
+import { Injectable, inject } from '@angular/core';
+import { Observable, BehaviorSubject, combineLatest, of } from 'rxjs';
+import { map, distinctUntilChanged, shareReplay } from 'rxjs/operators';
 
-/**
- * 🔐 PERMISSION SERVICE - SISTEMA DE PERMISOS GRANULARES
- * 
- * Servicio para verificación de permisos específicos basado en roles.
- * Adaptado al RoleService real que usa observables y métodos síncronos.
- */
+// 🔗 INTEGRACIÓN CON ROLE SERVICE
+import { RoleService, UserRole } from './role.service';
+
+// 🔐 DEFINICIÓN DE PERMISOS ESPECÍFICOS
+export enum Permission {
+    // Gestión de Clínicas
+    MANAGE_CLINICS = 'manage_clinics',
+    VIEW_CLINICS = 'view_clinics',
+    
+    // Gestión de Pacientes
+    VIEW_PATIENTS = 'view_patients',
+    MANAGE_PATIENTS = 'manage_patients',
+    
+    // Gestión de Personal
+    MANAGE_STAFF = 'manage_staff',
+    VIEW_STAFF = 'view_staff',
+    
+    // Gestión de Citas
+    MANAGE_APPOINTMENTS = 'manage_appointments',
+    VIEW_APPOINTMENTS = 'view_appointments',
+    
+    // Reportes y Analytics
+    ACCESS_REPORTS = 'access_reports',
+    VIEW_ANALYTICS = 'view_analytics',
+    
+    // Gestión de Activos Meta
+    MANAGE_ASSETS = 'manage_assets',
+    
+    // Configuraciones del Sistema
+    SYSTEM_CONFIG = 'system_config'
+}
+
+// 🗺️ MAPEO DE ROLES A PERMISOS
+const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+    [UserRole.ADMIN]: [
+        Permission.MANAGE_CLINICS,
+        Permission.VIEW_CLINICS,
+        Permission.MANAGE_PATIENTS,
+        Permission.VIEW_PATIENTS,
+        Permission.MANAGE_STAFF,
+        Permission.VIEW_STAFF,
+        Permission.MANAGE_APPOINTMENTS,
+        Permission.VIEW_APPOINTMENTS,
+        Permission.ACCESS_REPORTS,
+        Permission.VIEW_ANALYTICS,
+        Permission.MANAGE_ASSETS,
+        Permission.SYSTEM_CONFIG
+    ],
+    [UserRole.PROPIETARIO]: [
+        Permission.VIEW_CLINICS,
+        Permission.MANAGE_PATIENTS,
+        Permission.VIEW_PATIENTS,
+        Permission.MANAGE_STAFF,
+        Permission.VIEW_STAFF,
+        Permission.MANAGE_APPOINTMENTS,
+        Permission.VIEW_APPOINTMENTS,
+        Permission.ACCESS_REPORTS,
+        Permission.VIEW_ANALYTICS,
+        Permission.MANAGE_ASSETS
+    ],
+    [UserRole.DOCTOR]: [
+        Permission.VIEW_CLINICS,
+        Permission.MANAGE_PATIENTS,
+        Permission.VIEW_PATIENTS,
+        Permission.VIEW_STAFF,
+        Permission.MANAGE_APPOINTMENTS,
+        Permission.VIEW_APPOINTMENTS,
+        Permission.VIEW_ANALYTICS
+    ],
+    [UserRole.PERSONAL_CLINICA]: [
+        Permission.VIEW_CLINICS,
+        Permission.VIEW_PATIENTS,
+        Permission.MANAGE_APPOINTMENTS,
+        Permission.VIEW_APPOINTMENTS
+    ],
+    [UserRole.PACIENTE]: [
+        Permission.VIEW_APPOINTMENTS
+    ]
+};
+
+// 🗺️ MAPEO DE RUTAS A PERMISOS REQUERIDOS
+const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
+    '/admin': [Permission.SYSTEM_CONFIG],
+    '/admin/roles': [Permission.SYSTEM_CONFIG],
+    '/clinicas': [Permission.VIEW_CLINICS],
+    '/clinicas/manage': [Permission.MANAGE_CLINICS],
+    '/pacientes': [Permission.VIEW_PATIENTS],
+    '/pacientes/manage': [Permission.MANAGE_PATIENTS],
+    '/personal': [Permission.VIEW_STAFF],
+    '/personal/manage': [Permission.MANAGE_STAFF],
+    '/citas': [Permission.VIEW_APPOINTMENTS],
+    '/citas/manage': [Permission.MANAGE_APPOINTMENTS],
+    '/reportes': [Permission.ACCESS_REPORTS],
+    '/assets': [Permission.MANAGE_ASSETS]
+};
+
 @Injectable({
     providedIn: 'root'
 })
 export class PermissionService {
+    private roleService = inject(RoleService);
 
-    constructor(private roleService: RoleService) {}
+    // 🔍 OBSERVABLES PARA PERMISOS ACTUALES
+    private currentPermissionsSubject = new BehaviorSubject<Permission[]>([]);
+    public currentPermissions$ = this.currentPermissionsSubject.asObservable();
 
-    // ========================================
-    // 🎯 MÉTODOS PRINCIPALES DE VERIFICACIÓN
-    // ========================================
+    // 🔄 OBSERVABLE COMBINADO PARA SINCRONIZACIÓN
+    private rolePermissions$ = combineLatest([
+        this.roleService.currentUser$,
+        this.roleService.selectedRole$
+    ]).pipe(
+        map(([user, selectedRole]) => {
+            console.log('🔄 PermissionService: Actualizando permisos', { user: !!user, selectedRole });
+            
+            if (!user || !selectedRole) {
+                console.log('🔐 PermissionService: Sin usuario o rol seleccionado');
+                return [];
+            }
+            
+            const permissions = ROLE_PERMISSIONS[selectedRole] || [];
+            console.log('🔐 PermissionService: Permisos para rol', selectedRole, ':', permissions);
+            return permissions;
+        }),
+        distinctUntilChanged(),
+        shareReplay(1)
+    );
+
+    constructor() {
+        this.initializePermissions();
+    }
+
+    // 🔄 INICIALIZACIÓN DE PERMISOS
+    private initializePermissions(): void {
+        console.log('🔄 PermissionService: Inicializando...');
+        
+        this.rolePermissions$.subscribe(permissions => {
+            console.log('🔄 PermissionService: Permisos actualizados:', permissions);
+            this.currentPermissionsSubject.next(permissions);
+        });
+    }
+
+    // 🔍 MÉTODOS DE VERIFICACIÓN DE PERMISOS
 
     /**
      * Verifica si el usuario tiene un permiso específico
      */
-    hasPermission(permission: string): Observable<boolean> {
-        try {
-            const currentRole = this.roleService.getCurrentRole();
-            if (!currentRole) {
-                console.warn('🚨 PermissionService: No hay rol actual');
-                return of(false);
-            }
-
-            const permissions = this.getPermissionsForRole(currentRole);
-            const hasAccess = permissions.includes(permission);
-            
-            console.log(`🔐 hasPermission(${permission}): ${hasAccess} [rol: ${currentRole}]`);
-            return of(hasAccess);
-        } catch (error) {
-            console.error('🚨 Error verificando permiso:', error);
-            return of(false);
-        }
+    hasPermission(permission: Permission): Observable<boolean> {
+        return this.rolePermissions$.pipe(
+            map(permissions => {
+                const hasPermission = permissions.includes(permission);
+                console.log('🔐 hasPermission(' + permission + '):', hasPermission);
+                return hasPermission;
+            })
+        );
     }
 
     /**
-     * Verifica si el usuario tiene alguno de los permisos especificados (OR)
+     * Verifica si el usuario tiene alguno de los permisos especificados
      */
-    hasAnyPermission(permissions: string[]): Observable<boolean> {
-        try {
-            if (!permissions || permissions.length === 0) {
-                return of(false);
-            }
-
-            const currentRole = this.roleService.getCurrentRole();
-            if (!currentRole) {
-                return of(false);
-            }
-
-            const userPermissions = this.getPermissionsForRole(currentRole);
-            const hasAccess = permissions.some(permission => userPermissions.includes(permission));
-            
-            console.log(`🔐 hasAnyPermission([${permissions.join(', ')}]): ${hasAccess}`);
-            return of(hasAccess);
-        } catch (error) {
-            console.error('🚨 Error verificando permisos (ANY):', error);
-            return of(false);
-        }
+    hasAnyPermission(permissions: Permission[]): Observable<boolean> {
+        return this.rolePermissions$.pipe(
+            map(userPermissions => {
+                const hasAny = permissions.some(permission => userPermissions.includes(permission));
+                console.log('🔐 hasAnyPermission(' + permissions.join(', ') + '):', hasAny);
+                return hasAny;
+            })
+        );
     }
 
     /**
-     * Verifica si el usuario tiene todos los permisos especificados (AND)
+     * Verifica si el usuario tiene todos los permisos especificados
      */
-    hasAllPermissions(permissions: string[]): Observable<boolean> {
-        try {
-            if (!permissions || permissions.length === 0) {
-                return of(true);
-            }
-
-            const currentRole = this.roleService.getCurrentRole();
-            if (!currentRole) {
-                return of(false);
-            }
-
-            const userPermissions = this.getPermissionsForRole(currentRole);
-            const hasAccess = permissions.every(permission => userPermissions.includes(permission));
-            
-            console.log(`🔐 hasAllPermissions([${permissions.join(', ')}]): ${hasAccess}`);
-            return of(hasAccess);
-        } catch (error) {
-            console.error('🚨 Error verificando permisos (ALL):', error);
-            return of(false);
-        }
+    hasAllPermissions(permissions: Permission[]): Observable<boolean> {
+        return this.rolePermissions$.pipe(
+            map(userPermissions => {
+                const hasAll = permissions.every(permission => userPermissions.includes(permission));
+                console.log('🔐 hasAllPermissions(' + permissions.join(', ') + '):', hasAll);
+                return hasAll;
+            })
+        );
     }
 
     /**
-     * Verifica si el usuario tiene un rol específico
-     */
-    hasRole(role: UserRole): Observable<boolean> {
-        try {
-            // Usar el método existente del RoleService
-            const hasAccess = this.roleService.hasRole(role);
-            console.log(`🔐 hasRole(${role}): ${hasAccess}`);
-            return of(hasAccess);
-        } catch (error) {
-            console.error('🚨 Error verificando rol:', error);
-            return of(false);
-        }
-    }
-
-    /**
-     * Verifica si el usuario tiene alguno de los roles especificados (OR)
-     * MÉTODO REQUERIDO POR ROLEGUARD
+     * Verifica si el usuario tiene alguno de los roles especificados
      */
     hasAnyRole(roles: UserRole[]): Observable<boolean> {
-        try {
-            if (!roles || roles.length === 0) {
-                return of(false);
-            }
-
-            const currentRole = this.roleService.getCurrentRole();
-            if (!currentRole) {
-                return of(false);
-            }
-
-            // Verificar si el rol actual está en la lista de roles permitidos
-            const hasAccess = roles.some(role => {
-                try {
-                    return this.roleService.hasRole(role);
-                } catch (error) {
-                    console.error(`🚨 Error verificando rol ${role}:`, error);
+        return this.roleService.selectedRole$.pipe(
+            map(currentRole => {
+                if (!currentRole) {
+                    console.log('🔐 hasAnyRole(' + roles.join(', ') + '): false (no current role)');
                     return false;
                 }
-            });
-            
-            console.log(`🔐 hasAnyRole([${roles.join(', ')}]): ${hasAccess} [rol actual: ${currentRole}]`);
-            return of(hasAccess);
-        } catch (error) {
-            console.error('🚨 Error verificando roles (ANY):', error);
-            return of(false);
-        }
+                
+                const hasRole = roles.includes(currentRole);
+                console.log('🔐 hasAnyRole(' + roles.join(', ') + '): ' + hasRole + ' [rol actual: ' + currentRole + ']');
+                return hasRole;
+            })
+        );
     }
 
     /**
-     * Verifica si el usuario tiene todos los roles especificados (AND)
+     * Verifica si el usuario tiene todos los roles especificados
      */
     hasAllRoles(roles: UserRole[]): Observable<boolean> {
-        try {
-            if (!roles || roles.length === 0) {
-                return of(true);
-            }
-
-            const hasAccess = roles.every(role => {
-                try {
-                    return this.roleService.hasRole(role);
-                } catch (error) {
-                    console.error(`🚨 Error verificando rol ${role}:`, error);
+        return this.roleService.availableRoles$.pipe(
+            map(availableRoles => {
+                if (!availableRoles || availableRoles.length === 0) {
+                    console.log('🔐 hasAllRoles(' + roles.join(', ') + '): false (no available roles)');
                     return false;
                 }
-            });
-            
-            console.log(`🔐 hasAllRoles([${roles.join(', ')}]): ${hasAccess}`);
-            return of(hasAccess);
-        } catch (error) {
-            console.error('🚨 Error verificando roles (ALL):', error);
-            return of(false);
-        }
+                
+                const hasAll = roles.every(role => availableRoles.includes(role));
+                console.log('🔐 hasAllRoles(' + roles.join(', ') + '): ' + hasAll);
+                return hasAll;
+            })
+        );
     }
 
-    // ========================================
-    // 🏥 MÉTODOS DE NEGOCIO ESPECÍFICOS
-    // ========================================
-
-    canManageClinics(): Observable<boolean> {
-        return this.hasAnyPermission(['manage_clinics', 'admin_access']);
-    }
-
-    canViewPatients(): Observable<boolean> {
-        return this.hasAnyPermission(['view_patients', 'manage_patients', 'admin_access']);
-    }
-
-    canManageStaff(): Observable<boolean> {
-        return this.hasAnyPermission(['manage_staff', 'admin_access']);
-    }
-
-    canManageAppointments(): Observable<boolean> {
-        return this.hasAnyPermission(['manage_appointments', 'view_appointments', 'admin_access']);
-    }
-
-    canAccessReports(): Observable<boolean> {
-        return this.hasAnyPermission(['view_reports', 'admin_access']);
-    }
-
-    canManageAssets(): Observable<boolean> {
-        return this.hasAnyPermission(['manage_assets', 'admin_access']);
-    }
-
-    // ========================================
-    // 🛡️ VERIFICACIÓN DE RUTAS
-    // ========================================
+    // 🏥 MÉTODOS DE PERMISOS ESPECÍFICOS DEL NEGOCIO
 
     /**
-     * Verifica si el usuario puede acceder a una ruta específica
+     * Verifica si puede gestionar clínicas
+     */
+    canManageClinics(): Observable<boolean> {
+        return this.hasPermission(Permission.MANAGE_CLINICS);
+    }
+
+    /**
+     * Verifica si puede ver pacientes
+     */
+    canViewPatients(): Observable<boolean> {
+        return this.hasPermission(Permission.VIEW_PATIENTS);
+    }
+
+    /**
+     * Verifica si puede gestionar personal
+     */
+    canManageStaff(): Observable<boolean> {
+        return this.hasPermission(Permission.MANAGE_STAFF);
+    }
+
+    /**
+     * Verifica si puede gestionar citas
+     */
+    canManageAppointments(): Observable<boolean> {
+        return this.hasPermission(Permission.MANAGE_APPOINTMENTS);
+    }
+
+    /**
+     * Verifica si puede acceder a reportes
+     */
+    canAccessReports(): Observable<boolean> {
+        return this.hasPermission(Permission.ACCESS_REPORTS);
+    }
+
+    /**
+     * Verifica si puede gestionar activos
+     */
+    canManageAssets(): Observable<boolean> {
+        return this.hasPermission(Permission.MANAGE_ASSETS);
+    }
+
+    /**
+     * Verifica si puede acceder a una ruta específica
      */
     canAccessRoute(route: string): Observable<boolean> {
-        const routePermissions = this.getRoutePermissions(route);
-        if (routePermissions.length === 0) {
-            return of(true); // Ruta sin restricciones
+        const requiredPermissions = ROUTE_PERMISSIONS[route];
+        
+        if (!requiredPermissions || requiredPermissions.length === 0) {
+            console.log('🔐 canAccessRoute(' + route + '): true (no permissions required)');
+            return of(true);
         }
-        return this.hasAnyPermission(routePermissions);
+
+        return this.hasAnyPermission(requiredPermissions).pipe(
+            map(canAccess => {
+                console.log('🔐 canAccessRoute(' + route + '): ' + canAccess);
+                return canAccess;
+            })
+        );
     }
 
-    // ========================================
-    // 🔧 MÉTODOS SÍNCRONOS (PARA TEMPLATES)
-    // ========================================
+    // 🔧 MÉTODOS SÍNCRONOS PARA COMPATIBILIDAD
 
     /**
-     * Versión síncrona para usar en templates
+     * Versión síncrona de hasPermission (para casos donde se necesita respuesta inmediata)
      */
-    hasPermissionSync(permission: string): boolean {
-        try {
-            const currentRole = this.roleService.getCurrentRole();
-            if (!currentRole) return false;
-
-            const permissions = this.getPermissionsForRole(currentRole);
-            return permissions.includes(permission);
-        } catch (error) {
-            console.error('🚨 Error verificando permiso (sync):', error);
-            return false;
-        }
-    }
-
-    /**
-     * Versión síncrona para verificar roles
-     */
-    hasRoleSync(role: UserRole): boolean {
-        try {
-            return this.roleService.hasRole(role);
-        } catch (error) {
-            console.error('🚨 Error verificando rol (sync):', error);
-            return false;
-        }
-    }
-
-    // ========================================
-    // 🔧 MÉTODOS AUXILIARES
-    // ========================================
-
-    /**
-     * Obtiene los permisos para un rol específico
-     */
-    private getPermissionsForRole(role: UserRole): string[] {
-        try {
-            const normalizedRole = role.toLowerCase() as keyof typeof ROLE_CONFIG.ROLE_PERMISSIONS;
-            const permissions = ROLE_CONFIG.ROLE_PERMISSIONS[normalizedRole];
-            
-            if (!permissions) {
-                console.warn(`🚨 No se encontraron permisos para el rol: ${role}`);
-                return [];
-            }
-
-            return permissions;
-        } catch (error) {
-            console.error('🚨 Error obteniendo permisos para rol:', error);
-            return [];
-        }
+    hasPermissionSync(permission: Permission): boolean {
+        const currentPermissions = this.currentPermissionsSubject.value;
+        const hasPermission = currentPermissions.includes(permission);
+        console.log('🔐 hasPermissionSync(' + permission + '):', hasPermission);
+        return hasPermission;
     }
 
     /**
-     * Mapea rutas a permisos requeridos
+     * Obtiene los permisos actuales de forma síncrona
      */
-    private getRoutePermissions(route: string): string[] {
-        const routeMap: { [key: string]: string[] } = {
-            '/clinicas': ['manage_clinics'],
-            '/pacientes': ['view_patients'],
-            '/personal': ['manage_staff'],
-            '/citas': ['view_appointments'],
-            '/reportes': ['view_reports'],
-            '/mapas': ['manage_assets'],
-            '/admin': ['admin_access']
+    getCurrentPermissions(): Permission[] {
+        return this.currentPermissionsSubject.value;
+    }
+
+    /**
+     * Verifica si el usuario actual es administrador
+     */
+    isAdmin(): boolean {
+        return this.roleService.isAdmin();
+    }
+
+    /**
+     * Obtiene el rol actual
+     */
+    getCurrentRole(): UserRole | null {
+        return this.roleService.getCurrentRole();
+    }
+
+    // 🔍 MÉTODOS DE UTILIDAD
+
+    /**
+     * Obtiene todos los permisos disponibles para un rol específico
+     */
+    getPermissionsForRole(role: UserRole): Permission[] {
+        return ROLE_PERMISSIONS[role] || [];
+    }
+
+    /**
+     * Obtiene el nivel jerárquico de un rol (para comparaciones)
+     */
+    getRoleLevel(role: UserRole): number {
+        const levels = {
+            [UserRole.ADMIN]: 5,
+            [UserRole.PROPIETARIO]: 4,
+            [UserRole.DOCTOR]: 3,
+            [UserRole.PERSONAL_CLINICA]: 2,
+            [UserRole.PACIENTE]: 1
         };
-
-        return routeMap[route] || [];
+        return levels[role] || 0;
     }
 
     /**
-     * Obtiene información detallada del sistema de permisos
+     * Verifica si un rol tiene nivel suficiente
      */
-    getPermissionInfo(): Observable<any> {
-        try {
-            const currentRole = this.roleService.getCurrentRole();
-            
-            // Obtener roles disponibles de forma segura
-            let availableRoles: UserRole[] = [];
-            try {
-                // Intentar obtener del observable
-                this.roleService.availableRoles$.subscribe(roles => {
-                    availableRoles = roles || [];
-                }).unsubscribe();
-            } catch (error) {
-                console.warn('🚨 Error obteniendo availableRoles$, usando rol actual:', error);
-                // Si falla, usar al menos el rol actual
-                if (currentRole) {
-                    availableRoles = [currentRole];
-                }
-            }
+    hasMinimumRoleLevel(minimumLevel: number): Observable<boolean> {
+        return this.roleService.selectedRole$.pipe(
+            map(currentRole => {
+                if (!currentRole) return false;
+                const currentLevel = this.getRoleLevel(currentRole);
+                const hasLevel = currentLevel >= minimumLevel;
+                console.log('🔐 hasMinimumRoleLevel(' + minimumLevel + '): ' + hasLevel + ' [nivel actual: ' + currentLevel + ']');
+                return hasLevel;
+            })
+        );
+    }
 
-            const currentPermissions = currentRole ? this.getPermissionsForRole(currentRole) : [];
-            const allPermissions = Object.values(ROLE_CONFIG.ROLE_PERMISSIONS).flat();
+    // 🧹 MÉTODOS DE LIMPIEZA
 
-            const info = {
-                currentRole: currentRole || null,
-                availableRoles: availableRoles,
-                currentPermissions: currentPermissions,
-                allPermissions: [...new Set(allPermissions)] // Eliminar duplicados
-            };
+    /**
+     * Limpia el estado de permisos
+     */
+    clearPermissions(): void {
+        console.log('🧹 PermissionService: Limpiando permisos');
+        this.currentPermissionsSubject.next([]);
+    }
 
-            console.log('🔐 Información del sistema de permisos:', info);
-            return of(info);
-        } catch (error) {
-            console.error('🚨 Error obteniendo información de permisos:', error);
-            return of({
-                currentRole: null,
-                availableRoles: [],
-                currentPermissions: [],
-                allPermissions: []
-            });
-        }
+    /**
+     * Recarga los permisos desde el RoleService
+     */
+    reloadPermissions(): void {
+        console.log('🔄 PermissionService: Recargando permisos');
+        // La recarga es automática gracias a los observables
+        // Este método existe para compatibilidad
     }
 }
 
