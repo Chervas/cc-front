@@ -86,15 +86,25 @@ export const appRoutes: Route[] = [
             // Ruta de pacientes (fuera del grupo "apps")
             {
                 path: 'pacientes',
-                loadChildren: () => 
+                loadChildren: () =>
                     import('./modules/admin/apps/pacientes/pacientes.routes').then(m => m.pacientesRoutes)
             },
 
             // NUEVA RUTA: Marketing
             {
                 path: 'marketing',
-                loadChildren: () => 
+                loadChildren: () =>
                     import('./modules/admin/apps/marketing/marketing.module').then(m => m.MarketingModule)
+            },
+
+            // 🧪 NUEVA RUTA: Testing Sistema de Roles (CORREGIDA)
+            {
+                path: 'roles-test',
+                loadComponent: () => import('./modules/admin/apps/roles/components/role-test-component').then(c => c.RoleTestComponent),
+                data: { 
+                    layout: 'empty',
+                    title: 'Testing Sistema de Roles'
+                }
             }
         ]
     }

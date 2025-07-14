@@ -1,0 +1,75 @@
+<div class="p-6">
+  <h2 class="text-2xl font-bold mb-4">🧪 Testing Sistema de Roles</h2>
+  
+  <!-- Información del usuario actual -->
+  <mat-card class="mb-4">
+    <mat-card-header>
+      <mat-card-title>👤 Usuario Actual</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p><strong>Rol:</strong> {{ (roleService.currentRole$ | async) || 'No definido' }}</p>
+      <p><strong>Roles disponibles:</strong> {{ (roleService.availableRoles$ | async)?.join(', ') || 'Ninguno' }}</p>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Testing de directivas por rol -->
+  <mat-card class="mb-4">
+    <mat-card-header>
+      <mat-card-title>🎯 Testing Directiva *hasRole</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div *hasRole="'admin'" class="p-2 bg-red-100 mb-2">
+        ✅ Visible solo para ADMIN
+      </div>
+      <div *hasRole="'propietario'" class="p-2 bg-blue-100 mb-2">
+        ✅ Visible solo para PROPIETARIO
+      </div>
+      <div *hasRole="['propietario', 'admin']" class="p-2 bg-green-100 mb-2">
+        ✅ Visible para PROPIETARIO o ADMIN
+      </div>
+      <div *hasRole="'paciente'" class="p-2 bg-yellow-100 mb-2">
+        ✅ Visible solo para PACIENTE
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Testing de directivas por permiso -->
+  <mat-card class="mb-4">
+    <mat-card-header>
+      <mat-card-title>🔐 Testing Directiva *hasPermission</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <button *hasPermission="'clinics.manage'" mat-raised-button color="primary" class="mr-2 mb-2">
+        Gestionar Clínicas
+      </button>
+      <button *hasPermission="'patients.view'" mat-raised-button color="accent" class="mr-2 mb-2">
+        Ver Pacientes
+      </button>
+      <button *hasPermission="'reports.view'" mat-raised-button color="warn" class="mr-2 mb-2">
+        Ver Reportes
+      </button>
+      <button *hasPermission="'admin.access'" mat-raised-button class="mr-2 mb-2">
+        Acceso Admin
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Testing de métodos del servicio -->
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>🔍 Testing Métodos del Servicio</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <button mat-button (click)="testPermissions()" class="mr-2">
+        Probar Permisos
+      </button>
+      <button mat-button (click)="testRoles()" class="mr-2">
+        Probar Roles
+      </button>
+      <div class="mt-4 p-2 bg-gray-100 rounded">
+        <pre>{{ testResults | json }}</pre>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
+
