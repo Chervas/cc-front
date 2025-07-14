@@ -280,15 +280,44 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
         });
     }
 
-    onClinicChange(clinicId: number): void {
-        const clinic = this.filteredClinics.find(c => c.id_clinica === clinicId);
+    // ✅ CORREGIDO: Método para manejar selección de clínicas desde clinic-selector
+    onClinicChange(clinicData: any): void {
+        console.log('🔄 onClinicChange llamado con:', clinicData);
+        
+        // ✅ CORREGIDO: Manejar tanto objetos de clínica como grupos
+        if (!clinicData) {
+            console.log('⚠️ No se recibió datos de clínica');
+            return;
+        }
+
+        // Si es un grupo
+        if (clinicData.isGroup) {
+            this.selectedClinic = clinicData;
+            this.persistClinicSelection(clinicData);
+            this.updateFinalClinicsAndPatients();
+            console.log('🏥 Grupo seleccionado:', clinicData.nombre_grupo);
+            return;
+        }
+
+        // Si es una clínica individual
+        let clinic: any = null;
+        
+        if (typeof clinicData === 'number') {
+            // Si recibe un ID (compatibilidad hacia atrás)
+            clinic = this.filteredClinics.find(c => c.id_clinica === clinicData);
+        } else if (clinicData.id_clinica) {
+            // Si recibe el objeto completo de la clínica
+            clinic = clinicData;
+        }
+
         if (clinic) {
             this.selectedClinic = clinic;
-            // ✅ CORREGIDO: Usar setSelectedClinicId en lugar de setSelectedClinic
-            this._clinicFilterService.setSelectedClinicId(String(clinicId));
+            this._clinicFilterService.setSelectedClinicId(String(clinic.id_clinica));
             this.persistClinicSelection(clinic);
             this.updateFinalClinicsAndPatients();
             console.log('🏥 Clínica seleccionada:', clinic.nombre_clinica);
+        } else {
+            console.log('⚠️ No se encontró la clínica:', clinicData);
         }
     }
 
