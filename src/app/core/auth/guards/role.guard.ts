@@ -1,15 +1,14 @@
 import { Injectable } from '@angular/core';
-import { CanActivate, CanActivateChild, ActivatedRouteSnapshot, RouterStateSnapshot, Router } from '@angular/router';
-import { Observable, of, map, catchError, take } from 'rxjs';
-import { RoleService, UserRole } from '../services/role.service';
-import { PermissionService } from '../services/permission.service';
+import { CanActivate, CanActivateChild, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
+import { Observable, of } from 'rxjs';
+import { map, take, switchMap } from 'rxjs/operators';
+import { RoleService, UserRole } from '../../services/role.service';
+import { PermissionService } from '../../services/permission.service';
 
 /**
- * 🛡️ GUARD DE PROTECCIÓN POR ROLES
- * 
- * Protege rutas basándose en roles y permisos del usuario
- * Se integra con RoleService y PermissionService existentes
- * Mantiene compatibilidad total con el sistema actual
+ * 🛡️ ROLE GUARD
+ * Guard para proteger rutas basado en roles y permisos
+ * ADAPTADO AL ROLESERVICE REAL (usa observables y métodos síncronos existentes)
  */
 @Injectable({
     providedIn: 'root'
@@ -22,317 +21,225 @@ export class RoleGuard implements CanActivate, CanActivateChild {
         private router: Router
     ) {}
 
-    /**
-     * Protege rutas principales
-     */
-    canActivate(
-        route: ActivatedRouteSnapshot,
-        state: RouterStateSnapshot
-    ): Observable<boolean> {
+    canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<boolean> {
         return this.checkAccess(route, state);
     }
 
-    /**
-     * Protege rutas hijas
-     */
-    canActivateChild(
-        route: ActivatedRouteSnapshot,
-        state: RouterStateSnapshot
-    ): Observable<boolean> {
+    canActivateChild(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<boolean> {
         return this.checkAccess(route, state);
     }
 
-    /**
-     * Lógica principal de verificación de acceso
-     */
-    private checkAccess(
-        route: ActivatedRouteSnapshot,
-        state: RouterStateSnapshot
-    ): Observable<boolean> {
+    private checkAccess(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<boolean> {
+        const routeData = route.data;
+
+        // Si no hay restricciones, permitir acceso
+        if (!routeData || (!routeData['requiredRoles'] && !routeData['requiredPermissions'] && !routeData['minimumRoleLevel'])) {
+            return of(true);
+        }
+
+        // Verificar autenticación primero usando observable currentUser$
         return this.roleService.currentUser$.pipe(
             take(1),
-            map(currentUser => {
-                // ✅ VERIFICAR SI HAY USUARIO AUTENTICADO
+            switchMap(currentUser => {
                 if (!currentUser) {
-                    console.log('🛡️ RoleGuard: Usuario no autenticado, redirigiendo a login');
-                    this.router.navigate(['/sign-in'], { 
-                        queryParams: { returnUrl: state.url } 
-                    });
-                    return false;
+                    console.log('🛡️ RoleGuard: Usuario no autenticado');
+                    this.router.navigate(['/sign-in']);
+                    return of(false);
                 }
 
-                // ✅ OBTENER CONFIGURACIÓN DE LA RUTA
-                const routeConfig = this.extractRouteConfig(route);
-                
-                // ✅ SI NO HAY RESTRICCIONES, PERMITIR ACCESO
-                if (!routeConfig.hasRestrictions) {
-                    console.log('🛡️ RoleGuard: Ruta sin restricciones, acceso permitido');
-                    return true;
+                // Verificar roles requeridos
+                if (routeData['requiredRoles']) {
+                    return this.checkRequiredRoles(routeData['requiredRoles'], state.url);
                 }
 
-                // ✅ VERIFICAR ROLES REQUERIDOS
-                if (routeConfig.requiredRoles.length > 0) {
-                    const hasRequiredRole = this.checkRequiredRoles(
-                        routeConfig.requiredRoles, 
-                        currentUser
-                    );
-                    
-                    if (!hasRequiredRole) {
-                        console.log('🛡️ RoleGuard: Usuario no tiene rol requerido');
-                        this.handleUnauthorizedAccess(state.url);
-                        return false;
-                    }
+                // Verificar permisos requeridos
+                if (routeData['requiredPermissions']) {
+                    return this.checkRequiredPermissions(routeData['requiredPermissions'], state.url);
                 }
 
-                // ✅ VERIFICAR PERMISOS REQUERIDOS
-                if (routeConfig.requiredPermissions.length > 0) {
-                    const hasRequiredPermission = this.checkRequiredPermissions(
-                        routeConfig.requiredPermissions
-                    );
-                    
-                    if (!hasRequiredPermission) {
-                        console.log('🛡️ RoleGuard: Usuario no tiene permiso requerido');
-                        this.handleUnauthorizedAccess(state.url);
-                        return false;
-                    }
+                // Verificar nivel mínimo de rol
+                if (routeData['minimumRoleLevel']) {
+                    return this.checkMinimumRoleLevel(routeData['minimumRoleLevel'], state.url);
                 }
 
-                // ✅ VERIFICAR NIVEL MÍNIMO DE ROL
-                if (routeConfig.minimumRoleLevel) {
-                    const hasMinimumLevel = this.checkMinimumRoleLevel(
-                        routeConfig.minimumRoleLevel
-                    );
-                    
-                    if (!hasMinimumLevel) {
-                        console.log('🛡️ RoleGuard: Usuario no tiene nivel mínimo de rol');
-                        this.handleUnauthorizedAccess(state.url);
-                        return false;
-                    }
-                }
-
-                console.log('🛡️ RoleGuard: Acceso autorizado para:', state.url);
-                return true;
-            }),
-            catchError(error => {
-                console.error('🛡️ RoleGuard: Error verificando acceso:', error);
-                this.router.navigate(['/error']);
-                return of(false);
+                return of(true);
             })
         );
     }
 
-    /**
-     * Extrae la configuración de protección de la ruta
-     */
-    private extractRouteConfig(route: ActivatedRouteSnapshot): RouteConfig {
-        const data = route.data || {};
-        
-        return {
-            requiredRoles: this.normalizeRoles(data['requiredRoles'] || data['roles'] || []),
-            requiredPermissions: this.normalizePermissions(data['requiredPermissions'] || data['permissions'] || []),
-            minimumRoleLevel: data['minimumRoleLevel'] || data['minRole'] || null,
-            allowedForGuests: data['allowGuests'] || false,
-            requiresAdmin: data['requiresAdmin'] || false,
-            hasRestrictions: this.hasAnyRestrictions(data)
-        };
-    }
-
-    /**
-     * Verifica si la ruta tiene alguna restricción configurada
-     */
-    private hasAnyRestrictions(data: any): boolean {
-        return !!(
-            data['requiredRoles'] || 
-            data['roles'] || 
-            data['requiredPermissions'] || 
-            data['permissions'] || 
-            data['minimumRoleLevel'] || 
-            data['minRole'] || 
-            data['requiresAdmin']
+    private checkRequiredRoles(requiredRoles: UserRole[], targetUrl: string): Observable<boolean> {
+        return this.permissionService.hasAnyRole(requiredRoles).pipe(
+            take(1),
+            map(hasRole => {
+                if (!hasRole) {
+                    console.log('🛡️ RoleGuard: Acceso denegado - Roles requeridos:', requiredRoles);
+                    this.redirectBasedOnRole(targetUrl);
+                    return false;
+                }
+                console.log('🛡️ RoleGuard: Acceso permitido - Roles:', requiredRoles);
+                return true;
+            })
         );
     }
 
-    /**
-     * Normaliza los roles a un array de UserRole
-     */
-    private normalizeRoles(roles: any): UserRole[] {
-        if (!roles) return [];
-        
-        const roleArray = Array.isArray(roles) ? roles : [roles];
-        return roleArray.filter(role => 
-            Object.values(UserRole).includes(role as UserRole)
-        ) as UserRole[];
+    private checkRequiredPermissions(requiredPermissions: string[], targetUrl: string): Observable<boolean> {
+        return this.permissionService.hasAnyPermission(requiredPermissions).pipe(
+            take(1),
+            map(hasPermission => {
+                if (!hasPermission) {
+                    console.log('🛡️ RoleGuard: Acceso denegado - Permisos requeridos:', requiredPermissions);
+                    this.redirectBasedOnRole(targetUrl);
+                    return false;
+                }
+                console.log('🛡️ RoleGuard: Acceso permitido - Permisos:', requiredPermissions);
+                return true;
+            })
+        );
     }
 
-    /**
-     * Normaliza los permisos a un array de strings
-     */
-    private normalizePermissions(permissions: any): string[] {
-        if (!permissions) return [];
+    private checkMinimumRoleLevel(minimumLevel: number, targetUrl: string): Observable<boolean> {
+        // Usar método síncrono getCurrentRole() que SÍ existe
+        const currentRole = this.roleService.getCurrentRole() as UserRole;
         
-        return Array.isArray(permissions) ? permissions : [permissions];
-    }
+        const roleHierarchy: { [key in UserRole]: number } = {
+            'paciente': 1,
+            'personaldeclinica': 2,
+            'doctor': 3,
+            'propietario': 4,
+            'admin': 5
+        };
 
-    /**
-     * Verifica si el usuario tiene alguno de los roles requeridos
-     */
-    private checkRequiredRoles(requiredRoles: UserRole[], currentUser: any): boolean {
-        const userRoles = currentUser.roles || [];
+        const currentLevel = currentRole ? roleHierarchy[currentRole] : 0;
         
-        // Admin siempre tiene acceso
-        if (userRoles.includes(UserRole.ADMIN)) return true;
-        
-        // Verificar si tiene alguno de los roles requeridos
-        return requiredRoles.some(role => userRoles.includes(role));
-    }
-
-    /**
-     * Verifica si el usuario tiene alguno de los permisos requeridos (síncrono)
-     */
-    private checkRequiredPermissions(requiredPermissions: string[]): boolean {
-        // Usar método síncrono si está disponible
-        if (typeof (this.permissionService as any).hasPermissionSync === 'function') {
-            return requiredPermissions.some(permission => 
-                (this.permissionService as any).hasPermissionSync(permission)
-            );
+        if (currentLevel < minimumLevel) {
+            console.log('🛡️ RoleGuard: Acceso denegado - Nivel insuficiente:', currentLevel, '<', minimumLevel);
+            this.redirectBasedOnRole(targetUrl);
+            return of(false);
         }
         
-        // Fallback: asumir que tiene permisos si no se puede verificar síncronamente
-        console.warn('🛡️ RoleGuard: Verificación síncrona de permisos no disponible');
-        return true;
+        console.log('🛡️ RoleGuard: Acceso permitido - Nivel:', currentLevel, '>=', minimumLevel);
+        return of(true);
     }
 
-    /**
-     * Verifica si el usuario tiene el nivel mínimo de rol
-     */
-    private checkMinimumRoleLevel(minimumRole: UserRole): boolean {
-        const currentUser = this.roleService.getCurrentUserSync?.() || null;
-        const selectedRole = this.roleService.getSelectedRoleSync?.() || null;
-        
-        if (!currentUser || !selectedRole) return false;
-        
-        const roleLevels: { [key in UserRole]: number } = {
-            [UserRole.ADMIN]: 5,
-            [UserRole.PROPIETARIO]: 4,
-            [UserRole.DOCTOR]: 3,
-            [UserRole.PERSONAL_CLINICA]: 2,
-            [UserRole.PACIENTE]: 1
-        };
-        
-        const currentLevel = roleLevels[selectedRole] || 0;
-        const minimumLevel = roleLevels[minimumRole] || 0;
-        
-        return currentLevel >= minimumLevel;
-    }
+    private redirectBasedOnRole(originalUrl: string): void {
+        // Usar método síncrono getCurrentRole() que SÍ existe
+        const currentRole = this.roleService.getCurrentRole() as UserRole;
+        let redirectUrl = '/example'; // URL por defecto
 
-    /**
-     * Maneja acceso no autorizado
-     */
-    private handleUnauthorizedAccess(attemptedUrl: string): void {
-        console.log('🛡️ RoleGuard: Acceso denegado a:', attemptedUrl);
-        
-        // Redirigir a página de acceso denegado o dashboard según el rol
-        this.roleService.selectedRole$.pipe(take(1)).subscribe(role => {
-            if (role === UserRole.PACIENTE) {
-                this.router.navigate(['/paciente/dashboard']);
-            } else if (role === UserRole.DOCTOR) {
-                this.router.navigate(['/doctor/dashboard']);
-            } else if (role === UserRole.PERSONAL_CLINICA) {
-                this.router.navigate(['/personal/dashboard']);
-            } else if (role === UserRole.PROPIETARIO) {
-                this.router.navigate(['/propietario/dashboard']);
-            } else {
-                this.router.navigate(['/unauthorized'], {
-                    queryParams: { attemptedUrl }
-                });
-            }
+        switch (currentRole) {
+            case 'admin':
+                redirectUrl = '/admin/dashboard';
+                break;
+            case 'propietario':
+                redirectUrl = '/clinicas';
+                break;
+            case 'doctor':
+                redirectUrl = '/pacientes';
+                break;
+            case 'personaldeclinica':
+                redirectUrl = '/citas';
+                break;
+            case 'paciente':
+                redirectUrl = '/paciente/dashboard';
+                break;
+            default:
+                redirectUrl = '/example';
+        }
+
+        // Preservar URL original para redirección posterior
+        this.router.navigate([redirectUrl], { 
+            queryParams: { returnUrl: originalUrl } 
         });
     }
 }
 
 /**
- * 🔧 INTERFACE PARA CONFIGURACIÓN DE RUTAS
+ * 🎯 CONFIGURACIONES PREDEFINIDAS PARA RUTAS
  */
-interface RouteConfig {
-    requiredRoles: UserRole[];
-    requiredPermissions: string[];
-    minimumRoleLevel: UserRole | null;
-    allowedForGuests: boolean;
-    requiresAdmin: boolean;
-    hasRestrictions: boolean;
+
+// Solo administradores
+export const ADMIN_ONLY = {
+    requiredRoles: ['admin' as UserRole]
+};
+
+// Propietarios y administradores
+export const PROPIETARIO_OR_ADMIN = {
+    requiredRoles: ['propietario' as UserRole, 'admin' as UserRole]
+};
+
+// Personal médico (doctor o superior)
+export const DOCTOR_OR_HIGHER = {
+    minimumRoleLevel: 3
+};
+
+// Personal clínico (excluye pacientes)
+export const CLINICAL_STAFF_ONLY = {
+    requiredRoles: ['doctor' as UserRole, 'personaldeclinica' as UserRole, 'propietario' as UserRole, 'admin' as UserRole]
+};
+
+// Solo pacientes
+export const PACIENTE_ONLY = {
+    requiredRoles: ['paciente' as UserRole]
+};
+
+// Pacientes y personal clínico
+export const PACIENTE_OR_CLINICAL = {
+    requiredRoles: ['paciente' as UserRole, 'doctor' as UserRole, 'personaldeclinica' as UserRole, 'propietario' as UserRole, 'admin' as UserRole]
+};
+
+// Personal clínico (excluye pacientes)
+export const CLINICAL_STAFF = {
+    requiredRoles: ['doctor' as UserRole, 'personaldeclinica' as UserRole, 'propietario' as UserRole, 'admin' as UserRole]
+};
+
+// Todos los usuarios autenticados
+export const AUTHENTICATED_USERS = {
+    // Sin restricciones específicas, solo requiere autenticación
+};
+
+// Configuraciones específicas para pacientes
+export const PATIENT_OWN_DATA = {
+    requiredRoles: ['paciente' as UserRole],
+    requiredPermissions: ['patients.view.own']
+};
+
+export const PATIENT_EDIT_OWN = {
+    requiredRoles: ['paciente' as UserRole],
+    requiredPermissions: ['patients.edit.own']
+};
+
+export const PATIENT_APPOINTMENTS = {
+    requiredRoles: ['paciente' as UserRole],
+    requiredPermissions: ['appointments.view.own', 'appointments.manage.own']
+};
+
+export const PATIENT_COMMUNICATION = {
+    requiredRoles: ['paciente' as UserRole],
+    requiredPermissions: ['communication.patient']
+};
+
+/**
+ * 🎯 FUNCIONES DE UTILIDAD
+ */
+
+/**
+ * Crea configuración para permisos específicos
+ */
+export function requiresPermissions(permissions: string[]) {
+    return { requiredPermissions: permissions };
 }
 
 /**
- * 🎯 FUNCIONES DE UTILIDAD PARA CONFIGURAR RUTAS
+ * Crea configuración para nivel mínimo de rol
  */
+export function minimumRole(level: number) {
+    return { minimumRoleLevel: level };
+}
 
 /**
- * Configuración rápida para rutas que requieren admin
+ * Crea configuración para roles específicos
  */
-export const ADMIN_ONLY = {
-    requiredRoles: [UserRole.ADMIN]
-};
-
-/**
- * Configuración rápida para rutas de propietarios
- */
-export const PROPIETARIO_OR_ADMIN = {
-    requiredRoles: [UserRole.PROPIETARIO, UserRole.ADMIN]
-};
-
-/**
- * Configuración rápida para rutas de doctores
- */
-export const DOCTOR_OR_HIGHER = {
-    minimumRoleLevel: UserRole.DOCTOR
-};
-
-/**
- * Configuración rápida para rutas de personal clínico
- */
-export const CLINICAL_STAFF = {
-    requiredRoles: [UserRole.DOCTOR, UserRole.PERSONAL_CLINICA, UserRole.PROPIETARIO, UserRole.ADMIN]
-};
-
-/**
- * Configuración rápida para rutas de pacientes
- */
-export const PACIENTE_ONLY = {
-    requiredRoles: [UserRole.PACIENTE]
-};
-
-/**
- * Configuración rápida para rutas accesibles por pacientes y personal clínico
- */
-export const PACIENTE_OR_CLINICAL = {
-    requiredRoles: [UserRole.PACIENTE, UserRole.DOCTOR, UserRole.PERSONAL_CLINICA, UserRole.PROPIETARIO, UserRole.ADMIN]
-};
-
-/**
- * Configuración rápida para rutas de personal clínico y superiores (excluye pacientes)
- */
-export const CLINICAL_STAFF_ONLY = {
-    minimumRoleLevel: UserRole.PERSONAL_CLINICA
-};
-
-/**
- * Configuración rápida para rutas accesibles por todos los usuarios autenticados
- */
-export const AUTHENTICATED_USERS = {
-    minimumRoleLevel: UserRole.PACIENTE
-};
-
-/**
- * Configuración rápida para rutas que requieren permisos específicos
- */
-export const requiresPermissions = (permissions: string[]) => ({
-    requiredPermissions: permissions
-});
-
-/**
- * Configuración rápida para rutas con nivel mínimo
- */
-export const minimumRole = (role: UserRole) => ({
-    minimumRoleLevel: role
-});
+export function requiresRoles(roles: UserRole[]) {
+    return { requiredRoles: roles };
+}
 

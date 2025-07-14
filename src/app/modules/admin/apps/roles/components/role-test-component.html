@@ -1,75 +1,238 @@
-<div class="p-6">
-  <h2 class="text-2xl font-bold mb-4">🧪 Testing Sistema de Roles</h2>
-  
-  <!-- Información del usuario actual -->
-  <mat-card class="mb-4">
-    <mat-card-header>
-      <mat-card-title>👤 Usuario Actual</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <p><strong>Rol:</strong> {{ (roleService.currentRole$ | async) || 'No definido' }}</p>
-      <p><strong>Roles disponibles:</strong> {{ (roleService.availableRoles$ | async)?.join(', ') || 'Ninguno' }}</p>
-    </mat-card-content>
-  </mat-card>
+<div class="flex flex-col flex-auto min-w-0">
 
-  <!-- Testing de directivas por rol -->
-  <mat-card class="mb-4">
-    <mat-card-header>
-      <mat-card-title>🎯 Testing Directiva *hasRole</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <div *hasRole="'admin'" class="p-2 bg-red-100 mb-2">
-        ✅ Visible solo para ADMIN
-      </div>
-      <div *hasRole="'propietario'" class="p-2 bg-blue-100 mb-2">
-        ✅ Visible solo para PROPIETARIO
-      </div>
-      <div *hasRole="['propietario', 'admin']" class="p-2 bg-green-100 mb-2">
-        ✅ Visible para PROPIETARIO o ADMIN
-      </div>
-      <div *hasRole="'paciente'" class="p-2 bg-yellow-100 mb-2">
-        ✅ Visible solo para PACIENTE
-      </div>
-    </mat-card-content>
-  </mat-card>
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row flex-0 sm:items-center sm:justify-between p-6 sm:py-8 sm:px-10 border-b bg-card dark:bg-transparent">
+        <div class="flex-1 min-w-0">
+            <!-- Breadcrumbs -->
+            <div class="flex flex-wrap items-center font-medium">
+                <div>
+                    <a class="whitespace-nowrap text-primary-500">Admin</a>
+                </div>
+                <div class="flex items-center ml-1 whitespace-nowrap">
+                    <mat-icon
+                        class="icon-size-5 text-secondary"
+                        [svgIcon]="'heroicons_mini:chevron-right'"></mat-icon>
+                    <a class="ml-1 text-primary-500">Testing</a>
+                </div>
+                <div class="flex items-center ml-1 whitespace-nowrap">
+                    <mat-icon
+                        class="icon-size-5 text-secondary"
+                        [svgIcon]="'heroicons_mini:chevron-right'"></mat-icon>
+                    <span class="ml-1 text-secondary">Sistema de Roles</span>
+                </div>
+            </div>
+            <!-- Title -->
+            <div class="mt-2">
+                <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight leading-7 sm:leading-10 truncate">
+                    🧪 Testing Sistema de Roles - Fase 2
+                </h2>
+            </div>
+        </div>
+    </div>
 
-  <!-- Testing de directivas por permiso -->
-  <mat-card class="mb-4">
-    <mat-card-header>
-      <mat-card-title>🔐 Testing Directiva *hasPermission</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <button *hasPermission="'clinics.manage'" mat-raised-button color="primary" class="mr-2 mb-2">
-        Gestionar Clínicas
-      </button>
-      <button *hasPermission="'patients.view'" mat-raised-button color="accent" class="mr-2 mb-2">
-        Ver Pacientes
-      </button>
-      <button *hasPermission="'reports.view'" mat-raised-button color="warn" class="mr-2 mb-2">
-        Ver Reportes
-      </button>
-      <button *hasPermission="'admin.access'" mat-raised-button class="mr-2 mb-2">
-        Acceso Admin
-      </button>
-    </mat-card-content>
-  </mat-card>
+    <!-- Main -->
+    <div class="flex-auto p-6 sm:p-10">
 
-  <!-- Testing de métodos del servicio -->
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>🔍 Testing Métodos del Servicio</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <button mat-button (click)="testPermissions()" class="mr-2">
-        Probar Permisos
-      </button>
-      <button mat-button (click)="testRoles()" class="mr-2">
-        Probar Roles
-      </button>
-      <div class="mt-4 p-2 bg-gray-100 rounded">
-        <pre>{{ testResults | json }}</pre>
-      </div>
-    </mat-card-content>
-  </mat-card>
+        <!-- Usuario Actual -->
+        <div class="bg-card shadow rounded-2xl p-6 mb-8">
+            <div class="flex items-center mb-4">
+                <div class="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-on-primary mr-4">
+                    <mat-icon [svgIcon]="'heroicons_outline:user'"></mat-icon>
+                </div>
+                <h3 class="text-xl font-semibold">Usuario Actual</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex items-center space-x-3">
+                    <span class="text-secondary font-medium">Rol Actual:</span>
+                    <span class="px-3 py-1 bg-primary-100 text-primary-800 rounded-full text-sm font-medium">
+                        {{ getCurrentRole() }}
+                    </span>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <span class="text-secondary font-medium">Roles Disponibles:</span>
+                    <span class="px-3 py-1 bg-accent-100 text-accent-800 rounded-full text-sm font-medium">
+                        {{ getAvailableRoles() }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Testing Directiva *hasRole -->
+            <div class="bg-card shadow rounded-2xl p-6">
+                <div class="flex items-center mb-6">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-full bg-accent text-on-accent mr-4">
+                        <mat-icon [svgIcon]="'heroicons_outline:shield-check'"></mat-icon>
+                    </div>
+                    <h3 class="text-xl font-semibold">Testing Directiva *hasRole</h3>
+                </div>
+                <div class="space-y-4">
+                    <div *hasRole="'admin'" class="p-4 bg-red-50 border-l-4 border-red-400 rounded-r-lg">
+                        <div class="flex items-center">
+                            <mat-icon class="text-red-400 mr-2" [svgIcon]="'heroicons_outline:check-circle'"></mat-icon>
+                            <span class="text-red-700 font-medium">Visible solo para ADMIN</span>
+                        </div>
+                    </div>
+                    <div *hasRole="'propietario'" class="p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
+                        <div class="flex items-center">
+                            <mat-icon class="text-blue-400 mr-2" [svgIcon]="'heroicons_outline:check-circle'"></mat-icon>
+                            <span class="text-blue-700 font-medium">Visible solo para PROPIETARIO</span>
+                        </div>
+                    </div>
+                    <div *hasRole="['propietario', 'admin']" class="p-4 bg-green-50 border-l-4 border-green-400 rounded-r-lg">
+                        <div class="flex items-center">
+                            <mat-icon class="text-green-400 mr-2" [svgIcon]="'heroicons_outline:check-circle'"></mat-icon>
+                            <span class="text-green-700 font-medium">Visible para PROPIETARIO o ADMIN</span>
+                        </div>
+                    </div>
+                    <div *hasRole="'doctor'" class="p-4 bg-purple-50 border-l-4 border-purple-400 rounded-r-lg">
+                        <div class="flex items-center">
+                            <mat-icon class="text-purple-400 mr-2" [svgIcon]="'heroicons_outline:check-circle'"></mat-icon>
+                            <span class="text-purple-700 font-medium">Visible solo para DOCTOR</span>
+                        </div>
+                    </div>
+                    <div *hasRole="'personaldeclinica'" class="p-4 bg-indigo-50 border-l-4 border-indigo-400 rounded-r-lg">
+                        <div class="flex items-center">
+                            <mat-icon class="text-indigo-400 mr-2" [svgIcon]="'heroicons_outline:check-circle'"></mat-icon>
+                            <span class="text-indigo-700 font-medium">Visible solo para PERSONAL DE CLÍNICA</span>
+                        </div>
+                    </div>
+                    <div *hasRole="'paciente'" class="p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg">
+                        <div class="flex items-center">
+                            <mat-icon class="text-yellow-400 mr-2" [svgIcon]="'heroicons_outline:check-circle'"></mat-icon>
+                            <span class="text-yellow-700 font-medium">Visible solo para PACIENTE</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Testing Directiva *hasPermission -->
+            <div class="bg-card shadow rounded-2xl p-6">
+                <div class="flex items-center mb-6">
+                    <div class="flex items-center justify-center w-10 h-10 rounded-full bg-warn text-on-warn mr-4">
+                        <mat-icon [svgIcon]="'heroicons_outline:key'"></mat-icon>
+                    </div>
+                    <h3 class="text-xl font-semibold">Testing Directiva *hasPermission</h3>
+                </div>
+                <div class="space-y-3">
+                    <button *hasPermission="'clinics.manage'" 
+                            mat-flat-button 
+                            color="primary" 
+                            class="w-full justify-start">
+                        <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:building-office'"></mat-icon>
+                        Gestionar Clínicas
+                    </button>
+                    <button *hasPermission="'patients.view'" 
+                            mat-flat-button 
+                            color="accent" 
+                            class="w-full justify-start">
+                        <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:users'"></mat-icon>
+                        Ver Pacientes
+                    </button>
+                    <button *hasPermission="'reports.view'" 
+                            mat-flat-button 
+                            color="warn" 
+                            class="w-full justify-start">
+                        <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:chart-bar'"></mat-icon>
+                        Ver Reportes
+                    </button>
+                    <button *hasPermission="'admin.access'" 
+                            mat-flat-button 
+                            class="w-full justify-start">
+                        <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:cog-6-tooth'"></mat-icon>
+                        Acceso Admin
+                    </button>
+                    <button *hasPermission="'staff.manage'" 
+                            mat-flat-button 
+                            color="primary" 
+                            class="w-full justify-start">
+                        <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:user-group'"></mat-icon>
+                        Gestionar Personal
+                    </button>
+                    <button *hasPermission="'appointments.manage'" 
+                            mat-flat-button 
+                            color="accent" 
+                            class="w-full justify-start">
+                        <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:calendar-days'"></mat-icon>
+                        Gestionar Citas
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Testing Métodos del Servicio -->
+        <div class="bg-card shadow rounded-2xl p-6 mt-8">
+            <div class="flex items-center mb-6">
+                <div class="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-on-primary mr-4">
+                    <mat-icon [svgIcon]="'heroicons_outline:beaker'"></mat-icon>
+                </div>
+                <h3 class="text-xl font-semibold">Testing Métodos del Servicio</h3>
+            </div>
+            
+            <div class="flex flex-wrap gap-3 mb-6">
+                <button mat-flat-button color="primary" (click)="testPermissions()">
+                    <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:key'"></mat-icon>
+                    Probar Permisos Básicos
+                </button>
+                <button mat-flat-button color="accent" (click)="testRoles()">
+                    <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:user'"></mat-icon>
+                    Probar Roles
+                </button>
+                <button mat-flat-button color="warn" (click)="testAdvancedPermissions()">
+                    <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:magnifying-glass'"></mat-icon>
+                    Probar Permisos Avanzados
+                </button>
+                <button mat-stroked-button (click)="clearResults()">
+                    <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:trash'"></mat-icon>
+                    Limpiar Resultados
+                </button>
+            </div>
+            
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border p-4">
+                <h4 class="font-semibold mb-3 flex items-center">
+                    <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:clipboard-document-list'"></mat-icon>
+                    Resultados:
+                </h4>
+                <pre class="text-sm overflow-auto max-h-64 bg-white dark:bg-gray-900 p-4 rounded border font-mono">{{ testResults | json }}</pre>
+            </div>
+        </div>
+
+        <!-- Información del Sistema -->
+        <div class="bg-card shadow rounded-2xl p-6 mt-8">
+            <div class="flex items-center mb-6">
+                <div class="flex items-center justify-center w-10 h-10 rounded-full bg-accent text-on-accent mr-4">
+                    <mat-icon [svgIcon]="'heroicons_outline:information-circle'"></mat-icon>
+                </div>
+                <h3 class="text-xl font-semibold">Información del Sistema</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div class="flex items-center mb-2">
+                        <mat-icon class="text-blue-600 mr-2" [svgIcon]="'heroicons_outline:shield-check'"></mat-icon>
+                        <h5 class="font-semibold text-blue-800 dark:text-blue-200">Guards</h5>
+                    </div>
+                    <p class="text-blue-600 dark:text-blue-300 text-sm">Protección automática de rutas</p>
+                </div>
+                <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <div class="flex items-center mb-2">
+                        <mat-icon class="text-green-600 mr-2" [svgIcon]="'heroicons_outline:globe-alt'"></mat-icon>
+                        <h5 class="font-semibold text-green-800 dark:text-green-200">Interceptors</h5>
+                    </div>
+                    <p class="text-green-600 dark:text-green-300 text-sm">Headers HTTP automáticos</p>
+                </div>
+                <div class="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                    <div class="flex items-center mb-2">
+                        <mat-icon class="text-purple-600 mr-2" [svgIcon]="'heroicons_outline:cursor-arrow-rays'"></mat-icon>
+                        <h5 class="font-semibold text-purple-800 dark:text-purple-200">Directivas</h5>
+                    </div>
+                    <p class="text-purple-600 dark:text-purple-300 text-sm">Control declarativo de UI</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
 </div>
 

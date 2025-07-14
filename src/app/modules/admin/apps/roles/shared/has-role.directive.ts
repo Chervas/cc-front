@@ -1,107 +1,142 @@
-import { Directive, Input, OnInit, OnDestroy, TemplateRef, ViewContainerRef } from '@angular/core';
+import { Directive, Input, OnInit, OnDestroy, TemplateRef, ViewContainerRef, inject } from '@angular/core';
 import { Subject, takeUntil } from 'rxjs';
-import { PermissionService } from '../../../services/permission.service';
+import { RoleService, UserRole } from '../../../../../core/services/role.service';
 
 /**
- * 🎯 HAS ROLE DIRECTIVE - CONTROL DECLARATIVO DE ELEMENTOS UI
+ * 🎯 Directiva *hasRole para mostrar/ocultar elementos basado en roles
  * 
- * Ubicación: src/app/modules/admin/apps/roles/shared/has-role.directive.ts
- * 
- * Directiva estructural que muestra/oculta elementos basándose en roles del usuario.
- * Sigue la estructura de Fuse colocando shared components dentro del módulo específico.
+ * Uso:
+ * <div *hasRole="'admin'">Solo admins</div>
+ * <div *hasRole="['admin', 'propietario']">Admins o propietarios</div>
  */
-
 @Directive({
     selector: '[hasRole]',
     standalone: true
 })
 export class HasRoleDirective implements OnInit, OnDestroy {
-    
-    @Input() hasRole: string | string[] = [];
-    @Input() hasRoleOperator: 'AND' | 'OR' = 'OR';
-    @Input() hasRoleElse?: TemplateRef<any>;
+    private _destroy$ = new Subject<void>();
+    private _roleService = inject(RoleService);
+    private _templateRef = inject(TemplateRef<any>);
+    private _viewContainer = inject(ViewContainerRef);
 
-    private destroy$ = new Subject<void>();
-    private hasView = false;
-
-    constructor(
-        private templateRef: TemplateRef<any>,
-        private viewContainer: ViewContainerRef,
-        private permissionService: PermissionService
-    ) {}
+    @Input() hasRole: UserRole | UserRole[] | string | string[] = [];
 
     ngOnInit(): void {
+        // Suscribirse a cambios en el usuario actual
+        this._roleService.currentUser$.pipe(
+            takeUntil(this._destroy$)
+        ).subscribe(() => {
+            this.updateView();
+        });
+
+        // Suscribirse a cambios en roles disponibles
+        this._roleService.availableRoles$.pipe(
+            takeUntil(this._destroy$)
+        ).subscribe(() => {
+            this.updateView();
+        });
+
+        // Verificación inicial
         this.updateView();
-        
-        // Suscribirse a cambios en los roles
-        this.permissionService.currentRole$
-            .pipe(takeUntil(this.destroy$))
-            .subscribe(() => {
-                this.updateView();
-            });
     }
 
     ngOnDestroy(): void {
-        this.destroy$.next();
-        this.destroy$.complete();
+        this._destroy$.next();
+        this._destroy$.complete();
     }
 
     private updateView(): void {
-        this.checkPermission().then(hasPermission => {
-            if (hasPermission && !this.hasView) {
-                this.viewContainer.createEmbeddedView(this.templateRef);
-                this.hasView = true;
-            } else if (!hasPermission && this.hasView) {
-                this.viewContainer.clear();
-                this.hasView = false;
-                
-                // Mostrar template alternativo si existe
-                if (this.hasRoleElse) {
-                    this.viewContainer.createEmbeddedView(this.hasRoleElse);
+        try {
+            const shouldShow = this.checkRoleAccess();
+            
+            if (shouldShow) {
+                if (this._viewContainer.length === 0) {
+                    this._viewContainer.createEmbeddedView(this._templateRef);
                 }
+            } else {
+                this._viewContainer.clear();
             }
-        });
+        } catch (error) {
+            console.error('🚨 Error en HasRoleDirective:', error);
+            // En caso de error, ocultar el elemento por seguridad
+            this._viewContainer.clear();
+        }
     }
 
-    private async checkPermission(): Promise<boolean> {
-        if (!this.hasRole || (Array.isArray(this.hasRole) && this.hasRole.length === 0)) {
-            return true;
+    private checkRoleAccess(): boolean {
+        try {
+            // Validar entrada
+            if (!this.hasRole) {
+                console.warn('🚨 HasRoleDirective: hasRole está vacío');
+                return false;
+            }
+
+            // Obtener rol actual de forma segura
+            const currentRole = this._roleService.getCurrentRole();
+            if (!currentRole) {
+                console.warn('🚨 HasRoleDirective: No hay rol actual');
+                return false;
+            }
+
+            // Normalizar roles requeridos
+            const requiredRoles = this.normalizeRoles(this.hasRole);
+            if (requiredRoles.length === 0) {
+                console.warn('🚨 HasRoleDirective: No hay roles requeridos válidos');
+                return false;
+            }
+
+            // Verificar si el rol actual está en los roles requeridos
+            const hasAccess = requiredRoles.some(role => {
+                const normalizedRole = this.normalizeRole(role);
+                const normalizedCurrentRole = this.normalizeRole(currentRole);
+                return normalizedRole === normalizedCurrentRole;
+            });
+
+            console.log(`🎯 HasRoleDirective: Rol actual: ${currentRole}, Requeridos: [${requiredRoles.join(', ')}], Acceso: ${hasAccess}`);
+            return hasAccess;
+
+        } catch (error) {
+            console.error('🚨 Error verificando acceso de rol:', error);
+            return false;
         }
+    }
 
-        const roles = Array.isArray(this.hasRole) ? this.hasRole : [this.hasRole];
+    private normalizeRoles(roles: UserRole | UserRole[] | string | string[]): string[] {
+        try {
+            if (!roles) return [];
 
-        if (this.hasRoleOperator === 'AND') {
-            return this.permissionService.hasAllRoles(roles).toPromise() || false;
-        } else {
-            return this.permissionService.hasAnyRole(roles).toPromise() || false;
+            if (Array.isArray(roles)) {
+                return roles
+                    .filter(role => role != null && role !== '')
+                    .map(role => this.normalizeRole(role))
+                    .filter(role => role !== '');
+            }
+
+            const normalizedRole = this.normalizeRole(roles);
+            return normalizedRole ? [normalizedRole] : [];
+        } catch (error) {
+            console.error('🚨 Error normalizando roles:', error);
+            return [];
+        }
+    }
+
+    private normalizeRole(role: UserRole | string): string {
+        try {
+            if (!role || role === null || role === undefined) {
+                return '';
+            }
+
+            // Convertir a string de forma segura
+            const roleStr = String(role).trim();
+            if (roleStr === '' || roleStr === 'null' || roleStr === 'undefined') {
+                return '';
+            }
+
+            return roleStr.toLowerCase();
+        } catch (error) {
+            console.error('🚨 Error normalizando rol individual:', error);
+            return '';
         }
     }
 }
-
-/**
- * 🎯 EJEMPLOS DE USO:
- * 
- * <!-- Mostrar solo para administradores -->
- * <div *hasRole="'admin'">
- *   Contenido solo para administradores
- * </div>
- * 
- * <!-- Mostrar para propietarios o administradores -->
- * <div *hasRole="['propietario', 'admin']">
- *   Contenido para propietarios y administradores
- * </div>
- * 
- * <!-- Mostrar solo si tiene TODOS los roles (AND) -->
- * <div *hasRole="['doctor', 'propietario']; operator: 'AND'">
- *   Contenido para doctores que también son propietarios
- * </div>
- * 
- * <!-- Con template alternativo -->
- * <div *hasRole="'admin'; else: noAccess">
- *   Contenido para administradores
- * </div>
- * <ng-template #noAccess>
- *   <div>No tienes permisos para ver este contenido</div>
- * </ng-template>
- */
 

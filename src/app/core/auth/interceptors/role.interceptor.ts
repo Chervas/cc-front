@@ -1,182 +1,158 @@
-import { Injectable } from '@angular/core';
-import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpInterceptorFn, HttpRequest, HttpHandlerFn } from '@angular/common/http';
+import { inject } from '@angular/core';
+import { switchMap, take } from 'rxjs/operators';
 import { RoleService } from '../../services/role.service';
 
 /**
- * 🌐 ROLE INTERCEPTOR - HEADERS HTTP AUTOMÁTICOS
- * 
- * Ubicación: src/app/core/auth/interceptors/role.interceptor.ts
- * 
- * Interceptor que agrega automáticamente headers con información de roles
- * a todas las peticiones HTTP dirigidas al backend.
- * Sigue la estructura de Fuse colocando interceptors dentro de core/auth/interceptors/
+ * 🌐 ROLE INTERCEPTOR FUNCTION
+ * Interceptor funcional para agregar headers automáticos con información de roles
+ * Compatible con Angular 17+ (HttpInterceptorFn)
  */
+export const roleInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, next: HttpHandlerFn) => {
+    const roleService = inject(RoleService);
 
-@Injectable()
-export class RoleInterceptor implements HttpInterceptor {
-
-    constructor(private roleService: RoleService) {}
-
-    intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-        // Solo agregar headers a peticiones del backend
-        if (!this.shouldAddHeaders(req.url)) {
-            return next.handle(req);
-        }
-
-        try {
-            // Obtener información actual del usuario y roles
-            const currentUser = this.roleService.getCurrentUserSync();
-            const selectedRole = this.roleService.getSelectedRoleSync();
-            const availableRoles = this.roleService.getAvailableRolesSync();
-            const selectedClinic = this.roleService.getSelectedClinicSync();
-
-            // Crear headers con información de roles
-            const headers: { [key: string]: string } = {};
-
-            if (selectedRole) {
-                headers['X-Current-Role'] = selectedRole;
-            }
-
-            if (availableRoles && availableRoles.length > 0) {
-                headers['X-Available-Roles'] = availableRoles.join(',');
-            }
-
-            if (currentUser?.id_usuario) {
-                headers['X-User-ID'] = currentUser.id_usuario.toString();
-            }
-
-            if (selectedClinic?.id_clinica) {
-                headers['X-Selected-Clinic'] = selectedClinic.id_clinica.toString();
-            }
-
-            // Agregar timestamp para debugging
-            headers['X-Role-Timestamp'] = new Date().toISOString();
-
-            // Agregar indicador de admin
-            if (selectedRole === 'admin') {
-                headers['X-Is-Admin'] = 'true';
-            }
-
-            // Crear nueva request con headers
-            const modifiedReq = req.clone({
-                setHeaders: headers
-            });
-
-            console.log('🌐 RoleInterceptor: Headers agregados:', headers);
-            return next.handle(modifiedReq);
-
-        } catch (error) {
-            console.warn('🌐 RoleInterceptor: Error al obtener información de roles:', error);
-            // En caso de error, continuar sin headers adicionales
-            return next.handle(req);
-        }
+    // Solo interceptar peticiones al backend
+    if (!shouldInterceptRequest(req.url)) {
+        return next(req);
     }
 
-    private shouldAddHeaders(url: string): boolean {
-        // Solo agregar headers a URLs del backend
-        const backendPatterns = [
-            '/api/',
-            'localhost:3000',
-            'localhost:8000',
-            'clinicaclick.com',
-            // Agregar otros patrones de backend según sea necesario
-        ];
+    // Usar observables públicos del RoleService
+    return roleService.currentUser$.pipe(
+        take(1),
+        switchMap(currentUser => {
+            try {
+                // Si no hay usuario, continuar sin headers
+                if (!currentUser) {
+                    return next(req);
+                }
 
-        return backendPatterns.some(pattern => url.includes(pattern));
+                // Usar métodos públicos síncronos
+                const currentRole = roleService.getCurrentRole();
+                
+                if (!currentRole) {
+                    return next(req);
+                }
+
+                // Crear headers con información de roles
+                const headers: { [key: string]: string } = {
+                    'X-Current-Role': currentRole,
+                    'X-User-ID': currentUser.id_usuario?.toString() || '',
+                    'X-Is-Admin': roleService.isAdmin().toString(),
+                    'X-Role-Timestamp': new Date().toISOString()
+                };
+
+                // Agregar roles disponibles si existen
+                if (currentUser.roles && currentUser.roles.length > 0) {
+                    headers['X-Available-Roles'] = currentUser.roles.join(',');
+                }
+
+                // Agregar información de sesión si existe
+                if (currentUser.sessionId) {
+                    headers['X-Session-ID'] = currentUser.sessionId;
+                }
+
+                // Agregar clínica seleccionada si existe
+                const clinicas = roleService.getClinicasByCurrentRole();
+                if (clinicas && clinicas.length > 0) {
+                    headers['X-Selected-Clinic'] = clinicas[0].id_clinica?.toString() || '';
+                }
+
+                // Clonar request con nuevos headers
+                const modifiedReq = req.clone({
+                    setHeaders: headers
+                });
+
+                console.log('🌐 roleInterceptor: Headers agregados:', headers);
+                return next(modifiedReq);
+
+            } catch (error) {
+                console.error('🌐 roleInterceptor: Error agregando headers:', error);
+                // En caso de error, continuar sin headers
+                return next(req);
+            }
+        })
+    );
+};
+
+/**
+ * Función auxiliar para determinar si interceptar la petición
+ */
+function shouldInterceptRequest(url: string): boolean {
+    // Solo interceptar peticiones al backend
+    const backendPatterns = [
+        '/api/',
+        '/auth/',
+        '/user/',
+        '/clinicas/',
+        '/pacientes/',
+        '/citas/',
+        '/reportes/'
+    ];
+
+    // Excluir assets y archivos estáticos
+    const excludePatterns = [
+        '/assets/',
+        '.js',
+        '.css',
+        '.png',
+        '.jpg',
+        '.svg',
+        '.ico',
+        '/sign-in',
+        '/sign-up'
+    ];
+
+    // No interceptar si es un archivo excluido
+    if (excludePatterns.some(pattern => url.includes(pattern))) {
+        return false;
     }
+
+    // Interceptar si coincide con patrones de backend
+    return backendPatterns.some(pattern => url.includes(pattern));
 }
 
 /**
- * 🔧 VERSIÓN CONFIGURABLE DEL INTERCEPTOR
+ * 🔧 VERSIÓN SIMPLIFICADA DEL INTERCEPTOR
+ * Solo usa métodos síncronos para evitar complejidad
  */
+export const simpleRoleInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, next: HttpHandlerFn) => {
+    const roleService = inject(RoleService);
 
-export interface RoleInterceptorConfig {
-    enableLogging?: boolean;
-    customHeaders?: { [key: string]: string };
-    backendPatterns?: string[];
-    excludePatterns?: string[];
-}
-
-@Injectable()
-export class ConfigurableRoleInterceptor implements HttpInterceptor {
-
-    private config: RoleInterceptorConfig = {
-        enableLogging: true,
-        customHeaders: {},
-        backendPatterns: ['/api/', 'localhost:3000', 'localhost:8000'],
-        excludePatterns: ['/auth/login', '/auth/register']
-    };
-
-    constructor(
-        private roleService: RoleService,
-        config?: RoleInterceptorConfig
-    ) {
-        if (config) {
-            this.config = { ...this.config, ...config };
-        }
+    if (!shouldInterceptRequest(req.url)) {
+        return next(req);
     }
 
-    intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-        if (!this.shouldAddHeaders(req.url)) {
-            return next.handle(req);
-        }
-
-        try {
-            const headers = this.buildHeaders();
-            
-            if (Object.keys(headers).length === 0) {
-                return next.handle(req);
-            }
-
-            const modifiedReq = req.clone({ setHeaders: headers });
-
-            if (this.config.enableLogging) {
-                console.log('🌐 ConfigurableRoleInterceptor: Headers agregados:', headers);
-            }
-
-            return next.handle(modifiedReq);
-
-        } catch (error) {
-            if (this.config.enableLogging) {
-                console.warn('🌐 ConfigurableRoleInterceptor: Error:', error);
-            }
-            return next.handle(req);
-        }
-    }
-
-    private buildHeaders(): { [key: string]: string } {
-        const headers: { [key: string]: string } = {};
-
-        // Headers básicos de roles
-        const currentUser = this.roleService.getCurrentUserSync();
-        const selectedRole = this.roleService.getSelectedRoleSync();
-        const availableRoles = this.roleService.getAvailableRolesSync();
-        const selectedClinic = this.roleService.getSelectedClinicSync();
-
-        if (selectedRole) headers['X-Current-Role'] = selectedRole;
-        if (availableRoles?.length) headers['X-Available-Roles'] = availableRoles.join(',');
-        if (currentUser?.id_usuario) headers['X-User-ID'] = currentUser.id_usuario.toString();
-        if (selectedClinic?.id_clinica) headers['X-Selected-Clinic'] = selectedClinic.id_clinica.toString();
+    try {
+        // Solo usar métodos síncronos públicos
+        const currentRole = roleService.getCurrentRole();
+        const isAdmin = roleService.isAdmin();
         
-        // Headers personalizados
-        Object.assign(headers, this.config.customHeaders);
-
-        // Headers de metadatos
-        headers['X-Role-Timestamp'] = new Date().toISOString();
-        if (selectedRole === 'admin') headers['X-Is-Admin'] = 'true';
-
-        return headers;
-    }
-
-    private shouldAddHeaders(url: string): boolean {
-        // Verificar patrones de exclusión
-        if (this.config.excludePatterns?.some(pattern => url.includes(pattern))) {
-            return false;
+        if (!currentRole) {
+            return next(req);
         }
 
-        // Verificar patrones de backend
-        return this.config.backendPatterns?.some(pattern => url.includes(pattern)) || false;
+        // Headers básicos usando solo métodos públicos
+        const headers: { [key: string]: string } = {
+            'X-Current-Role': currentRole,
+            'X-Is-Admin': isAdmin.toString(),
+            'X-Role-Timestamp': new Date().toISOString()
+        };
+
+        // Agregar clínica si existe
+        const clinicas = roleService.getClinicasByCurrentRole();
+        if (clinicas && clinicas.length > 0) {
+            headers['X-Selected-Clinic'] = clinicas[0].id_clinica?.toString() || '';
+            headers['X-Clinicas-Count'] = clinicas.length.toString();
+        }
+
+        const modifiedReq = req.clone({ setHeaders: headers });
+        console.log('🌐 simpleRoleInterceptor: Headers agregados:', headers);
+        
+        return next(modifiedReq);
+
+    } catch (error) {
+        console.error('🌐 simpleRoleInterceptor: Error:', error);
+        return next(req);
     }
-}
+};
 
