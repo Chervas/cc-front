@@ -76,14 +76,24 @@ export const appConfig: ApplicationConfig = {
         provideIcons(),
 
         // 🌍 Internacionalización (usando loader existente)
-        provideTransloco({
+         provideTransloco({
             config: {
-                availableLangs: ['en', 'es'],
-                defaultLang: 'es',
+                availableLangs: [
+                    {
+                        id: 'en',
+                        label: 'English',
+                    },
+                    {
+                        id: 'tr',
+                        label: 'Turkish',
+                    },
+                ],
+                defaultLang: 'en',
                 fallbackLang: 'en',
+                reRenderOnLangChange: true,
                 prodMode: true,
             },
-            loader: TranslocoHttpLoader
+            loader: TranslocoHttpLoader,
         }),
 
         // 🎯 Fuse (configuración existente)

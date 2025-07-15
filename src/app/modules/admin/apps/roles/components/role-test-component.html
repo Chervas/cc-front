@@ -57,6 +57,28 @@
             </div>
         </div>
 
+        <!-- Testing de directivas por rol -->
+  <mat-card class="mb-4">
+    <mat-card-header>
+      <mat-card-title>🎯 paaco Testing Directiva *hasRole</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div *hasRole="'admin'" class="p-2 bg-red-100 mb-2">
+        ✅ Visible solo para ADMIN
+      </div>
+      <div *hasRole="'propietario'" class="p-2 bg-blue-100 mb-2">
+        ✅ Visible solo para PROPIETARIO
+      </div>
+      <div *hasRole="['propietario', 'admin']" class="p-2 bg-green-100 mb-2">
+        ✅ Visible para PROPIETARIO o ADMIN
+      </div>
+      <div *hasRole="'paciente'" class="p-2 bg-yellow-100 mb-2">
+        ✅ Visible solo para PACIENTE
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             
             <!-- Testing Directiva *hasRole -->
@@ -67,6 +89,7 @@
                     </div>
                     <h3 class="text-xl font-semibold">Testing Directiva *hasRole</h3>
                 </div>
+                
                 <div class="space-y-4">
                     <div *hasRole="'admin'" class="p-4 bg-red-50 border-l-4 border-red-400 rounded-r-lg">
                         <div class="flex items-center">
