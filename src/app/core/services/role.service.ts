@@ -1,544 +1,305 @@
-import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, throwError, of } from 'rxjs';
+import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 
-// 🔗 INTEGRACIÓN CON FUSE AUTH
-import { AuthService } from 'app/core/auth/auth.service';
-
-// 🔐 DEFINICIÓN CLARA DE ROLES CON SEGURIDAD
-export enum UserRole {
-    ADMIN = 'admin',
-    PROPIETARIO = 'propietario',
-    DOCTOR = 'doctor',
-    PERSONAL_CLINICA = 'personaldeclinica',
-    PACIENTE = 'paciente'
-}
-
-// 🏥 INTERFACE PARA CLÍNICA CON ROL
-export interface ClinicaConRol {
-    id_clinica: number;
-    nombre_clinica: string;
-    rol_clinica: UserRole;
-    subrol_clinica?: string;
-    grupoclinica?: {
-        nombre_grupo: string;
+// ✅ ESTRUCTURA EXACTA QUE DEVUELVE EL BACKEND - VERIFICADA
+export interface UsuarioClinicaResponse {
+    id: number;                    // ← REAL del backend
+    name: string;                  // ← REAL del backend
+    description: string;           // ← REAL del backend
+    avatar: string | null;         // ← REAL del backend
+    website: string | null;        // ← REAL del backend
+    contact: {                     // ← REAL del backend
+        email: string | null;
+        phone: string | null;
+        address: string | null;
+        city: string | null;
     };
-    // ✅ COMPATIBILIDAD CON THIN COMPONENT
-    grupoClinica?: {
-        nombre_grupo: string;
-    };
-    // 🔒 CAMPOS DE SEGURIDAD
-    permissions?: {
+    userRole: string;              // ← REAL del backend
+    userSubRole: string;           // ← REAL del backend
+    permissions: {                 // ← REAL del backend
         canMapAssets: boolean;
         canManageSettings: boolean;
+        canManageUsers: boolean;
         canViewReports: boolean;
-        isSystemAdmin: boolean;
+        canManagePatients: boolean;
+        canManageAppointments: boolean;
     };
 }
 
-// 👤 INTERFACE PARA USUARIO CON ROLES Y SEGURIDAD
-export interface UsuarioConRoles {
+// ✅ USUARIO COMO VIENE DEL BACKEND - VERIFICADO
+export interface Usuario {
     id_usuario: number;
-    roles: UserRole[];
-    clinicas: ClinicaConRol[];
-    isAdmin: boolean;
-    // 🔒 CAMPOS DE SEGURIDAD JWT (integrados con Fuse)
-    tokenExpiry?: Date;
-    lastRoleValidation?: Date;
-    sessionId?: string;
+    nombre: string;
+    apellidos: string;
+    email_usuario: string;
+    email_factura: string;
+    email_notificacion: string;
+    password_usuario: string;
+    fecha_creacion: string;
+    id_gestor: number;
+    notas_usuario: string;
+    telefono: string;
+    cargo_usuario: string;
+    cumpleanos: string;
+    isProfesional: boolean;
+    isAdmin?: boolean;
 }
 
-// 🔍 INTERFACE PARA VALIDACIÓN DE ROLES
-export interface RoleValidationResponse {
-    valid: boolean;
-    roles: UserRole[];
-    clinicas: ClinicaConRol[];
-    tokenExpiry: Date;
-    message?: string;
+export interface LoginResponse {
+    token: string;
+    expiresIn: number;
+    user: Usuario;
 }
+
+// ✅ TIPOS PARA COMPATIBILIDAD - EXPORTADOS
+export type RolClinica = string;  // ← SIMPLIFICADO para compatibilidad
+
+// ✅ ALIAS PARA COMPATIBILIDAD CON CÓDIGO EXISTENTE
+export type ClinicaConRol = UsuarioClinicaResponse;
+
+// ✅ CONSTANTES EXPORTADAS - VERIFICADAS
+export const ROL_LEVELS = {
+    'administrador': 4,
+    'propietario': 4,
+    'doctor': 3,
+    'personal': 2,
+    'paciente': 1
+} as const;
+
+export const ROL_PERMISSIONS = {
+    'administrador': [
+        'clinic.manage',
+        'users.manage', 
+        'patients.manage',
+        'patients.view',
+        'patients.edit',
+        'appointments.manage',
+        'appointments.view',
+        'appointments.create',
+        'reports.view',
+        'settings.modify'
+    ],
+    'propietario': [
+        'clinic.manage',
+        'users.manage', 
+        'patients.manage',
+        'patients.view',
+        'patients.edit',
+        'appointments.manage',
+        'appointments.view',
+        'appointments.create',
+        'reports.view',
+        'settings.modify'
+    ],
+    'doctor': [
+        'patients.view',
+        'patients.edit',
+        'appointments.view',
+        'appointments.create'
+    ],
+    'personal': [
+        'patients.view',
+        'appointments.view'
+    ],
+    'paciente': [
+        'appointments.view.own',
+        'profile.edit.own'
+    ]
+} as const;
+
+export const ROL_LABELS = {
+    'administrador': 'Administrador',
+    'propietario': 'Propietario',
+    'doctor': 'Doctor',
+    'personal': 'Personal',
+    'paciente': 'Paciente'
+} as const;
+
+export const ROL_COLORS = {
+    'administrador': '#f59e0b',
+    'propietario': '#f59e0b',
+    'doctor': '#8b5cf6',
+    'personal': '#3b82f6',
+    'paciente': '#10b981'
+} as const;
+
+export const ROL_ICONS = {
+    'administrador': 'business',
+    'propietario': 'business',
+    'doctor': 'medical_services',
+    'personal': 'work',
+    'paciente': 'person'
+} as const;
 
 @Injectable({
     providedIn: 'root'
 })
 export class RoleService {
-    // 🔗 INTEGRACIÓN CON FUSE AUTH
-    private authService = inject(AuthService);
-    private http = inject(HttpClient);
+    
+    private currentUserSubject = new BehaviorSubject<Usuario | null>(null);
+    private clinicasSubject = new BehaviorSubject<UsuarioClinicaResponse[]>([]);
+    private selectedRoleSubject = new BehaviorSubject<string | null>(null);
+    private selectedClinicaSubject = new BehaviorSubject<UsuarioClinicaResponse | null>(null);
 
-    // 🔒 ESTADO CENTRALIZADO CON SEGURIDAD
-    private currentUserSubject = new BehaviorSubject<UsuarioConRoles | null>(null);
-    private selectedRoleSubject = new BehaviorSubject<UserRole | null>(null);
-    private availableRolesSubject = new BehaviorSubject<UserRole[]>([]);
-    private roleValidationSubject = new BehaviorSubject<boolean>(false);
+    // Observables públicos
+    currentUser$ = this.currentUserSubject.asObservable();
+    clinicasConRol$ = this.clinicasSubject.asObservable();
+    selectedRole$ = this.selectedRoleSubject.asObservable();
+    selectedClinica$ = this.selectedClinicaSubject.asObservable();
 
-    // 🔍 OBSERVABLES PÚBLICOS - CORREGIDOS PARA COMPATIBILIDAD
-    public currentUser$ = this.currentUserSubject.asObservable();
-    public selectedRoles = this.selectedRoleSubject.asObservable();
-    public selectedRole$ = this.selectedRoleSubject.asObservable(); // ✅ AGREGADO PARA THIN COMPONENT
-    public availableRoles$ = this.availableRolesSubject.asObservable();
-    public isRoleValid$ = this.roleValidationSubject.asObservable();
+    // ✅ ALIAS PARA COMPATIBILIDAD
+    availableRoles$ = this.clinicasSubject.asObservable();
 
-    // ⚙️ CONFIGURACIÓN DE ADMINS (basada en documentación antigua)
-    private readonly ADMIN_USER_IDS = [1, 2, 5];
-
-    // ⏱️ CONFIGURACIÓN DE SEGURIDAD
-    private readonly ROLE_VALIDATION_INTERVAL = 5 * 60 * 1000; // 5 minutos
-    private readonly MAX_ROLE_CACHE_TIME = 10 * 60 * 1000; // 10 minutos
-    private validationTimer?: any;
-
-    constructor() {
-        this.initializeIntegration();
+    constructor(private http: HttpClient) {
+        this.loadUserFromToken();
     }
 
-    // 🔗 INICIALIZACIÓN INTEGRADA CON FUSE - CORREGIDA SEGÚN DOCUMENTACIÓN
-    private initializeIntegration(): void {
-        console.log('🔄 Inicializando integración con Fuse Auth...');
-        
-        // 🔍 SUSCRIBIRSE A CAMBIOS DE AUTENTICACIÓN DE FUSE
-        this.authService.getCurrentUser().subscribe(user => {
-            console.log('🔗 Usuario recibido de Fuse Auth:', user);
-            
-            if (user?.id_usuario) {
-                console.log('🔗 Usuario válido detectado, ID:', user.id_usuario);
-                // ✅ INICIALIZAR INMEDIATAMENTE CON LOS DATOS DISPONIBLES
-                this.initializeUserFromFuseData(user);
-            } else {
-                console.log('🔗 No hay usuario autenticado en Fuse');
-                this.clearUserSession();
-            }
-        });
-
-        this.loadPersistedRole();
-        this.startRoleValidationTimer();
-
-        // 🔄 VALIDAR ROLES AL CAMBIAR DE PESTAÑA/VENTANA
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                this.validateCurrentRoles();
-            }
-        });
-    }
-
-    // 🔐 INICIALIZACIÓN DIRECTA DESDE DATOS DE FUSE - NUEVO MÉTODO
-    private initializeUserFromFuseData(fuseUser: any): void {
-        try {
-            console.log('🔄 Inicializando usuario desde datos de Fuse:', fuseUser);
-
-            // 🔒 VALIDAR DATOS DE ENTRADA
-            if (!fuseUser || !fuseUser.id_usuario) {
-                console.error('🚨 Datos de usuario de Fuse inválidos');
-                this.clearUserSession();
-                return;
-            }
-
-            // 🔄 DETERMINAR ROLES BASADO EN ID (según documentación antigua)
-            const isAdmin = this.ADMIN_USER_IDS.includes(fuseUser.id_usuario);
-            let roles: UserRole[] = [];
-            
-            if (isAdmin) {
-                roles = [UserRole.ADMIN];
-                console.log('🔐 Usuario identificado como ADMIN');
-            } else {
-                // Para usuarios no-admin, asignar rol por defecto y cargar desde backend
-                roles = [UserRole.PACIENTE]; // Fallback temporal
-                console.log('🔐 Usuario no-admin, cargando roles desde backend...');
-                this.loadUserRolesFromBackend(fuseUser.id_usuario);
-            }
-
-            const usuario: UsuarioConRoles = {
-                id_usuario: fuseUser.id_usuario,
-                roles: roles,
-                clinicas: [], // Se cargarán después
-                isAdmin: isAdmin,
-                tokenExpiry: this.extractTokenExpiryFromFuse(),
-                lastRoleValidation: new Date(),
-                sessionId: this.generateSessionId()
-            };
-
-            // ✅ ACTUALIZAR ESTADO INMEDIATAMENTE
-            this.currentUserSubject.next(usuario);
-            this.availableRolesSubject.next(roles);
-            this.roleValidationSubject.next(true);
-
-            // Seleccionar rol por defecto
-            this.selectDefaultRole(roles);
-
-            console.log('✅ Usuario inicializado desde Fuse:', {
-                id: usuario.id_usuario,
-                roles: usuario.roles,
-                isAdmin: usuario.isAdmin
-            });
-
-        } catch (error) {
-            console.error('🚨 Error inicializando usuario desde Fuse:', error);
-            this.clearUserSession();
-        }
-    }
-
-    // 🔄 CARGAR ROLES DESDE BACKEND - NUEVO MÉTODO
-    private loadUserRolesFromBackend(userId: number): void {
-        console.log('🔄 Cargando roles desde backend para usuario:', userId);
-        
-        // Simular carga desde backend (implementar según endpoints reales)
-        // Basado en la documentación: endpoint getClinicasByUser debería retornar roles
-        this.http.get(`/api/user/${userId}/clinicas`).subscribe({
-            next: (response: any) => {
-                console.log('📋 Respuesta del backend:', response);
-                
-                if (response.clinicas && Array.isArray(response.clinicas)) {
-                    const roles = this.extractRolesFromClinics(response.clinicas);
-                    this.updateUserRoles(roles);
-                    console.log('✅ Roles cargados desde backend:', roles);
-                } else {
-                    console.warn('⚠️ No se encontraron clínicas en la respuesta del backend');
+    private loadUserFromToken(): void {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const userId = payload.userId;
+                if (userId) {
+                    this.loadCurrentUser(userId);
+                    this.loadClinicas();
                 }
-            },
-            error: (error) => {
-                console.error('🚨 Error cargando roles desde backend:', error);
-                // Mantener roles por defecto
+            } catch (error) {
+                console.error('Error decodificando token:', error);
+            }
+        }
+    }
+
+    private loadCurrentUser(userId: number): void {
+        this.http.get<Usuario>(`/api/users/${userId}`).pipe(
+            catchError(error => {
+                console.error('Error cargando usuario:', error);
+                return of(null);
+            })
+        ).subscribe(user => {
+            if (user) {
+                user.isAdmin = this.checkIfUserIsAdmin(user);
+                this.currentUserSubject.next(user);
+                console.log('✅ Usuario cargado:', user.nombre, user.apellidos);
             }
         });
     }
 
-    /**
-     * 🔄 Inicializa el usuario con validación de seguridad JWT integrada con Fuse
-     * MÉTODO MANTENIDO PARA COMPATIBILIDAD
-     */
-    initializeUser(userData: any): void {
-        console.log('🔄 initializeUser llamado (método legacy):', userData);
-        // Redirigir al nuevo método
-        this.initializeUserFromFuseData(userData);
+    private checkIfUserIsAdmin(user: Usuario): boolean {
+        return user.isProfesional || false;
     }
 
-    /**
-     * 🔄 Selecciona un rol específico con validación de seguridad
-     */
-    selectRole(role: UserRole): void {
-        const currentUser = this.currentUserSubject.value;
-        if (!currentUser) {
-            console.error('🚨 No hay usuario para seleccionar rol');
-            return;
-        }
-
-        const normalizedRole = this.normalizeRole(role);
-        if (!this.isValidRole(normalizedRole) || !currentUser.roles.includes(normalizedRole)) {
-            console.error('🚨 Rol no válido o no disponible:', role);
-            return;
-        }
-
-        this.selectedRoleSubject.next(normalizedRole);
-        localStorage.setItem('selectedRole', normalizedRole);
-        
-        console.log('🔄 Rol seleccionado:', normalizedRole);
+    private loadClinicas(): void {
+        this.http.get<UsuarioClinicaResponse[]>('/api/userclinicas/list').pipe(
+            catchError(error => {
+                console.error('Error cargando clínicas:', error);
+                return of([]);
+            })
+        ).subscribe(clinicas => {
+            console.log('✅ Clínicas cargadas:', clinicas);
+            this.clinicasSubject.next(clinicas);
+            
+            if (clinicas.length > 0 && !this.selectedRoleSubject.value) {
+                this.selectRole(clinicas[0].userRole);
+                this.selectClinica(clinicas[0]);
+            }
+        });
     }
 
-    /**
-     * 🏥 Obtiene clínicas filtradas por el rol actual con seguridad
-     */
-    getClinicasByCurrentRole(): ClinicaConRol[] {
-        const currentUser = this.currentUserSubject.value;
-        const currentRole = this.selectedRoleSubject.value;
-
-        if (!currentUser || !currentRole) {
-            console.log('🚨 Usuario o rol no válido para filtrar clínicas');
-            return [];
-        }
-
-        // Admin puede ver todas las clínicas
-        if (currentRole === UserRole.ADMIN) {
-            console.log('🔐 Cargando clínicas para administrador');
-            return currentUser.clinicas;
-        }
-
-        // Filtrar clínicas por rol específico
-        const filteredClinics = currentUser.clinicas.filter(clinica => 
-            clinica.rol_clinica === currentRole
-        );
-
-        if (filteredClinics.length === 0) {
-            console.log('🔐 No hay clínicas para filtrar');
-        }
-
-        return filteredClinics;
+    // ✅ USAR PROPIEDADES REALES - VERIFICADO
+    selectRole(role: string): void {
+        this.selectedRoleSubject.next(role);
+        console.log('🎭 Rol seleccionado:', role);
     }
 
-    /**
-     * 🔍 Verifica si el usuario tiene un rol específico - CORREGIDO
-     */
-    hasRole(role: UserRole): boolean {
-        const currentUser = this.currentUserSubject.value;
-        if (!currentUser) {
-            console.log('🔐 hasRole(' + role + '): false (no user)');
-            return false;
-        }
-
-        const normalizedRole = this.normalizeRole(role);
-        const hasRole = currentUser.roles.includes(normalizedRole);
-        console.log('🔐 hasRole(' + role + '): ' + hasRole + ' [usuario válido]');
-        return hasRole;
+    selectClinica(clinica: UsuarioClinicaResponse): void {
+        this.selectedClinicaSubject.next(clinica);
+        this.selectedRoleSubject.next(clinica.userRole);  // ← PROPIEDAD REAL
+        console.log('🏥 Clínica seleccionada:', clinica.name);  // ← PROPIEDAD REAL
     }
 
-    /**
-     * 🔒 Verifica si el usuario es administrador
-     */
+    hasRole(role: string): boolean {
+        const clinicas = this.clinicasSubject.value;
+        return clinicas.some(clinica => clinica.userRole === role);  // ← PROPIEDAD REAL
+    }
+
     isAdmin(): boolean {
-        const currentUser = this.currentUserSubject.value;
-        const isAdmin = currentUser?.isAdmin || false;
-        console.log('🔐 isAdmin(): ' + isAdmin);
-        return isAdmin;
+        return this.hasRole('administrador') || this.hasRole('propietario');
     }
 
-    /**
-     * 📋 Obtiene el rol actual seleccionado
-     */
-    getCurrentRole(): UserRole | null {
-        const role = this.selectedRoleSubject.value;
-        console.log('🔐 getCurrentRole(): ' + role);
-        return role;
+    getCurrentRole(): string | null {
+        return this.selectedRoleSubject.value;
     }
 
-    /**
-     * ✅ Valida los roles actuales del usuario
-     */
-    validateCurrentRoles(): Observable<RoleValidationResponse> {
-        const currentUser = this.currentUserSubject.value;
-        if (!currentUser) {
-            return throwError(() => new Error('No hay usuario autenticado'));
-        }
-
-        // Simular validación exitosa por ahora
-        const response: RoleValidationResponse = {
-            valid: true,
-            roles: currentUser.roles,
-            clinicas: currentUser.clinicas,
-            tokenExpiry: currentUser.tokenExpiry || new Date(Date.now() + 3600000),
-            message: 'Roles validados correctamente'
-        };
-
-        this.roleValidationSubject.next(response.valid);
-        return of(response);
+    getClinicasByRole(role: string): UsuarioClinicaResponse[] {
+        const clinicas = this.clinicasSubject.value;
+        return clinicas.filter(clinica => clinica.userRole === role);  // ← PROPIEDAD REAL
     }
 
-    /**
-     * 🧹 Limpia la sesión del usuario
-     */
-    clearUserSession(): void {
-        console.log('🧹 Limpiando sesión de usuario');
+    getSelectedClinica(): UsuarioClinicaResponse | null {
+        return this.selectedClinicaSubject.value;
+    }
+
+    getCurrentUser(): Usuario | null {
+        return this.currentUserSubject.value;
+    }
+
+    getCurrentPermissions(): string[] {
+        const clinica = this.getSelectedClinica();
+        
+        if (!clinica) return [];
+
+        const permissions: string[] = [];
+        
+        // ✅ USAR PROPIEDADES REALES - VERIFICADO
+        if (clinica.permissions.canMapAssets) permissions.push('clinic.manage');
+        if (clinica.permissions.canManageSettings) permissions.push('settings.modify');
+        if (clinica.permissions.canManageUsers) permissions.push('users.manage');
+        if (clinica.permissions.canViewReports) permissions.push('reports.view');
+        if (clinica.permissions.canManagePatients) permissions.push('patients.manage');
+        if (clinica.permissions.canManageAppointments) permissions.push('appointments.manage');
+
+        return permissions;
+    }
+
+    getRoleLevel(role: string): number {
+        return ROL_LEVELS[role as keyof typeof ROL_LEVELS] || 0;
+    }
+
+    getRoleLabel(role: string): string {
+        return ROL_LABELS[role as keyof typeof ROL_LABELS] || role;
+    }
+
+    getRoleColor(role: string): string {
+        return ROL_COLORS[role as keyof typeof ROL_COLORS] || '#6b7280';
+    }
+
+    getRoleIcon(role: string): string {
+        return ROL_ICONS[role as keyof typeof ROL_ICONS] || 'person';
+    }
+
+    getAvailableRoles(): string[] {
+        const clinicas = this.clinicasSubject.value;
+        return clinicas.map(clinica => clinica.userRole)  // ← PROPIEDAD REAL
+            .filter((role, index, array) => array.indexOf(role) === index);
+    }
+
+    clearData(): void {
         this.currentUserSubject.next(null);
+        this.clinicasSubject.next([]);
         this.selectedRoleSubject.next(null);
-        this.availableRolesSubject.next([]);
-        this.roleValidationSubject.next(false);
-        localStorage.removeItem('selectedRole');
-        
-        if (this.validationTimer) {
-            clearInterval(this.validationTimer);
-        }
+        this.selectedClinicaSubject.next(null);
     }
 
-    // 🛠️ MÉTODOS AUXILIARES PRIVADOS
-
-    /**
-     * 🔍 Extrae roles de las clínicas del usuario
-     */
-    private extractRolesFromClinics(clinicas: any[]): UserRole[] {
-        if (!Array.isArray(clinicas)) return [];
-        
-        const roles = new Set<UserRole>();
-        
-        clinicas.forEach(clinica => {
-            if (clinica.rol_clinica) {
-                const normalizedRole = this.normalizeRole(clinica.rol_clinica);
-                if (this.isValidRole(normalizedRole)) {
-                    roles.add(normalizedRole);
-                }
-            }
-        });
-        
-        return Array.from(roles);
-    }
-
-    /**
-     * 🧹 Sanitiza las clínicas para seguridad
-     */
-    private sanitizeClinicas(clinicas: any[]): ClinicaConRol[] {
-        if (!Array.isArray(clinicas)) return [];
-        
-        return clinicas.map(clinica => ({
-            id_clinica: clinica.id_clinica || 0,
-            nombre_clinica: clinica.nombre_clinica || 'Sin nombre',
-            rol_clinica: this.normalizeRole(clinica.rol_clinica),
-            subrol_clinica: clinica.subrol_clinica,
-            grupoclinica: clinica.grupoclinica,
-            // ✅ COMPATIBILIDAD CON THIN COMPONENT
-            grupoClinica: clinica.grupoclinica || clinica.grupoClinica,
-            permissions: {
-                canMapAssets: clinica.permissions?.canMapAssets || false,
-                canManageSettings: clinica.permissions?.canManageSettings || false,
-                canViewReports: clinica.permissions?.canViewReports || false,
-                isSystemAdmin: clinica.permissions?.isSystemAdmin || false
-            }
-        })).filter(clinica => clinica.id_clinica > 0);
-    }
-
-    /**
-     * ✅ Valida que los roles extraídos sean válidos
-     */
-    private validateExtractedRoles(roles: UserRole[]): boolean {
-        if (!Array.isArray(roles) || roles.length === 0) return false;
-        return roles.every(role => this.isValidRole(role));
-    }
-
-    /**
-     * 🔧 Normaliza un rol a formato estándar - CORREGIDO PARA EVITAR toUpperCase() ERROR
-     */
-    private normalizeRole(role: any): UserRole {
-        // 🚨 VALIDACIÓN CRÍTICA: Prevenir error de toUpperCase() en undefined/null
-        if (role === null || role === undefined) {
-            console.warn('🚨 Rol null/undefined detectado, usando PACIENTE como fallback');
-            return UserRole.PACIENTE;
-        }
-        
-        // Convertir a string de forma segura
-        let roleStr: string;
-        try {
-            roleStr = String(role).toLowerCase().trim();
-        } catch (error) {
-            console.error('🚨 Error convirtiendo rol a string:', error, 'rol:', role);
-            return UserRole.PACIENTE;
-        }
-        
-        // Validar que no esté vacío después del trim
-        if (!roleStr || roleStr.length === 0) {
-            console.warn('🚨 Rol vacío detectado, usando PACIENTE como fallback');
-            return UserRole.PACIENTE;
-        }
-        
-        switch (roleStr) {
-            case 'admin':
-            case 'administrador':
-                return UserRole.ADMIN;
-            case 'propietario':
-            case 'owner':
-                return UserRole.PROPIETARIO;
-            case 'doctor':
-            case 'medico':
-                return UserRole.DOCTOR;
-            case 'personaldeclinica':
-            case 'personal_clinica':
-            case 'staff':
-                return UserRole.PERSONAL_CLINICA;
-            case 'paciente':
-            case 'patient':
-                return UserRole.PACIENTE;
-            default:
-                console.warn('🚨 Rol desconocido:', roleStr, 'usando PACIENTE como fallback');
-                return UserRole.PACIENTE;
-        }
-    }
-
-    /**
-     * ✅ Verifica si un rol es válido
-     */
-    private isValidRole(role: UserRole): boolean {
-        return Object.values(UserRole).includes(role);
-    }
-
-    /**
-     * ⏰ Extrae la expiración del token desde Fuse
-     */
-    private extractTokenExpiryFromFuse(): Date | null {
-        try {
-            // Intentar obtener desde el AuthService de Fuse
-            const token = localStorage.getItem('accessToken');
-            if (!token) return null;
-            
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            return payload.exp ? new Date(payload.exp * 1000) : null;
-        } catch {
-            return null;
-        }
-    }
-
-    /**
-     * 🆔 Genera un ID de sesión único
-     */
-    private generateSessionId(): string {
-        return Date.now().toString(36) + Math.random().toString(36).substr(2);
-    }
-
-    /**
-     * 🎯 Selecciona el rol por defecto
-     */
-    private selectDefaultRole(availableRoles: UserRole[]): void {
-        if (availableRoles.length === 0) return;
-        
-        // Prioridad: Admin > Propietario > Doctor > Personal > Paciente
-        const priority = [UserRole.ADMIN, UserRole.PROPIETARIO, UserRole.DOCTOR, UserRole.PERSONAL_CLINICA, UserRole.PACIENTE];
-        
-        for (const role of priority) {
-            if (availableRoles.includes(role)) {
-                this.selectRole(role);
-                return;
-            }
-        }
-        
-        // Fallback al primer rol disponible
-        this.selectRole(availableRoles[0]);
-    }
-
-    /**
-     * 💾 Carga el rol persistido del localStorage
-     */
-    private loadPersistedRole(): void {
-        const savedRole = localStorage.getItem('selectedRole') as UserRole;
-        if (savedRole && this.isValidRole(savedRole)) {
-            this.selectedRoleSubject.next(savedRole);
-        }
-    }
-
-    /**
-     * ⏱️ Inicia el timer de validación de roles
-     */
-    private startRoleValidationTimer(): void {
-        this.validationTimer = setInterval(() => {
-            this.validateCurrentRoles().subscribe({
-                next: (response) => {
-                    if (!response.valid) {
-                        console.warn('⚠️ Validación de roles falló, limpiando sesión');
-                        this.clearUserSession();
-                    }
-                },
-                error: (error) => {
-                    console.error('🚨 Error en validación automática de roles:', error);
-                }
-            });
-        }, this.ROLE_VALIDATION_INTERVAL);
-    }
-
-    /**
-     * 🔄 Actualiza los roles del usuario
-     */
-    private updateUserRoles(newRoles: UserRole[]): void {
-        const currentUser = this.currentUserSubject.value;
-        if (!currentUser) return;
-
-        const updatedUser: UsuarioConRoles = {
-            ...currentUser,
-            roles: newRoles,
-            lastRoleValidation: new Date()
-        };
-
-        this.currentUserSubject.next(updatedUser);
-        this.availableRolesSubject.next(newRoles);
-        
-        console.log('🔄 Roles actualizados:', newRoles);
-    }
-
-    ngOnDestroy(): void {
-        if (this.validationTimer) {
-            clearInterval(this.validationTimer);
-        }
+    debugBackendData(): void {
+        console.log('🔍 DEBUG - Datos del backend:');
+        console.log('Usuario actual:', this.getCurrentUser());
+        console.log('Clínicas:', this.clinicasSubject.value);
+        console.log('Rol seleccionado:', this.getCurrentRole());
+        console.log('Clínica seleccionada:', this.getSelectedClinica());
+        console.log('Permisos actuales:', this.getCurrentPermissions());
     }
 }
 

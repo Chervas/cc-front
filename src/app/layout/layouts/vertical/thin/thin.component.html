@@ -1,75 +1,124 @@
-<!-- Loading bar -->
-<fuse-loading-bar></fuse-loading-bar>
+<!-- ✅ TEMPLATE CON CLINIC-SELECTOR EXISTENTE -->
+<div class="flex flex-col w-full min-h-0 overflow-hidden">
 
-<!-- Navigation lateral -->
-<fuse-vertical-navigation
-    class="bg-card dark:bg-gray-900 print:hidden"
-    [appearance]="'thin'"
-    [mode]="isScreenSmall ? 'over' : 'side'"
-    [name]="'mainNavigation'"
-    [navigation]="navigation ? navigation.compact : []"
-    [opened]="true">
-    <!-- Navigation header hook -->
-    <ng-container fuseVerticalNavigationContentHeader>
-        <!-- Logo -->
-        <div class="flex items-center justify-center h-20">
-            <img class="w-8" src="assets/images/logo/logo.svg" alt="Logo image">
-        </div>
-        <!-- Selector de Clínica (bola) integrado en el menú lateral -->
-        <clinic-selector
-            [selectedClinic]="selectedClinic"
-            [clinicsGrouped]="groupedClinics"
-            (clinicSelected)="onClinicChange($event)">
-        </clinic-selector>
-    </ng-container>
-</fuse-vertical-navigation>
+    <!-- Loading bar -->
+    <fuse-loading-bar></fuse-loading-bar>
 
-<!-- Wrapper -->
-<div class="flex flex-col flex-auto w-full min-w-0">
-    <!-- Header -->
-    <div class="relative flex flex-0 items-center w-full h-16 px-4 md:px-6 z-49 shadow dark:shadow-none dark:border-b bg-card dark:bg-transparent print:hidden">
-        <!-- Navigation toggle button -->
-        <button mat-icon-button class="mr-2" (click)="toggleNavigation('mainNavigation')">
-            <mat-icon [svgIcon]="'heroicons_outline:bars-3'"></mat-icon>
-        </button>
-        <!-- Selector de Rol en el header -->
-        <div class="flex items-center ml-auto space-x-2">
-            <mat-form-field appearance="fill" class="w-40">
-                <mat-label>Rol</mat-label>
-                <!-- ✅ CORRECCIÓN MÍNIMA: Usar observables con async pipe -->
-                <mat-select [value]="selectedRole$ | async" (selectionChange)="onRoleChange($event.value)">
-                    <mat-option *ngFor="let role of (availableRoles$ | async)" [value]="role">
-                        {{ role | titlecase }}
-                    </mat-option>
-                </mat-select>
-            </mat-form-field>
+    <!-- Vertical navigation -->
+    <fuse-vertical-navigation
+        class="dark bg-gray-900"
+        [mode]="isScreenSmall ? 'over' : 'side'"
+        [name]="'mainNavigation'"
+        [navigation]="navigation">
+
+        <!-- Navigation header -->
+        <div class="flex items-center px-8 py-6 border-b">
+            <!-- Logo -->
+            <div class="flex items-center">
+                <img class="w-8" src="assets/images/logo/logo.svg" alt="Logo">
+                <span class="ml-3 text-xl font-bold text-white">ClinicaClick</span>
+            </div>
         </div>
-        <!-- Otros elementos en el header -->
-        <div class="flex items-center space-x-0.5 sm:space-x-2">
-            <languages></languages>
-            <fuse-fullscreen class="hidden md:block"></fuse-fullscreen>
-            <search [appearance]="'bar'"></search>
-            <shortcuts></shortcuts>
-            <messages></messages>
-            <notifications></notifications>
-            <button mat-icon-button class="lg:hidden" (click)="quickChat.toggle()">
-                <mat-icon [svgIcon]="'heroicons_outline:chat-bubble-left-right'"></mat-icon>
+
+        <!-- Navigation content -->
+        <div class="flex flex-col flex-auto p-6">
+            
+            <!-- ✅ CLINIC SELECTOR COMPONENT EXISTENTE -->
+            <div class="mb-6" *ngIf="hasAvailableRoles()">
+                <clinic-selector
+                    [selectedClinic]="selectedClinic"
+                    [clinicsGrouped]="clinicsGrouped"
+                    (clinicSelected)="onClinicSelected($event)">
+                </clinic-selector>
+            </div>
+
+            <!-- ✅ INFORMACIÓN DEL USUARIO -->
+            <div class="mt-auto pt-6 border-t border-gray-700" *ngIf="currentUser">
+                <div class="text-xs text-gray-400 mb-1">Usuario Actual</div>
+                <div class="text-sm text-white">{{ getCurrentUserInfo() }}</div>
+                <div class="text-xs text-gray-400 mt-1" *ngIf="hasSelectedClinica()">
+                    {{ getSelectedClinicaInfo() }}
+                </div>
+            </div>
+
+            <!-- ✅ DEBUG INFO (SOLO EN DESARROLLO) -->
+            <div class="mt-4 p-3 bg-gray-800 rounded-lg" *ngIf="false">
+                <div class="text-xs text-gray-400 mb-2">Debug Info</div>
+                <div class="text-xs text-gray-300">
+                    <div>Clínicas: {{ getClinicasCount() }}</div>
+                    <div>Roles: {{ getRolesCount() }}</div>
+                    <div>Es Admin: {{ isCurrentUserAdmin() ? 'Sí' : 'No' }}</div>
+                    <div>Permisos: {{ getCurrentPermissions().length }}</div>
+                </div>
+                <button mat-button (click)="debugRoleSystem()" class="mt-2 text-xs">
+                    Ver Debug Completo
+                </button>
+            </div>
+
+        </div>
+
+    </fuse-vertical-navigation>
+
+    <!-- Main -->
+    <div class="flex flex-col flex-auto overflow-hidden">
+
+        <!-- Header -->
+        <div class="relative flex flex-0 items-center w-full h-16 px-4 md:px-6 z-49 shadow dark:shadow-none dark:border-b bg-card dark:bg-transparent print:hidden">
+
+            <!-- Navigation toggle for the mobile -->
+            <button
+                class="md:hidden -ml-2"
+                mat-icon-button
+                (click)="toggleNavigation('mainNavigation')">
+                <mat-icon [svgIcon]="'heroicons_outline:bars-3'"></mat-icon>
             </button>
-            <user></user>
+
+            <!-- Logo for mobile -->
+            <div class="flex items-center md:hidden ml-2">
+                <img class="w-7" src="assets/images/logo/logo.svg" alt="Logo">
+                <span class="ml-2 text-lg font-bold">ClinicaClick</span>
+            </div>
+
+            <!-- Horizontal spacer -->
+            <div class="flex-1"></div>
+
+            <!-- Components -->
+            <div class="flex items-center pl-2 ml-2 space-x-2">
+
+                <!-- Search -->
+                <search [appearance]="'bar'"></search>
+
+                <!-- Shortcuts -->
+                <shortcuts></shortcuts>
+
+                <!-- Messages -->
+                <messages></messages>
+
+                <!-- Notifications -->
+                <notifications></notifications>
+
+                <!-- Languages -->
+                <languages></languages>
+
+                <!-- Fullscreen -->
+                <fuse-fullscreen class="hidden md:block"></fuse-fullscreen>
+
+                <!-- User menu -->
+                <user class="ml-2"></user>
+
+            </div>
+
         </div>
+
+        <!-- Content -->
+        <div class="flex flex-col flex-auto overflow-hidden">
+            <router-outlet></router-outlet>
+        </div>
+
     </div>
 
-    <!-- Content -->
-    <div class="flex flex-col flex-auto">
-        <router-outlet *ngIf="true"></router-outlet>
-    </div>
+    <!-- Quick chat -->
+    <quick-chat></quick-chat>
 
-    <!-- Footer -->
-    <div class="relative flex flex-0 items-center justify-start w-full h-14 px-4 md:px-6 z-49 border-t bg-card dark:bg-transparent print:hidden">
-        <span class="font-medium text-secondary">Fuse &copy; {{ currentYear }}</span>
-    </div>
 </div>
-
-<!-- Quick chat -->
-<quick-chat #quickChat="quickChat"></quick-chat>
 
