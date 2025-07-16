@@ -4,6 +4,7 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { LuxonDateAdapter } from '@angular/material-luxon-adapter';
 import { DateAdapter, MAT_DATE_FORMATS } from '@angular/material/core';
+import { authInterceptor } from './core/auth/interceptors/auth.interceptor';
 
 // 🔧 Importaciones de Fuse
 import { provideFuse } from '@fuse/fuse.provider';
