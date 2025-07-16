@@ -1,34 +1,35 @@
 import { Directive, Input, TemplateRef, ViewContainerRef, OnInit, OnDestroy } from '@angular/core';
 import { Subject, takeUntil } from 'rxjs';
-import { PermissionService } from 'app/core/services/permission.service';
+import { RoleService } from 'app/core/services/role.service';
+import { UserRole } from 'app/core/constants/role.constants';
 
 /**
- * 🔐 Directiva para mostrar/ocultar elementos basado en permisos
+ * 🎭 Directiva para mostrar/ocultar elementos basado en roles
  * 
  * Uso:
- * <div *hasPermission="'clinic.manage'">Solo con permiso clinic.manage</div>
- * <div *hasPermission="['clinic.manage', 'clinic.view']">Con cualquiera de estos permisos</div>
+ * <div *hasRole="'admin'">Solo para administradores</div>
+ * <div *hasRole="['admin', 'propietario']">Para admin o propietario</div>
  */
 @Directive({
-    selector: '[hasPermission]',
+    selector: '[hasRole]',
     standalone: true
 })
-export class HasPermissionDirective implements OnInit, OnDestroy {
+export class HasRoleDirective implements OnInit, OnDestroy {
     private destroy$ = new Subject<void>();
     private hasView = false;
 
-    @Input() set hasPermission(permissions: string | string[]) {
-        this.checkPermissions(permissions);
+    @Input() set hasRole(roles: UserRole | UserRole[]) {
+        this.checkRoles(roles);
     }
 
     constructor(
         private templateRef: TemplateRef<any>,
         private viewContainer: ViewContainerRef,
-        private permissionService: PermissionService
+        private roleService: RoleService
     ) {}
 
     ngOnInit(): void {
-        // Suscribirse a cambios en permisos si el servicio lo soporta
+        // Suscribirse a cambios en roles si el servicio lo soporta
         // (opcional, depende de la implementación del servicio)
     }
 
@@ -37,71 +38,56 @@ export class HasPermissionDirective implements OnInit, OnDestroy {
         this.destroy$.complete();
     }
 
-    private checkPermissions(permissions: string | string[]): void {
+    private checkRoles(roles: UserRole | UserRole[]): void {
         try {
-            let hasPermission = false;
+            let hasRole = false;
 
-            if (typeof permissions === 'string') {
-                // Permiso único
-                hasPermission = this.permissionService.hasPermission(permissions as any);
-            } else if (Array.isArray(permissions)) {
-                // Múltiples permisos - verificar si tiene alguno
-                const permissionArray = permissions;
-                
-                // CORREGIDO: Hacer casting para evitar error de tipos
-                if (typeof this.permissionService.hasAnyPermission === 'function') {
-                    hasPermission = this.permissionService.hasAnyPermission(permissionArray as any);
+            if (typeof roles === 'string') {
+                // Rol único
+                const result = this.roleService.hasRole(roles);
+                if (result && typeof result.subscribe === 'function') {
+                    // Es Observable<boolean>
+                    result.pipe(takeUntil(this.destroy$)).subscribe(value => {
+                        this.updateView((value as unknown) as boolean);
+                    });
+                    return;
                 } else {
-                    // Fallback: verificar cada permiso individualmente
-                    hasPermission = permissionArray.some(permission => 
-                        this.permissionService.hasPermission(permission as any)
-                    );
+                    // Es boolean directo
+                    hasRole = (result as unknown) as boolean;
                 }
+            } else if (Array.isArray(roles)) {
+                // Múltiples roles - verificar si tiene alguno
+                hasRole = roles.some(role => {
+                    const result = this.roleService.hasRole(role);
+                    if (result && typeof result.subscribe === 'function') {
+                        // Si es Observable, necesitamos manejar asincrónicamente
+                        result.pipe(takeUntil(this.destroy$)).subscribe(value => {
+                            if ((value as unknown) as boolean) {
+                                this.updateView(true);
+                            }
+                        });
+                        return false; // Por ahora false, se actualizará asincrónicamente
+                    } else {
+                        return (result as unknown) as boolean;
+                    }
+                });
             }
 
-            this.updateView(hasPermission);
-
+            this.updateView(hasRole);
         } catch (error) {
-            console.error('[HasPermissionDirective] Error verificando permisos:', error);
-            // En caso de error, ocultar el elemento por seguridad
+            console.error('[HasRoleDirective] Error checking roles:', error);
             this.updateView(false);
         }
     }
 
     private updateView(show: boolean): void {
         if (show && !this.hasView) {
-            // Mostrar elemento
             this.viewContainer.createEmbeddedView(this.templateRef);
             this.hasView = true;
         } else if (!show && this.hasView) {
-            // Ocultar elemento
             this.viewContainer.clear();
             this.hasView = false;
         }
     }
 }
-
-/*
-📝 CORRECCIONES REALIZADAS:
-
-1. 🔧 TIPOS CORREGIDOS:
-   - Uso de 'as any' para evitar conflictos de tipos Permission vs string
-   - Manejo flexible de tipos para compatibilidad
-
-2. 🛡️ MANEJO DE ERRORES:
-   - Try-catch para capturar errores de tipos o métodos
-   - Fallback seguro ocultando elemento en caso de error
-
-3. 📊 COMPATIBILIDAD:
-   - Verificación de existencia del método hasAnyPermission
-   - Fallback usando hasPermission individual si hasAnyPermission no existe
-
-4. 🚨 SEGURIDAD:
-   - En caso de error, ocultar elemento por defecto
-   - Logs de error para debugging
-
-5. 🔄 FLEXIBILIDAD:
-   - Soporte para string único o array de strings
-   - Adaptable a diferentes implementaciones del PermissionService
-*/
 

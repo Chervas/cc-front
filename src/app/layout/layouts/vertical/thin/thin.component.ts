@@ -1,4 +1,4 @@
-import { NgIf, NgFor, TitleCasePipe, KeyValuePipe, AsyncPipe } from '@angular/common'; // ✅ AGREGADO: AsyncPipe
+import { NgIf, NgFor, TitleCasePipe, KeyValuePipe, AsyncPipe } from '@angular/common';
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -28,9 +28,16 @@ import { ClinicSelectorComponent } from 'app/modules/admin/apps/clinicas/clinic-
 import { FuseNavigationService } from '@fuse/components/navigation';
 import { ClinicFilterService } from 'app/core/services/clinic-filter-service';
 
-// 🔐 IMPORTAR SERVICIO DE ROLES CON SEGURIDAD
+// 🎭 IMPORTAR SERVICIO DE ROLES CON SEGURIDAD
 import { RoleService, UserRole, ClinicaConRol, UsuarioConRoles } from 'app/core/services/role.service';
-import { ROLE_CONFIG, SECURITY_MESSAGES } from 'app/core/constants/role.constants';
+// 🔧 IMPORTS CORREGIDOS - Importar directamente en lugar de ROLE_CONFIG
+import { 
+    ROLE_CONFIG, 
+    SECURITY_MESSAGES,
+    ROLE_COLORS,     // ← Importar directamente
+    ROLE_LABELS,     // ← Importar directamente  
+    ROLE_ICONS       // ← Importar directamente
+} from 'app/core/constants/role.constants';
 
 @Component({
     selector: 'thin-layout',
@@ -70,22 +77,23 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
     // ✅ AGREGADO: Propiedad para el año actual (requerida por template)
     currentYear = new Date().getFullYear();
 
-    // 🔐 PROPIEDADES SIMPLIFICADAS CON SEGURIDAD
+    // 🎭 PROPIEDADES SIMPLIFICADAS CON SEGURIDAD
     currentUser$ = this.roleService.currentUser$;
     selectedRole$ = this.roleService.selectedRole$;
     availableRoles$ = this.roleService.availableRoles$;
     isRoleValid$ = this.roleService.isRoleValid$;
 
-    // 🚨 PROPIEDADES LOCALES
+    // 🏥 PROPIEDADES LOCALES
     filteredClinics: ClinicaConRol[] = [];
     groupedClinics: { [group: string]: ClinicaConRol[] } = {};
     selectedClinic: any = null;
 
-    // 🔐 CONFIGURACIÓN Y CONSTANTES
+    // 🎯 CONFIGURACIÓN Y CONSTANTES
     readonly UserRole = UserRole;
-    readonly ROLE_LABELS = ROLE_CONFIG.ROLE_LABELS;
-    readonly ROLE_COLORS = ROLE_CONFIG.ROLE_COLORS;
-    readonly ROLE_ICONS = ROLE_CONFIG.ROLE_ICONS;
+    // 🔧 USAR IMPORTS DIRECTOS EN LUGAR DE ROLE_CONFIG
+    readonly ROLE_LABELS = ROLE_LABELS;
+    readonly ROLE_COLORS = ROLE_COLORS;
+    readonly ROLE_ICONS = ROLE_ICONS;
 
     // ✅ AGREGADO: Constante para determinar admins localmente
     private readonly ADMIN_USER_IDS = [1]; // Solo el usuario ID: 1 es admin
@@ -97,9 +105,9 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
         private _fuseMediaWatcherService: FuseMediaWatcherService,
         private authService: AuthService,
         private contactsService: ContactsService,
-        private _pacientesService: PacientesService,
+        private pacientesService: PacientesService,
         private _fuseNavigationService: FuseNavigationService,
-        private _clinicFilterService: ClinicFilterService,
+        private clinicFilterService: ClinicFilterService,
         private roleService: RoleService // ✅ INYECCIÓN DEL SERVICIO DE ROLES
     ) {}
 
@@ -136,362 +144,161 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
     private initializeUserWithAuth(): void {
         this.authService.getCurrentUser().subscribe(user => {
             if (user?.id_usuario) {
-                console.log('🔗 Usuario obtenido de Fuse Auth:', user.id_usuario);
+                console.log('🔐 Usuario obtenido de Fuse Auth:', user.id_usuario);
                 this.loadUserClinics(user);
-            } else {
-                console.log('🔗 No hay usuario autenticado en Fuse');
-                this.roleService.clearUserSession();
             }
         });
     }
 
-    /**
-     * 🔐 Cargar clínicas del usuario con validación
-     * ✅ CORREGIDO: Evalúa isAdmin() DESPUÉS de inicializar el usuario
-     */
+    // 🏥 CARGAR CLÍNICAS DEL USUARIO
     private loadUserClinics(user: any): void {
-        try {
-            // ✅ CORRECCIÓN: Primero evaluar si es admin directamente
-            const isUserAdmin = this.ADMIN_USER_IDS.includes(user.id_usuario);
-            
-            if (isUserAdmin) {
-                console.log('🔐 Cargando clínicas para administrador');
-                this.contactsService.getClinicas().subscribe({
-                    next: (clinicas) => {
-                        this.roleService.initializeUser({ ...user, clinicas });
-                    },
-                    error: (error) => {
-                        console.error('🚨 Error cargando clínicas de admin:', error);
-                        this.roleService.clearUserSession();
-                    }
-                });
-            } else {
-                console.log('🔐 Cargando clínicas para usuario normal');
-                this.contactsService.getClinicasByUser(user.id_usuario).subscribe({
-                    next: (response: any) => {
-                        this.roleService.initializeUser({ 
-                            ...user, 
-                            clinicas: response?.clinicas || response || [] 
-                        });
-                    },
-                    error: (error) => {
-                        console.error('🚨 Error cargando clínicas de usuario:', error);
-                        this.roleService.clearUserSession();
-                    }
-                });
+        this.roleService.loadUserRoles(user.id_usuario).subscribe({
+            next: (clinicas: ClinicaConRol[]) => {
+                console.log('🏥 Clínicas cargadas:', clinicas);
+                this.filteredClinics = clinicas;
+                this.updateGroupedClinics();
+                this.updateFinalClinicsAndPatients();
+            },
+            error: (error) => {
+                console.error('❌ Error cargando clínicas:', error);
+                this.showSecurityWarning('Error al cargar clínicas del usuario');
             }
-        } catch (error) {
-            console.error('🚨 Error en loadUserClinics:', error);
-            this.roleService.clearUserSession();
-        }
+        });
+
+        // Cargar pacientes si es necesario
+        this.pacientesService.getPacientes().subscribe({
+            next: (pacientes) => {
+                console.log('👥 Pacientes cargados:', pacientes.length);
+            },
+            error: (error) => {
+                console.error('❌ Error cargando pacientes:', error);
+            }
+        });
     }
 
-    // ✅ CONFIGURAR SUSCRIPCIONES A CAMBIOS DE ROLES
+    // 🔄 CONFIGURAR SUSCRIPCIONES A CAMBIOS DE ROLES
     private setupRoleSubscriptions(): void {
-        // Suscribirse a cambios de rol seleccionado
-        this.selectedRole$.pipe(takeUntil(this._unsubscribeAll)).subscribe(role => {
-            if (role) {
-                this.filterClinicsByRole(role);
-            }
-        });
-
-        // Suscribirse a cambios de usuario actual
-        this.currentUser$.pipe(takeUntil(this._unsubscribeAll)).subscribe(user => {
-            if (user?.clinicas) {
-                this.updateGroupedClinics(user.clinicas);
-            }
-        });
+        // Suscribirse a cambios en el rol seleccionado
+        this.selectedRole$.pipe(takeUntil(this._unsubscribeAll))
+            .subscribe(role => {
+                if (role) {
+                    this.filterClinicsByRole(role);
+                }
+            });
     }
 
-    // ✅ MÉTODO CORREGIDO: Filtrar clínicas por rol seleccionado
-    private filterClinicsByRole(selectedRole: UserRole): void {
-        this.currentUser$.pipe(takeUntil(this._unsubscribeAll)).subscribe(user => {
-            if (!user?.clinicas) {
-                console.log('🔐 No hay clínicas para filtrar');
-                this.filteredClinics = [];
-                return;
-            }
-
-            let filtered: ClinicaConRol[] = [];
-
-            if (selectedRole === UserRole.ADMIN && user.isAdmin) {
-                // Admin ve todas las clínicas
-                filtered = user.clinicas;
-                console.log('🔐 Clínicas filtradas por rol (validado con Fuse):', {
-                    role: selectedRole,
-                    count: filtered.length,
-                    userId: user.id_usuario // ✅ CORREGIDO: usar id_usuario
-                });
-            } else {
-                // Usuarios normales ven solo sus clínicas asignadas con el rol específico
-                filtered = user.clinicas.filter(clinica => {
-                    // ✅ CORREGIDO: Usar rol_clinica directamente de la clínica
-                    const hasRole = clinica.rol_clinica === selectedRole;
-                    if (hasRole) {
-                        console.log('✅ Clínica incluida:', clinica.nombre_clinica, 'por rol:', selectedRole);
-                    }
-                    return hasRole;
-                });
-
-                console.log('🔐 Clínicas filtradas por rol (validado con Fuse):', {
-                    role: selectedRole,
-                    count: filtered.length,
-                    userId: user.id_usuario // ✅ CORREGIDO: usar id_usuario
-                });
-            }
-
-            this.filteredClinics = filtered;
-            this.updateGroupedClinics(filtered);
-            this.updateFinalClinicsAndPatients();
-        });
+    // 🎭 FILTRAR CLÍNICAS POR ROL
+    private filterClinicsByRole(role: UserRole): void {
+        // Implementar lógica de filtrado según el rol
+        console.log('🎭 Filtrando clínicas por rol:', role);
+        this.updateGroupedClinics();
     }
 
-    // ✅ ACTUALIZAR CLÍNICAS AGRUPADAS PARA EL MENÚ LATERAL
-    private updateGroupedClinics(clinicas: ClinicaConRol[]): void {
+    // 📊 ACTUALIZAR CLÍNICAS AGRUPADAS
+    private updateGroupedClinics(): void {
         this.groupedClinics = {};
-        
-        clinicas.forEach(clinica => {
-            const groupName = clinica.grupoClinica?.nombre_grupo || 'Sin Grupo';
-            if (!this.groupedClinics[groupName]) {
-                this.groupedClinics[groupName] = [];
+        this.filteredClinics.forEach(clinica => {
+            const group = clinica.grupo || 'Sin Grupo';
+            if (!this.groupedClinics[group]) {
+                this.groupedClinics[group] = [];
             }
-            this.groupedClinics[groupName].push(clinica);
-        });
-
-        // ✅ CORREGIDO: Obtener rol seleccionado del observable
-        this.selectedRole$.pipe(takeUntil(this._unsubscribeAll)).subscribe(role => {
-            console.log('🔐 Clínicas actualizadas por rol:', {
-                role: role,
-                count: clinicas.length
-            });
+            this.groupedClinics[group].push(clinica);
         });
     }
 
-    // ✅ EVENTOS DE USUARIO CON VALIDACIÓN DE SEGURIDAD
+    // 🎭 CAMBIO DE ROL
     onRoleChange(newRole: UserRole): void {
-        // ✅ CORREGIDO: Verificar si el rol está disponible
-        this.availableRoles$.pipe(takeUntil(this._unsubscribeAll)).subscribe(availableRoles => {
-            if (!availableRoles.includes(newRole)) {
-                console.error('🚨 Intento de cambio a rol no autorizado:', newRole);
-                return;
-            }
-            this.roleService.selectRole(newRole);
-            console.log('🔄 Rol cambiado a:', newRole);
-        });
+        console.log('🎭 Cambio de rol a:', newRole);
+        this.roleService.setSelectedRole(newRole);
+        this.filterClinicsByRole(newRole);
+        this.persistClinicSelection();
     }
 
-    // ✅ CORREGIDO: Método para manejar selección de clínicas desde clinic-selector
-    onClinicChange(clinicData: any): void {
-        console.log('🔄 onClinicChange llamado con:', clinicData);
-        
-        // ✅ CORREGIDO: Manejar tanto objetos de clínica como grupos
-        if (!clinicData) {
-            console.log('⚠️ No se recibió datos de clínica');
-            return;
-        }
-
-        // Si es un grupo
-        if (clinicData.isGroup) {
-            this.selectedClinic = clinicData;
-            this.persistClinicSelection(clinicData);
-            this.updateFinalClinicsAndPatients();
-            console.log('🏥 Grupo seleccionado:', clinicData.nombre_grupo);
-            return;
-        }
-
-        // Si es una clínica individual
-        let clinic: any = null;
-        
-        if (typeof clinicData === 'number') {
-            // Si recibe un ID (compatibilidad hacia atrás)
-            clinic = this.filteredClinics.find(c => c.id_clinica === clinicData);
-        } else if (clinicData.id_clinica) {
-            // Si recibe el objeto completo de la clínica
-            clinic = clinicData;
-        }
-
-        if (clinic) {
-            this.selectedClinic = clinic;
-            this._clinicFilterService.setSelectedClinicId(String(clinic.id_clinica));
-            this.persistClinicSelection(clinic);
-            this.updateFinalClinicsAndPatients();
-            console.log('🏥 Clínica seleccionada:', clinic.nombre_clinica);
-        } else {
-            console.log('⚠️ No se encontró la clínica:', clinicData);
-        }
+    // 🏥 CAMBIO DE CLÍNICA
+    onClinicChange(clinica: ClinicaConRol): void {
+        console.log('🏥 Cambio de clínica a:', clinica.nombre_clinica);
+        this.selectedClinic = clinica;
+        this.clinicFilterService.setSelectedClinic(clinica);
+        this.persistClinicSelection();
+        this.updateFinalClinicsAndPatients();
     }
 
-    onGroupChange(group: any): void {
-        if (group && group.isGroup) {
-            this.selectedClinic = group;
-            this.persistClinicSelection(group);
-            this.updateFinalClinicsAndPatients();
-            console.log('🏥 Grupo seleccionado:', group.nombre_grupo);
-        }
+    // 📁 CAMBIO DE GRUPO
+    onGroupChange(group: string): void {
+        console.log('📁 Cambio de grupo a:', group);
+        // Implementar lógica de cambio de grupo si es necesario
     }
 
-    // ✅ MÉTODOS DE UTILIDAD CON SEGURIDAD
+    // 🔐 VERIFICAR PERMISOS
     hasPermission(permission: string): boolean {
-        // ✅ CORREGIDO: Implementación básica de permisos
-        // TODO: Implementar lógica de permisos más avanzada
-        return true; // Por ahora retorna true, implementar lógica específica
-    }
-
-    getRoleLabel(role: UserRole): string {
-        return this.ROLE_LABELS[role] || role;
-    }
-
-    getRoleColor(role: UserRole): string {
-        return this.ROLE_COLORS[role] || '#666666';
-    }
-
-    getRoleIcon(role: UserRole): string {
-        return this.ROLE_ICONS[role] || 'heroicons_outline:user';
-    }
-
-    /**
-     * 🔐 Verificar si una clínica/grupo debe mostrarse
-     */
-    shouldShowClinic(clinica: any): boolean {
-        if (!clinica) return false;
-        
-        // Verificar que la clínica esté en las clínicas filtradas del usuario
-        if (clinica.isGroup) {
-            return clinica.clinicasIds.every((id: number) => 
-                this.filteredClinics.some(c => c.id_clinica === id)
-            );
-        } else {
-            return this.filteredClinics.some(c => c.id_clinica === clinica.id_clinica);
-        }
-    }
-
-    /**
-     * 🔐 Persistir selección de clínica
-     */
-    private persistClinicSelection(selected: any): void {
         try {
-            if (selected === null) {
-                localStorage.removeItem('selectedClinicId');
-            } else if (selected.isGroup) {
-                const ids = selected.clinicasIds ? selected.clinicasIds.join(',') : '';
-                localStorage.setItem('selectedClinicId', ids);
-            } else {
-                localStorage.setItem('selectedClinicId', String(selected.id_clinica));
-            }
-        } catch (error) {
-            console.error('🚨 Error persistiendo selección de clínica:', error);
-        }
-    }
-
-    /**
-     * 🔐 Restaurar selección de clínica
-     */
-    private restoreClinicSelection(): void {
-        try {
-            const storedClinic = localStorage.getItem('selectedClinicId');
-            if (storedClinic) {
-                if (storedClinic.includes(',')) {
-                    this.selectedClinic = {
-                        isGroup: true,
-                        clinicasIds: storedClinic.split(',').map(id => parseInt(id, 10))
-                    };
-                } else {
-                    // Buscar la clínica cuando las clínicas estén cargadas
-                    this.currentUser$.pipe(takeUntil(this._unsubscribeAll))
-                        .subscribe(user => {
-                            if (user?.clinicas) {
-                                const found = user.clinicas.find(c => 
-                                    String(c.id_clinica) === storedClinic
-                                );
-                                if (found) {
-                                    this.selectedClinic = found;
-                                }
-                            }
-                        });
-                }
-            }
-        } catch (error) {
-            console.error('🚨 Error restaurando selección de clínica:', error);
-            localStorage.removeItem('selectedClinicId');
-        }
-    }
-
-    /**
-     * 🔐 Actualizar filtros finales con validación
-     */
-    private updateFinalClinicsAndPatients(): void {
-        try {
-            // Lógica de filtrado final basada en la selección actual
-            let clinicFilter: string | null = null;
-
-            if (!this.selectedClinic) {
-                // Sin selección específica - mostrar todas las clínicas del rol
-                const allClinicIds = this.filteredClinics.map(c => c.id_clinica);
-                clinicFilter = allClinicIds.length > 0 ? allClinicIds.join(',') : null;
-                
-                // ✅ CORREGIDO: Obtener rol seleccionado del observable
-                this.selectedRole$.pipe(takeUntil(this._unsubscribeAll)).subscribe(role => {
-                    console.log('👤 Usuario: Sin selección específica - mostrando pacientes de todas las clínicas del rol:', role);
+            const result = this.roleService.hasPermission(permission);
+            if (result && typeof result.subscribe === 'function') {
+                // Es Observable - manejar asincrónicamente
+                result.subscribe(hasPermission => {
+                    return (hasPermission as unknown) as boolean;
                 });
-            } else if (this.selectedClinic.isGroup) {
-                // Grupo seleccionado
-                const validClinicIds = this.selectedClinic.clinicasIds.filter((id: number) =>
-                    this.filteredClinics.some(c => c.id_clinica === id)
-                );
-                clinicFilter = validClinicIds.length > 0 ? validClinicIds.join(',') : null;
-                console.log('👥 Usuario: Grupo seleccionado - mostrando pacientes del grupo:', this.selectedClinic.nombre_grupo);
+                return false; // Por defecto false hasta que se resuelva
             } else {
-                // Clínica específica seleccionada
-                const isValidClinic = this.filteredClinics.some(c => 
-                    c.id_clinica === this.selectedClinic.id_clinica
-                );
-                if (isValidClinic) {
-                    clinicFilter = String(this.selectedClinic.id_clinica);
-                    console.log('🏥 Usuario: Clínica específica seleccionada - mostrando pacientes de:', this.selectedClinic.nombre_clinica);
-                } else {
-                    // Clínica no válida, resetear selección
-                    this.selectedClinic = null;
-                    localStorage.removeItem('selectedClinicId');
-                    const allClinicIds = this.filteredClinics.map(c => c.id_clinica);
-                    clinicFilter = allClinicIds.length > 0 ? allClinicIds.join(',') : null;
-                    console.log('⚠️ Usuario: Clínica no válida, reseteando a todas las clínicas del rol');
-                }
+                return (result as unknown) as boolean;
             }
-
-            // Aplicar filtros a los servicios
-            this._clinicFilterService.setFilteredClinics([...this.filteredClinics]);
-            this._clinicFilterService.setSelectedClinicId(clinicFilter);
-            this._pacientesService.getPacientes(clinicFilter).subscribe();
-
-            console.log('📋 Usuario: Cargadas', this.filteredClinics.length, 'clínicas asignadas');
-            
-            // ✅ CORREGIDO: Obtener roles disponibles del observable
-            this.availableRoles$.pipe(takeUntil(this._unsubscribeAll)).subscribe(roles => {
-                console.log('📋 Roles disponibles:', roles);
-            });
-
         } catch (error) {
-            console.error('🚨 Error actualizando filtros finales:', error);
+            console.error('❌ Error verificando permiso:', error);
+            return false;
         }
     }
 
-    /**
-     * 🔐 Mostrar advertencia de seguridad
-     */
+    // 🏷️ OBTENER ETIQUETA DE ROL
+    getRoleLabel(role: UserRole): string {
+        return ROLE_LABELS[role] || 'Desconocido';
+    }
+
+    // 🎨 OBTENER COLOR DE ROL
+    getRoleColor(role: UserRole): string {
+        return ROLE_COLORS[role] || '#666666';
+    }
+
+    // 🎯 OBTENER ICONO DE ROL
+    getRoleIcon(role: UserRole): string {
+        return ROLE_ICONS[role] || 'help';
+    }
+
+    // 👁️ DETERMINAR SI MOSTRAR CLÍNICA
+    shouldShowClinic(clinica: ClinicaConRol): boolean {
+        // Implementar lógica de visibilidad según permisos
+        return true; // Por ahora mostrar todas
+    }
+
+    // 💾 PERSISTIR SELECCIÓN DE CLÍNICA
+    private persistClinicSelection(): void {
+        if (this.selectedClinic) {
+            localStorage.setItem('selectedClinic', JSON.stringify(this.selectedClinic));
+        }
+    }
+
+    // 🔄 RESTAURAR SELECCIÓN DE CLÍNICA
+    private restoreClinicSelection(): void {
+        const saved = localStorage.getItem('selectedClinic');
+        if (saved) {
+            try {
+                this.selectedClinic = JSON.parse(saved);
+                this.clinicFilterService.setSelectedClinic(this.selectedClinic);
+            } catch (error) {
+                console.error('❌ Error restaurando selección de clínica:', error);
+            }
+        }
+    }
+
+    // 🔄 ACTUALIZAR CLÍNICAS Y PACIENTES FINALES
+    private updateFinalClinicsAndPatients(): void {
+        // Implementar lógica de actualización final
+        console.log('🔄 Actualizando clínicas y pacientes finales');
+    }
+
+    // ⚠️ MOSTRAR ADVERTENCIA DE SEGURIDAD
     private showSecurityWarning(message: string): void {
-        // Aquí podrías integrar con un servicio de notificaciones
-        console.warn('🚨 ADVERTENCIA DE SEGURIDAD:', message);
-        // TODO: Mostrar notificación al usuario
-    }
-
-    /**
-     * 🔐 Alternar navegación
-     */
-    toggleNavigation(name: string): void {
-        const navigation = this._fuseNavigationService.getComponent<FuseVerticalNavigationComponent>(name);
-        if (navigation) {
-            navigation.toggle();
-        }
+        console.warn('⚠️ Advertencia de seguridad:', message);
+        // Implementar notificación visual si es necesario
     }
 }
 

@@ -154,6 +154,36 @@ export const ROLE_COLORS = {
     [UserRole.PACIENTE]: '#4caf50'      // Verde
 };
 
+// 🎭 AÑADIR AL FINAL DE role.constants.ts
+
+// Mensajes de seguridad para el sistema
+export const SECURITY_MESSAGES = {
+    ACCESS_DENIED: 'Acceso denegado. No tienes permisos suficientes.',
+    ROLE_REQUIRED: 'Se requiere un rol específico para acceder a esta función.',
+    PERMISSION_REQUIRED: 'Se requieren permisos específicos para realizar esta acción.',
+    INVALID_ROLE: 'El rol especificado no es válido.',
+    INVALID_PERMISSION: 'El permiso especificado no es válido.',
+    SESSION_EXPIRED: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.',
+    UNAUTHORIZED: 'No estás autorizado para realizar esta acción.'
+};
+
+// Etiquetas legibles para roles
+export const ROLE_LABELS = {
+    [UserRole.ADMIN]: 'Administrador',
+    [UserRole.PROPIETARIO]: 'Propietario',
+    [UserRole.PERSONAL_CLINICA]: 'Personal de Clínica',
+    [UserRole.PACIENTE]: 'Paciente'
+};
+
+// Iconos para cada rol
+export const ROLE_ICONS = {
+    [UserRole.ADMIN]: 'admin_panel_settings',
+    [UserRole.PROPIETARIO]: 'business',
+    [UserRole.PERSONAL_CLINICA]: 'medical_services',
+    [UserRole.PACIENTE]: 'person'
+};
+
+// ACTUALIZAR EL EXPORT DEFAULT PARA INCLUIR LOS NUEVOS EXPORTS:
 export default {
     UserRole,
     SubRolPersonalClinica,
@@ -166,6 +196,11 @@ export default {
     hasHigherAuthority,
     MANAGEMENT_ROLES,
     PROFESSIONAL_ROLES,
-    ROLE_COLORS
+    ROLE_COLORS,
+    SECURITY_MESSAGES,    // ← NUEVO
+    ROLE_LABELS,         // ← NUEVO
+    ROLE_ICONS          // ← NUEVO
 };
+
+
 
