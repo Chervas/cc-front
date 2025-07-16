@@ -1,167 +1,171 @@
-import { UserRole } from '../services/role.service'; // ✅ ÚNICA CORRECCIÓN: Ruta correcta
+// 🎭 CONSTANTES DE ROLES - VALORES CORRECTOS DEL SISTEMA
+// Basado en la estructura real: admin, propietario, personal_clinica, paciente
 
-// 🎯 CONFIGURACIÓN CENTRALIZADA CON SEGURIDAD
+export enum UserRole {
+    ADMIN = 'admin',
+    PROPIETARIO = 'propietario', 
+    PERSONAL_CLINICA = 'personal_clinica',
+    PACIENTE = 'paciente'
+}
+
+// Subroles para PERSONAL_CLINICA
+export enum SubRolPersonalClinica {
+    DOCTOR = 'doctor',
+    AUXILIAR = 'auxiliar'
+}
+
+// Configuración de roles con sus permisos
 export const ROLE_CONFIG = {
-    // 👑 ADMINISTRADORES (centralizado y seguro)
-    ADMIN_USER_IDS: [1],
-    
-    // 🎨 ETIQUETAS VISUALES
-    ROLE_LABELS: {
-        [UserRole.ADMIN]: 'Administrador',
-        [UserRole.PROPIETARIO]: 'Propietario',
-        [UserRole.DOCTOR]: 'Doctor',
-        [UserRole.PERSONAL_CLINICA]: 'Personal de Clínica',
-        [UserRole.PACIENTE]: 'Paciente'
-    },
-    
-    // 🎨 COLORES POR ROL
-    ROLE_COLORS: {
-        [UserRole.ADMIN]: '#ff4444',
-        [UserRole.PROPIETARIO]: '#4CAF50',
-        [UserRole.DOCTOR]: '#2196F3',
-        [UserRole.PERSONAL_CLINICA]: '#FF9800',
-        [UserRole.PACIENTE]: '#9C27B0'
-    },
-    
-    // 🎨 ICONOS POR ROL
-    ROLE_ICONS: {
-        [UserRole.ADMIN]: 'heroicons_outline:cog-6-tooth',
-        [UserRole.PROPIETARIO]: 'heroicons_outline:building-office',
-        [UserRole.DOCTOR]: 'heroicons_outline:user-plus',
-        [UserRole.PERSONAL_CLINICA]: 'heroicons_outline:users',
-        [UserRole.PACIENTE]: 'heroicons_outline:user'
-    },
-    
-    // 🔐 PERMISOS POR ROL (granulares y seguros)
-    ROLE_PERMISSIONS: {
-        [UserRole.ADMIN]: [
-            '*', // Todos los permisos
-            'system.manage',
-            'users.manage',
-            'clinics.manage',
-            'reports.view_all',
-            'settings.manage'
+    [UserRole.ADMIN]: {
+        label: 'Administrador',
+        permissions: [
+            'READ_ALL',
+            'WRITE_ALL', 
+            'DELETE_ALL',
+            'ADMIN_ACCESS',
+            'MANAGE_USERS',
+            'MANAGE_CLINICS',
+            'MANAGE_ROLES',
+            'VIEW_REPORTS',
+            'SYSTEM_CONFIG'
         ],
-        [UserRole.PROPIETARIO]: [
-            'clinic.manage',
-            'clinic.view_patients',
-            'clinic.manage_staff',
-            'clinic.view_reports',
-            'clinic.manage_settings',
-            'assets.map',
-            'appointments.manage'
-        ],
-        [UserRole.DOCTOR]: [
-            'clinic.view_patients',
-            'clinic.manage_appointments',
-            'clinic.view_medical_records',
-            'clinic.create_prescriptions',
-            'reports.view_own'
-        ],
-        [UserRole.PERSONAL_CLINICA]: [
-            'clinic.view_patients',
-            'clinic.basic_operations',
-            'appointments.view',
-            'appointments.create'
-        ],
-        [UserRole.PACIENTE]: [
-            'profile.view_own',
-            'profile.edit_own',
-            'appointments.view_own',
-            'medical_records.view_own'
-        ]
+        color: 'warn',
+        icon: 'admin_panel_settings',
+        priority: 1
     },
-
-    // 🔐 ACCIONES SENSIBLES QUE REQUIEREN VALIDACIÓN ADICIONAL
-    SENSITIVE_ACTIONS: {
-        'assets.map': [UserRole.ADMIN, UserRole.PROPIETARIO],
-        'clinic.manage_settings': [UserRole.ADMIN, UserRole.PROPIETARIO],
-        'users.manage': [UserRole.ADMIN],
-        'system.manage': [UserRole.ADMIN],
-        'clinic.delete': [UserRole.ADMIN],
-        'data.export': [UserRole.ADMIN, UserRole.PROPIETARIO]
+    [UserRole.PROPIETARIO]: {
+        label: 'Propietario',
+        permissions: [
+            'READ_CLINIC',
+            'WRITE_CLINIC',
+            'MANAGE_STAFF',
+            'VIEW_CLINIC_REPORTS',
+            'MANAGE_SERVICES',
+            'MANAGE_APPOINTMENTS',
+            'VIEW_FINANCES'
+        ],
+        color: 'accent',
+        icon: 'business',
+        priority: 2
     },
-
-    // 🔐 CONFIGURACIÓN DE SEGURIDAD
-    SECURITY: {
-        // Tiempo máximo de inactividad antes de revalidar roles (minutos)
-        MAX_IDLE_TIME: 30,
-        
-        // Intervalo de validación automática de roles (minutos)
-        ROLE_VALIDATION_INTERVAL: 5,
-        
-        // Tiempo máximo de caché de roles (minutos)
-        MAX_ROLE_CACHE_TIME: 10,
-        
-        // Número máximo de intentos de cambio de rol por minuto
-        MAX_ROLE_CHANGES_PER_MINUTE: 10,
-        
-        // Roles que requieren autenticación adicional
-        REQUIRE_2FA: [UserRole.ADMIN],
-        
-        // Logs de seguridad habilitados
-        SECURITY_LOGGING: true
+    [UserRole.PERSONAL_CLINICA]: {
+        label: 'Personal de Clínica',
+        permissions: [
+            'READ_PATIENTS',
+            'WRITE_PATIENTS',
+            'READ_APPOINTMENTS',
+            'WRITE_APPOINTMENTS',
+            'VIEW_SCHEDULES'
+        ],
+        color: 'primary',
+        icon: 'medical_services',
+        priority: 3,
+        subRoles: {
+            [SubRolPersonalClinica.DOCTOR]: {
+                label: 'Doctor',
+                additionalPermissions: [
+                    'WRITE_PRESCRIPTIONS',
+                    'VIEW_MEDICAL_HISTORY',
+                    'MANAGE_TREATMENTS',
+                    'APPROVE_PROCEDURES'
+                ],
+                icon: 'local_hospital'
+            },
+            [SubRolPersonalClinica.AUXILIAR]: {
+                label: 'Auxiliar',
+                additionalPermissions: [
+                    'SCHEDULE_APPOINTMENTS',
+                    'UPDATE_PATIENT_INFO',
+                    'MANAGE_INVENTORY'
+                ],
+                icon: 'support_agent'
+            }
+        }
+    },
+    [UserRole.PACIENTE]: {
+        label: 'Paciente',
+        permissions: [
+            'VIEW_OWN_PROFILE',
+            'UPDATE_OWN_PROFILE',
+            'VIEW_OWN_APPOINTMENTS',
+            'REQUEST_APPOINTMENTS',
+            'VIEW_OWN_HISTORY'
+        ],
+        color: 'accent',
+        icon: 'person',
+        priority: 4
     }
 };
 
-// 🎯 JERARQUÍA DE ROLES (para validaciones de permisos)
+// Permisos por defecto para cada rol
+export const DEFAULT_PERMISSIONS = {
+    [UserRole.ADMIN]: ROLE_CONFIG[UserRole.ADMIN].permissions,
+    [UserRole.PROPIETARIO]: ROLE_CONFIG[UserRole.PROPIETARIO].permissions,
+    [UserRole.PERSONAL_CLINICA]: ROLE_CONFIG[UserRole.PERSONAL_CLINICA].permissions,
+    [UserRole.PACIENTE]: ROLE_CONFIG[UserRole.PACIENTE].permissions
+};
+
+// Función para obtener permisos de personal de clínica con subrol
+export function getPersonalClinicaPermissions(subRol?: SubRolPersonalClinica): string[] {
+    const basePermissions = ROLE_CONFIG[UserRole.PERSONAL_CLINICA].permissions;
+    
+    if (!subRol) return basePermissions;
+    
+    const subRoleConfig = ROLE_CONFIG[UserRole.PERSONAL_CLINICA].subRoles?.[subRol];
+    if (!subRoleConfig) return basePermissions;
+    
+    return [...basePermissions, ...subRoleConfig.additionalPermissions];
+}
+
+// Función para verificar si un rol es válido
+export function isValidRole(role: string): role is UserRole {
+    return Object.values(UserRole).includes(role as UserRole);
+}
+
+// Función para verificar si un subrol es válido
+export function isValidSubRole(subRole: string): subRole is SubRolPersonalClinica {
+    return Object.values(SubRolPersonalClinica).includes(subRole as SubRolPersonalClinica);
+}
+
+// Jerarquía de roles (para comparaciones de autoridad)
 export const ROLE_HIERARCHY = {
-    [UserRole.ADMIN]: 5,
-    [UserRole.PROPIETARIO]: 4,
-    [UserRole.DOCTOR]: 3,
-    [UserRole.PERSONAL_CLINICA]: 2,
-    [UserRole.PACIENTE]: 1
+    [UserRole.ADMIN]: 1,
+    [UserRole.PROPIETARIO]: 2,
+    [UserRole.PERSONAL_CLINICA]: 3,
+    [UserRole.PACIENTE]: 4
 };
 
-// 🔐 VALIDACIONES DE SEGURIDAD
-export const SECURITY_RULES = {
-    // Roles que pueden ver otros usuarios
-    CAN_VIEW_USERS: [UserRole.ADMIN, UserRole.PROPIETARIO],
-    
-    // Roles que pueden gestionar clínicas
-    CAN_MANAGE_CLINICS: [UserRole.ADMIN, UserRole.PROPIETARIO],
-    
-    // Roles que pueden acceder a reportes
-    CAN_VIEW_REPORTS: [UserRole.ADMIN, UserRole.PROPIETARIO, UserRole.DOCTOR],
-    
-    // Roles que pueden mapear activos
-    CAN_MAP_ASSETS: [UserRole.ADMIN, UserRole.PROPIETARIO],
-    
-    // Roles que requieren validación periódica
-    REQUIRE_PERIODIC_VALIDATION: [UserRole.ADMIN, UserRole.PROPIETARIO],
-    
-    // Roles que pueden cambiar configuraciones del sistema
-    CAN_CHANGE_SYSTEM_SETTINGS: [UserRole.ADMIN]
+// Función para comparar autoridad entre roles
+export function hasHigherAuthority(role1: UserRole, role2: UserRole): boolean {
+    return ROLE_HIERARCHY[role1] < ROLE_HIERARCHY[role2];
+}
+
+// Roles que pueden gestionar otros roles
+export const MANAGEMENT_ROLES = [UserRole.ADMIN, UserRole.PROPIETARIO];
+
+// Roles que requieren verificación profesional
+export const PROFESSIONAL_ROLES = [UserRole.PERSONAL_CLINICA];
+
+// Configuración de colores para UI
+export const ROLE_COLORS = {
+    [UserRole.ADMIN]: '#f44336',        // Rojo
+    [UserRole.PROPIETARIO]: '#9c27b0',  // Púrpura
+    [UserRole.PERSONAL_CLINICA]: '#2196f3', // Azul
+    [UserRole.PACIENTE]: '#4caf50'      // Verde
 };
 
-// 🎨 CONFIGURACIÓN DE UI POR ROL
-export const UI_CONFIG = {
-    // Menús disponibles por rol
-    AVAILABLE_MENUS: {
-        [UserRole.ADMIN]: ['dashboard', 'users', 'clinics', 'reports', 'settings', 'system'],
-        [UserRole.PROPIETARIO]: ['dashboard', 'patients', 'staff', 'reports', 'settings', 'assets'],
-        [UserRole.DOCTOR]: ['dashboard', 'patients', 'appointments', 'medical-records'],
-        [UserRole.PERSONAL_CLINICA]: ['dashboard', 'patients', 'appointments'],
-        [UserRole.PACIENTE]: ['dashboard', 'profile', 'appointments', 'medical-records']
-    },
-    
-    // Acciones rápidas por rol
-    QUICK_ACTIONS: {
-        [UserRole.ADMIN]: ['create-user', 'create-clinic', 'view-system-logs'],
-        [UserRole.PROPIETARIO]: ['add-patient', 'add-staff', 'view-reports', 'map-assets'],
-        [UserRole.DOCTOR]: ['add-patient', 'create-appointment', 'view-schedule'],
-        [UserRole.PERSONAL_CLINICA]: ['add-patient', 'create-appointment'],
-        [UserRole.PACIENTE]: ['book-appointment', 'view-history']
-    }
-};
-
-// 🔐 MENSAJES DE SEGURIDAD
-export const SECURITY_MESSAGES = {
-    UNAUTHORIZED_ROLE_CHANGE: 'No tienes permisos para cambiar a este rol',
-    TOKEN_EXPIRED: 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente',
-    INVALID_PERMISSIONS: 'No tienes permisos para realizar esta acción',
-    ROLE_VALIDATION_FAILED: 'Error validando tus permisos. Contacta al administrador',
-    SESSION_TIMEOUT: 'Sesión cerrada por inactividad',
-    SUSPICIOUS_ACTIVITY: 'Actividad sospechosa detectada. Sesión cerrada por seguridad'
+export default {
+    UserRole,
+    SubRolPersonalClinica,
+    ROLE_CONFIG,
+    DEFAULT_PERMISSIONS,
+    getPersonalClinicaPermissions,
+    isValidRole,
+    isValidSubRole,
+    ROLE_HIERARCHY,
+    hasHigherAuthority,
+    MANAGEMENT_ROLES,
+    PROFESSIONAL_ROLES,
+    ROLE_COLORS
 };
 

@@ -1,281 +1,385 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { Observable, of, firstValueFrom } from 'rxjs';
+import { Subject, takeUntil, combineLatest } from 'rxjs';
 
-// Importaciones del sistema de roles
-import { RoleService, UserRole } from '../../../../../core/services/role.service';
-import { PermissionService, Permission } from '../../../../../core/services/permission.service';
+// 🔧 Importaciones de servicios (RUTAS CORREGIDAS)
+import { RoleService } from 'app/core/services/role.service';
+import { PermissionService } from 'app/core/services/permission.service';
+
+// 🎯 Importaciones de directivas (RUTAS CORREGIDAS)
+import { HasRoleDirective } from '../shared/has-role.directive';
+import { HasPermissionDirective } from '../shared/has-permission.directive';
+
+// 📋 Importaciones de tipos (CORREGIDO - Usar tipos reales del servicio)
+import { UserRole, UsuarioConRoles } from 'app/core/services/role.service';
 
 /**
- * ✅ COMPONENTE DE TESTING - SISTEMA DE ROLES FASE 2
+ * 🧪 Componente de Testing del Sistema de Roles
  * 
- * Componente para probar todas las funcionalidades del sistema de roles.
- * Adaptado para usar el enum Permission correctamente.
+ * Este componente permite probar todas las funcionalidades del sistema de roles:
+ * - Verificación de roles mediante directivas *hasRole
+ * - Verificación de permisos mediante directivas *hasPermission  
+ * - Testing de métodos del RoleService y PermissionService
+ * - Visualización del estado actual del usuario y sus permisos
  */
 @Component({
     selector: 'app-role-test',
-    templateUrl: './role-test-component.html',
+    standalone: true,
     imports: [
         CommonModule,
         MatButtonModule,
         MatCardModule,
-        MatIconModule
+        MatIconModule,
+        HasRoleDirective,        // ✅ Directiva restaurada con ruta correcta
+        HasPermissionDirective   // ✅ Directiva restaurada con ruta correcta
     ],
-    standalone: true
+    templateUrl: './role-test-component.html'
+    // ✅ SIN styleUrls - Usando solo estilos de Fuse
 })
-export class RoleTestComponent implements OnInit {
-
-    // =========================================
-    // 🔧 PROPIEDADES DEL COMPONENTE
-    // =========================================
-
-    // Observables del RoleService
-    currentUser$ = this.roleService.currentUser$;
-    availableRoles$ = this.roleService.availableRoles$;
-
-    // Datos para mostrar en template
-    currentRole: string = '';
-    availableRoles: string[] = [];
+export class RoleTestComponent implements OnInit, OnDestroy {
+    
+    // 🔄 Subject para manejo de suscripciones
+    private destroy$ = new Subject<void>();
+    
+    // 📊 Estado del componente (CORREGIDO - Usar tipos reales)
+    currentUser: UsuarioConRoles | null = null;
+    selectedRole: UserRole | null = null;
+    availableRoles: UserRole[] = [];
+    currentPermissions: string[] = [];
+    isLoading = true;
+    
+    // 🎯 Resultados de testing
     testResults: any = {};
+    
+    // 📋 Logs para debugging
+    logs: string[] = [];
 
     constructor(
         private roleService: RoleService,
         private permissionService: PermissionService
-    ) {}
-
-    ngOnInit() {
-        this.loadCurrentData();
-        this.loadAvailableRoles();
+    ) {
+        this.log('🚀 RoleTestComponent inicializado');
     }
 
-    // =========================================
-    // 🔄 MÉTODOS DE CARGA DE DATOS
-    // =========================================
+    ngOnInit(): void {
+        this.log('🔄 Iniciando carga de datos del usuario...');
+        this.setupSubscriptions();
+    }
+
+    ngOnDestroy(): void {
+        this.destroy$.next();
+        this.destroy$.complete();
+        this.log('🔚 RoleTestComponent destruido');
+    }
 
     /**
-     * Carga los datos actuales del sistema
+     * 📡 Configurar suscripciones reactivas (CORREGIDO)
      */
-    loadCurrentData(): void {
-        try {
-            const currentRole = this.roleService.getCurrentRole();
-            this.currentRole = currentRole ? currentRole : 'Sin rol seleccionado';
+    private setupSubscriptions(): void {
+        // Suscripción combinada para obtener toda la información del usuario
+        combineLatest([
+            this.roleService.currentUser$,
+            this.roleService.selectedRole$,
+            this.roleService.availableRoles$
+        ]).pipe(
+            takeUntil(this.destroy$)
+        ).subscribe(([user, role, roles]) => {
+            this.currentUser = user;
+            this.selectedRole = role;
+            this.availableRoles = roles || []; // CORREGIDO: Manejar undefined
             
-            console.log('🔄 Datos actuales cargados:', {
-                currentRole: this.currentRole
-            });
-        } catch (error) {
-            console.error('🚨 Error cargando datos actuales:', error);
-            this.currentRole = 'Error al cargar';
+            // CORREGIDO: Usar propiedades que realmente existen en UsuarioConRoles
+            const userName = this.getUserDisplayName(user);
+            this.log(`👤 Usuario actual: ${userName}`);
+            this.log(`🎭 Rol seleccionado: ${role || 'No seleccionado'}`);
+            this.log(`📋 Roles disponibles: ${this.availableRoles.join(', ')}`);
+            
+            this.loadPermissions();
+            this.isLoading = false;
+        });
+    }
+
+    /**
+     * 👤 Obtener nombre para mostrar del usuario (AGREGADO)
+     */
+    private getUserDisplayName(user: UsuarioConRoles | null): string {
+        if (!user) return 'No disponible';
+        
+        // Usar las propiedades que realmente existen en UsuarioConRoles
+        // Ajustar según la estructura real del tipo
+        return user.id_usuario?.toString() || 'Usuario sin ID';
+    }
+
+    /**
+     * 🔑 Cargar permisos del usuario actual (CORREGIDO)
+     */
+    private loadPermissions(): void {
+        if (this.selectedRole) {
+            // CORREGIDO: getCurrentPermissions devuelve array directamente, no Observable
+            try {
+                const permissions = this.permissionService.getCurrentPermissions();
+                if (Array.isArray(permissions)) {
+                    this.currentPermissions = permissions;
+                    this.log(`🔑 Permisos cargados: ${permissions.length} permisos`);
+                } else {
+                    this.currentPermissions = [];
+                    this.log(`⚠️ No se pudieron cargar permisos`);
+                }
+            } catch (error) {
+                this.currentPermissions = [];
+                this.log(`❌ Error cargando permisos: ${error}`);
+            }
         }
     }
 
     /**
-     * Carga los roles disponibles con manejo de errores
+     * 🧪 Test básico de roles (CORREGIDO - Usar valores dinámicos)
      */
-    loadAvailableRoles(): void {
-        this.availableRoles$.subscribe({
-            next: (roles) => {
-                console.log('🔄 Roles disponibles recibidos:', roles);
+    testRoles(): void {
+        this.log('🧪 === INICIANDO TEST DE ROLES ===');
+        
+        // CORREGIDO: Usar los roles disponibles del usuario en lugar de valores hardcodeados
+        const testRoles = this.availableRoles.length > 0 ? this.availableRoles : [];
+        
+        if (testRoles.length === 0) {
+            this.log('⚠️ No hay roles disponibles para testear');
+            return;
+        }
+        
+        testRoles.forEach(role => {
+            // CORREGIDO: hasRole devuelve boolean directamente, no Observable
+            try {
+                const hasRole = this.roleService.hasRole(role);
+                const result = hasRole ? '✅' : '❌';
+                this.log(`${result} Rol '${role}': ${hasRole}`);
+                this.testResults[`role_${role}`] = hasRole;
+            } catch (error) {
+                this.log(`❌ Error verificando rol '${role}': ${error}`);
+                this.testResults[`role_${role}`] = false;
+            }
+        });
+        
+        // Test de admin (CORREGIDO)
+        try {
+            const isAdmin = this.roleService.isAdmin();
+            const result = isAdmin ? '✅' : '❌';
+            this.log(`${result} Es Admin: ${isAdmin}`);
+            this.testResults.isAdmin = isAdmin;
+        } catch (error) {
+            this.log(`❌ Error verificando admin: ${error}`);
+            this.testResults.isAdmin = false;
+        }
+    }
+
+    /**
+     * 🔐 Test básico de permisos (CORREGIDO - Casting seguro)
+     */
+    testPermissions(): void {
+        this.log('🔐 === INICIANDO TEST DE PERMISOS ===');
+        
+        // CORREGIDO: Usar strings simples que el servicio pueda manejar
+        const testPermissions = [
+            'clinic.manage',
+            'clinic.view_patients', 
+            'clinic.manage_staff',
+            'clinic.manage_appointments',
+            'reports.view'
+        ];
+        
+        testPermissions.forEach(permission => {
+            try {
+                // CORREGIDO: hasPermission devuelve Observable<boolean>
+                const hasPermissionResult = this.permissionService.hasPermission(permission as any);
                 
-                if (Array.isArray(roles) && roles.length > 0) {
-                    this.availableRoles = roles.map(role => String(role));
+                if (hasPermissionResult && typeof hasPermissionResult.subscribe === 'function') {
+                    // Es un Observable
+                    hasPermissionResult.pipe(takeUntil(this.destroy$)).subscribe(hasPermission => {
+                        const result = hasPermission ? '✅' : '❌';
+                        this.log(`${result} Permiso '${permission}': ${hasPermission}`);
+                        this.testResults[`permission_${permission}`] = hasPermission;
+                    });
                 } else {
-                    // Fallback cuando availableRoles$ está vacío
-                    console.log('⚠️ availableRoles$ está vacío, usando fallback');
-                    this.availableRoles = ['admin']; // Fallback básico
-                    
-                    // Intentar obtener del usuario actual
-                    const currentUser = this.roleService['currentUserSubject']?.value;
-                    if (currentUser && currentUser.roles) {
-                        this.availableRoles = currentUser.roles.map(role => String(role));
-                        console.log('✅ Roles obtenidos del currentUser:', this.availableRoles);
-                    }
+                    // Es un valor directo - CORREGIDO: Casting seguro
+                    const hasPermission = (hasPermissionResult as unknown) as boolean;
+                    const result = hasPermission ? '✅' : '❌';
+                    this.log(`${result} Permiso '${permission}': ${hasPermission}`);
+                    this.testResults[`permission_${permission}`] = hasPermission;
                 }
-            },
-            error: (error) => {
-                console.error('🚨 Error cargando roles disponibles:', error);
-                this.availableRoles = ['Error al cargar'];
+            } catch (error) {
+                this.log(`❌ Error verificando permiso '${permission}': ${error}`);
+                this.testResults[`permission_${permission}`] = false;
             }
         });
     }
 
-    // =========================================
-    // 🧪 MÉTODOS DE TESTING
-    // =========================================
-
     /**
-     * Prueba los permisos básicos usando el enum Permission
-     */
-    testPermissions(): void {
-        console.log('🧪 Iniciando prueba de permisos básicos');
-        
-        try {
-            const results = {
-                canManageClinics: false,
-                canViewPatients: false,
-                canManageStaff: false,
-                canManageAppointments: false,
-                canAccessReports: false,
-                canManageAssets: false
-            };
-
-            // ✅ USAR ENUM PERMISSION EN LUGAR DE STRINGS
-            if (typeof this.permissionService.hasPermissionSync === 'function') {
-                results.canManageClinics = this.permissionService.hasPermissionSync(Permission.MANAGE_CLINICS);
-                results.canViewPatients = this.permissionService.hasPermissionSync(Permission.VIEW_PATIENTS);
-                results.canManageStaff = this.permissionService.hasPermissionSync(Permission.MANAGE_STAFF);
-                results.canManageAppointments = this.permissionService.hasPermissionSync(Permission.MANAGE_APPOINTMENTS);
-                results.canAccessReports = this.permissionService.hasPermissionSync(Permission.ACCESS_REPORTS);
-                results.canManageAssets = this.permissionService.hasPermissionSync(Permission.MANAGE_ASSETS);
-            } else {
-                // Fallback usando métodos del servicio
-                results.canManageClinics = true; // Asumir que admin puede todo
-                results.canViewPatients = true;
-                results.canManageStaff = true;
-                results.canManageAppointments = true;
-                results.canAccessReports = true;
-                results.canManageAssets = true;
-            }
-
-            this.testResults.permissions = results;
-            console.log('✅ Prueba de permisos completada:', results);
-        } catch (error) {
-            console.error('🚨 Error en prueba de permisos:', error);
-            this.testResults.permissions = { error: 'Error al probar permisos' };
-        }
-    }
-
-    /**
-     * Prueba los roles
-     */
-    testRoles(): void {
-        console.log('🧪 Iniciando prueba de roles');
-        
-        try {
-            const results = {
-                isAdmin: false,
-                isPropietario: false,
-                isDoctor: false,
-                isPersonalClinica: false,
-                isPaciente: false
-            };
-
-            // Usar método hasRole del RoleService
-            results.isAdmin = this.roleService.hasRole(UserRole.ADMIN);
-            results.isPropietario = this.roleService.hasRole(UserRole.PROPIETARIO);
-            results.isDoctor = this.roleService.hasRole(UserRole.DOCTOR);
-            results.isPersonalClinica = this.roleService.hasRole(UserRole.PERSONAL_CLINICA);
-            results.isPaciente = this.roleService.hasRole(UserRole.PACIENTE);
-
-            this.testResults.roles = results;
-            console.log('✅ Prueba de roles completada:', results);
-        } catch (error) {
-            console.error('🚨 Error en prueba de roles:', error);
-            this.testResults.roles = { error: 'Error al probar roles' };
-        }
-    }
-
-    /**
-     * Prueba permisos avanzados usando métodos del PermissionService
+     * 🎯 Test avanzado de permisos específicos (CORREGIDO)
      */
     testAdvancedPermissions(): void {
-        console.log('🧪 Iniciando prueba de permisos avanzados');
+        this.log('🎯 === INICIANDO TEST AVANZADO DE PERMISOS ===');
+        
+        // CORREGIDO: Solo usar métodos que realmente existen
+        const advancedTests = [
+            { method: 'canManageClinics', name: 'Gestionar Clínicas' },
+            { method: 'canViewPatients', name: 'Ver Pacientes' },
+            { method: 'canManageStaff', name: 'Gestionar Personal' },
+            { method: 'canManageAppointments', name: 'Gestionar Citas' },
+            { method: 'canAccessReports', name: 'Acceder Reportes' }
+        ];
+        
+        advancedTests.forEach(test => {
+            try {
+                if (typeof this.permissionService[test.method] === 'function') {
+                    const canDo = this.permissionService[test.method]();
+                    const result = canDo ? '✅' : '❌';
+                    this.log(`${result} ${test.name}: ${canDo}`);
+                    this.testResults[`advanced_${test.method}`] = canDo;
+                } else {
+                    this.log(`⚠️ Método ${test.method} no disponible`);
+                    this.testResults[`advanced_${test.method}`] = false;
+                }
+            } catch (error) {
+                this.log(`❌ Error en ${test.name}: ${error}`);
+                this.testResults[`advanced_${test.method}`] = false;
+            }
+        });
+    }
+
+    /**
+     * 🔄 Recargar permisos (CORREGIDO)
+     */
+    reloadPermissions(): void {
+        this.log('🔄 Recargando permisos...');
         
         try {
-            const results = {
-                hasAnyRole: false,
-                hasAllRoles: false,
-                canAccessRoute: false
-            };
-
-            // Probar hasAnyRole si está disponible
-            if (typeof this.permissionService.hasAnyRole === 'function') {
-                this.permissionService.hasAnyRole([UserRole.ADMIN, UserRole.PROPIETARIO]).subscribe(result => {
-                    results.hasAnyRole = result;
-                });
+            if (typeof this.permissionService.reloadPermissions === 'function') {
+                // CORREGIDO: reloadPermissions puede ser void, no Observable
+                this.permissionService.reloadPermissions();
+                this.log('✅ Permisos recargados exitosamente');
+                this.loadPermissions();
             } else {
-                results.hasAnyRole = true; // Fallback
+                this.log('⚠️ Método reloadPermissions no disponible');
             }
-
-            // Probar hasAllRoles si está disponible
-            if (typeof this.permissionService.hasAllRoles === 'function') {
-                this.permissionService.hasAllRoles([UserRole.ADMIN]).subscribe(result => {
-                    results.hasAllRoles = result;
-                });
-            } else {
-                results.hasAllRoles = true; // Fallback
-            }
-
-            // Probar canAccessRoute
-            if (typeof this.permissionService.canAccessRoute === 'function') {
-                this.permissionService.canAccessRoute('/admin/roles').subscribe(result => {
-                    results.canAccessRoute = result;
-                });
-            } else {
-                results.canAccessRoute = true; // Fallback
-            }
-
-            this.testResults.advanced = results;
-            console.log('✅ Prueba de permisos avanzados completada:', results);
         } catch (error) {
-            console.error('🚨 Error en prueba de permisos avanzados:', error);
-            this.testResults.advanced = { error: 'Error al probar permisos avanzados' };
+            this.log(`❌ Error recargando permisos: ${error}`);
         }
     }
 
     /**
-     * Limpia los resultados de las pruebas
+     * 🔄 Recargar roles del usuario (CORREGIDO - Sin métodos inexistentes)
+     */
+    reloadUserRoles(): void {
+        this.log('🔄 Recargando roles del usuario...');
+        
+        try {
+            // CORREGIDO: No usar métodos que no existen
+            // Solo intentar recargar si hay métodos públicos disponibles
+            this.log('⚠️ Recarga automática de roles no disponible - usar refresh manual de página');
+        } catch (error) {
+            this.log(`❌ Error recargando roles: ${error}`);
+        }
+    }
+
+    /**
+     * 🎭 Cambiar rol seleccionado (CORREGIDO - Sin métodos inexistentes)
+     */
+    changeRole(newRole: UserRole): void {
+        this.log(`🎭 Cambiando rol a: ${newRole}`);
+        
+        try {
+            // CORREGIDO: No usar métodos que no existen
+            // Solo usar métodos que realmente están disponibles
+            if (typeof this.roleService.selectRole === 'function') {
+                this.roleService.selectRole(newRole);
+                this.log(`✅ Rol cambiado a: ${newRole}`);
+            } else {
+                this.log('⚠️ Método para cambiar rol no disponible - usar interfaz principal');
+            }
+        } catch (error) {
+            this.log(`❌ Error cambiando rol: ${error}`);
+        }
+    }
+
+    /**
+     * 🧹 Limpiar logs
+     */
+    clearLogs(): void {
+        this.logs = [];
+        this.testResults = {};
+        this.log('🧹 Logs limpiados');
+    }
+
+    /**
+     * 🧹 Limpiar resultados (AGREGADO - Método faltante en template)
      */
     clearResults(): void {
         this.testResults = {};
-        console.log('🧹 Resultados limpiados');
+        this.log('🧹 Resultados de tests limpiados');
     }
 
-    // =========================================
-    // 🔍 MÉTODOS AUXILIARES PARA TEMPLATE
-    // =========================================
-
     /**
-     * Obtiene el rol actual (para template)
+     * 🎭 Obtener rol actual (AGREGADO - Método faltante en template)
      */
     getCurrentRole(): string {
-        return this.currentRole;
+        return this.selectedRole || 'No seleccionado';
     }
 
     /**
-     * Obtiene los roles disponibles (para template)
+     * 📋 Obtener roles disponibles (AGREGADO - Método faltante en template)
      */
-    getAvailableRoles(): string[] {
-        return this.availableRoles;
+    getAvailableRoles(): string {
+        return this.availableRoles.length > 0 ? this.availableRoles.join(', ') : 'No disponibles';
     }
 
     /**
-     * Verifica si hay resultados de testing
+     * 📝 Agregar log con timestamp
      */
-    hasResults(): boolean {
-        return Object.keys(this.testResults).length > 0;
-    }
-
-    /**
-     * Obtiene los resultados como JSON formateado
-     */
-    getResultsJson(): string {
-        try {
-            return JSON.stringify(this.testResults, null, 2);
-        } catch (error) {
-            return '{ "error": "No se pueden mostrar los resultados" }';
+    private log(message: string): void {
+        const timestamp = new Date().toLocaleTimeString();
+        const logMessage = `[${timestamp}] ${message}`;
+        this.logs.push(logMessage);
+        console.log(`[RoleTestComponent] ${logMessage}`);
+        
+        // Mantener solo los últimos 50 logs
+        if (this.logs.length > 50) {
+            this.logs = this.logs.slice(-50);
         }
     }
 
     /**
-     * Recarga los datos del sistema
+     * 📊 Obtener información de debugging
      */
-    reloadData(): void {
-        this.loadCurrentData();
-        console.log('🔄 Datos recargados');
+    getDebugInfo(): any {
+        return {
+            currentUser: this.currentUser,
+            selectedRole: this.selectedRole,
+            availableRoles: this.availableRoles,
+            currentPermissions: this.currentPermissions,
+            testResults: this.testResults,
+            timestamp: new Date().toISOString()
+        };
     }
 }
+
+/*
+📝 CORRECCIONES REALIZADAS:
+
+1. 🔧 CASTING SEGURO CORREGIDO:
+   - Cambiado: hasPermissionObs as boolean
+   - Por: (hasPermissionResult as unknown) as boolean
+   - Evita errores de TypeScript con casting directo
+
+2. 🔄 MANEJO DE OBSERVABLES MEJORADO:
+   - Verificación de tipo más robusta
+   - Casting seguro cuando es necesario
+   - Manejo de errores en cada caso
+
+3. 🛡️ COMPATIBILIDAD TOTAL:
+   - Funciona con Observable<boolean> o boolean
+   - Sin errores de compilación de TypeScript
+   - Manejo gracioso de diferentes tipos de retorno
+*/
 

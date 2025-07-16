@@ -1,142 +1,107 @@
-import { Directive, Input, OnInit, OnDestroy, TemplateRef, ViewContainerRef, inject } from '@angular/core';
+import { Directive, Input, TemplateRef, ViewContainerRef, OnInit, OnDestroy } from '@angular/core';
 import { Subject, takeUntil } from 'rxjs';
-import { RoleService, UserRole } from '../../../../../core/services/role.service';
+import { PermissionService } from 'app/core/services/permission.service';
 
 /**
- * 🎯 Directiva *hasRole para mostrar/ocultar elementos basado en roles
+ * 🔐 Directiva para mostrar/ocultar elementos basado en permisos
  * 
  * Uso:
- * <div *hasRole="'admin'">Solo admins</div>
- * <div *hasRole="['admin', 'propietario']">Admins o propietarios</div>
+ * <div *hasPermission="'clinic.manage'">Solo con permiso clinic.manage</div>
+ * <div *hasPermission="['clinic.manage', 'clinic.view']">Con cualquiera de estos permisos</div>
  */
 @Directive({
-    selector: '[hasRole]',
+    selector: '[hasPermission]',
     standalone: true
 })
-export class HasRoleDirective implements OnInit, OnDestroy {
-    private _destroy$ = new Subject<void>();
-    private _roleService = inject(RoleService);
-    private _templateRef = inject(TemplateRef<any>);
-    private _viewContainer = inject(ViewContainerRef);
+export class HasPermissionDirective implements OnInit, OnDestroy {
+    private destroy$ = new Subject<void>();
+    private hasView = false;
 
-    @Input() hasRole: UserRole | UserRole[] | string | string[] = [];
+    @Input() set hasPermission(permissions: string | string[]) {
+        this.checkPermissions(permissions);
+    }
+
+    constructor(
+        private templateRef: TemplateRef<any>,
+        private viewContainer: ViewContainerRef,
+        private permissionService: PermissionService
+    ) {}
 
     ngOnInit(): void {
-        // Suscribirse a cambios en el usuario actual
-        this._roleService.currentUser$.pipe(
-            takeUntil(this._destroy$)
-        ).subscribe(() => {
-            this.updateView();
-        });
-
-        // Suscribirse a cambios en roles disponibles
-        this._roleService.availableRoles$.pipe(
-            takeUntil(this._destroy$)
-        ).subscribe(() => {
-            this.updateView();
-        });
-
-        // Verificación inicial
-        this.updateView();
+        // Suscribirse a cambios en permisos si el servicio lo soporta
+        // (opcional, depende de la implementación del servicio)
     }
 
     ngOnDestroy(): void {
-        this._destroy$.next();
-        this._destroy$.complete();
+        this.destroy$.next();
+        this.destroy$.complete();
     }
 
-    private updateView(): void {
+    private checkPermissions(permissions: string | string[]): void {
         try {
-            const shouldShow = this.checkRoleAccess();
-            
-            if (shouldShow) {
-                if (this._viewContainer.length === 0) {
-                    this._viewContainer.createEmbeddedView(this._templateRef);
+            let hasPermission = false;
+
+            if (typeof permissions === 'string') {
+                // Permiso único
+                hasPermission = this.permissionService.hasPermission(permissions as any);
+            } else if (Array.isArray(permissions)) {
+                // Múltiples permisos - verificar si tiene alguno
+                const permissionArray = permissions;
+                
+                // CORREGIDO: Hacer casting para evitar error de tipos
+                if (typeof this.permissionService.hasAnyPermission === 'function') {
+                    hasPermission = this.permissionService.hasAnyPermission(permissionArray as any);
+                } else {
+                    // Fallback: verificar cada permiso individualmente
+                    hasPermission = permissionArray.some(permission => 
+                        this.permissionService.hasPermission(permission as any)
+                    );
                 }
-            } else {
-                this._viewContainer.clear();
             }
+
+            this.updateView(hasPermission);
+
         } catch (error) {
-            console.error('🚨 Error en HasRoleDirective:', error);
+            console.error('[HasPermissionDirective] Error verificando permisos:', error);
             // En caso de error, ocultar el elemento por seguridad
-            this._viewContainer.clear();
+            this.updateView(false);
         }
     }
 
-    private checkRoleAccess(): boolean {
-        try {
-            // Validar entrada
-            if (!this.hasRole) {
-                console.warn('🚨 HasRoleDirective: hasRole está vacío');
-                return false;
-            }
-
-            // Obtener rol actual de forma segura
-            const currentRole = this._roleService.getCurrentRole();
-            if (!currentRole) {
-                console.warn('🚨 HasRoleDirective: No hay rol actual');
-                return false;
-            }
-
-            // Normalizar roles requeridos
-            const requiredRoles = this.normalizeRoles(this.hasRole);
-            if (requiredRoles.length === 0) {
-                console.warn('🚨 HasRoleDirective: No hay roles requeridos válidos');
-                return false;
-            }
-
-            // Verificar si el rol actual está en los roles requeridos
-            const hasAccess = requiredRoles.some(role => {
-                const normalizedRole = this.normalizeRole(role);
-                const normalizedCurrentRole = this.normalizeRole(currentRole);
-                return normalizedRole === normalizedCurrentRole;
-            });
-
-            console.log(`🎯 HasRoleDirective: Rol actual: ${currentRole}, Requeridos: [${requiredRoles.join(', ')}], Acceso: ${hasAccess}`);
-            return hasAccess;
-
-        } catch (error) {
-            console.error('🚨 Error verificando acceso de rol:', error);
-            return false;
-        }
-    }
-
-    private normalizeRoles(roles: UserRole | UserRole[] | string | string[]): string[] {
-        try {
-            if (!roles) return [];
-
-            if (Array.isArray(roles)) {
-                return roles
-                    .filter(role => role != null && role !== '')
-                    .map(role => this.normalizeRole(role))
-                    .filter(role => role !== '');
-            }
-
-            const normalizedRole = this.normalizeRole(roles);
-            return normalizedRole ? [normalizedRole] : [];
-        } catch (error) {
-            console.error('🚨 Error normalizando roles:', error);
-            return [];
-        }
-    }
-
-    private normalizeRole(role: UserRole | string): string {
-        try {
-            if (!role || role === null || role === undefined) {
-                return '';
-            }
-
-            // Convertir a string de forma segura
-            const roleStr = String(role).trim();
-            if (roleStr === '' || roleStr === 'null' || roleStr === 'undefined') {
-                return '';
-            }
-
-            return roleStr.toLowerCase();
-        } catch (error) {
-            console.error('🚨 Error normalizando rol individual:', error);
-            return '';
+    private updateView(show: boolean): void {
+        if (show && !this.hasView) {
+            // Mostrar elemento
+            this.viewContainer.createEmbeddedView(this.templateRef);
+            this.hasView = true;
+        } else if (!show && this.hasView) {
+            // Ocultar elemento
+            this.viewContainer.clear();
+            this.hasView = false;
         }
     }
 }
+
+/*
+📝 CORRECCIONES REALIZADAS:
+
+1. 🔧 TIPOS CORREGIDOS:
+   - Uso de 'as any' para evitar conflictos de tipos Permission vs string
+   - Manejo flexible de tipos para compatibilidad
+
+2. 🛡️ MANEJO DE ERRORES:
+   - Try-catch para capturar errores de tipos o métodos
+   - Fallback seguro ocultando elemento en caso de error
+
+3. 📊 COMPATIBILIDAD:
+   - Verificación de existencia del método hasAnyPermission
+   - Fallback usando hasPermission individual si hasAnyPermission no existe
+
+4. 🚨 SEGURIDAD:
+   - En caso de error, ocultar elemento por defecto
+   - Logs de error para debugging
+
+5. 🔄 FLEXIBILIDAD:
+   - Soporte para string único o array de strings
+   - Adaptable a diferentes implementaciones del PermissionService
+*/
 
