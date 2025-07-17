@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Message } from 'app/layout/common/messages/messages.types';
+import { environment } from 'environments/environment';
 import { map, Observable, ReplaySubject, switchMap, take, tap } from 'rxjs';
 
 @Injectable({providedIn: 'root'})
@@ -36,7 +37,7 @@ export class MessagesService
      */
     getAll(): Observable<Message[]>
     {
-        return this._httpClient.get<Message[]>('api/common/messages').pipe(
+        return this._httpClient.get<Message[]>(`${environment.apiUrl}/common/messages`).pipe(
             tap((messages) =>
             {
                 this._messages.next(messages);
@@ -53,7 +54,7 @@ export class MessagesService
     {
         return this.messages$.pipe(
             take(1),
-            switchMap(messages => this._httpClient.post<Message>('api/common/messages', {message}).pipe(
+            switchMap(messages => this._httpClient.post<Message>(`${environment.apiUrl}/common/messages`, {message}).pipe(
                 map((newMessage) =>
                 {
                     // Update the messages with the new message
@@ -76,7 +77,7 @@ export class MessagesService
     {
         return this.messages$.pipe(
             take(1),
-            switchMap(messages => this._httpClient.patch<Message>('api/common/messages', {
+            switchMap(messages => this._httpClient.patch<Message>(`${environment.apiUrl}/common/messages`, {
                 id,
                 message,
             }).pipe(
@@ -107,7 +108,7 @@ export class MessagesService
     {
         return this.messages$.pipe(
             take(1),
-            switchMap(messages => this._httpClient.delete<boolean>('api/common/messages', {params: {id}}).pipe(
+            switchMap(messages => this._httpClient.delete<boolean>(`${environment.apiUrl}/common/messages`, {params: {id}}).pipe(
                 map((isDeleted: boolean) =>
                 {
                     // Find the index of the deleted message
@@ -133,7 +134,7 @@ export class MessagesService
     {
         return this.messages$.pipe(
             take(1),
-            switchMap(messages => this._httpClient.get<boolean>('api/common/messages/mark-all-as-read').pipe(
+            switchMap(messages => this._httpClient.get<boolean>(`${environment.apiUrl}/common/messages/mark-all-as-read`).pipe(
                 map((isUpdated: boolean) =>
                 {
                     // Go through all messages and set them as read

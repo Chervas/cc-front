@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Shortcut } from 'app/layout/common/shortcuts/shortcuts.types';
+import { environment } from 'environments/environment';
 import { map, Observable, ReplaySubject, switchMap, take, tap } from 'rxjs';
 
 @Injectable({providedIn: 'root'})
@@ -36,7 +37,7 @@ export class ShortcutsService
      */
     getAll(): Observable<Shortcut[]>
     {
-        return this._httpClient.get<Shortcut[]>('api/common/shortcuts').pipe(
+        return this._httpClient.get<Shortcut[]>(`${environment.apiUrl}/common/shortcuts`).pipe(
             tap((shortcuts) =>
             {
                 this._shortcuts.next(shortcuts);
@@ -53,7 +54,7 @@ export class ShortcutsService
     {
         return this.shortcuts$.pipe(
             take(1),
-            switchMap(shortcuts => this._httpClient.post<Shortcut>('api/common/shortcuts', {shortcut}).pipe(
+            switchMap(shortcuts => this._httpClient.post<Shortcut>(`${environment.apiUrl}/common/shortcuts`, {shortcut}).pipe(
                 map((newShortcut) =>
                 {
                     // Update the shortcuts with the new shortcut
@@ -76,7 +77,7 @@ export class ShortcutsService
     {
         return this.shortcuts$.pipe(
             take(1),
-            switchMap(shortcuts => this._httpClient.patch<Shortcut>('api/common/shortcuts', {
+            switchMap(shortcuts => this._httpClient.patch<Shortcut>(`${environment.apiUrl}/common/shortcuts`, {
                 id,
                 shortcut,
             }).pipe(
@@ -107,7 +108,7 @@ export class ShortcutsService
     {
         return this.shortcuts$.pipe(
             take(1),
-            switchMap(shortcuts => this._httpClient.delete<boolean>('api/common/shortcuts', {params: {id}}).pipe(
+            switchMap(shortcuts => this._httpClient.delete<boolean>(`${environment.apiUrl}/common/shortcuts`, {params: {id}}).pipe(
                 map((isDeleted: boolean) =>
                 {
                     // Find the index of the deleted shortcut
