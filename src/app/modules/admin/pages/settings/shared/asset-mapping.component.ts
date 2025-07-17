@@ -15,6 +15,7 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { UserService } from 'app/core/user/user.service';
+import { environment } from 'environments/environment';
 
 // Tipos TypeScript
 export interface MetaAsset {
@@ -353,7 +354,7 @@ export class AssetMappingComponent implements OnInit {
             }
 
             const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
-            const response = await this._http.get<any>('https://autenticacion.clinicaclick.com/api/userclinicas/list', { headers }).toPromise();
+            const response = await this._http.get<any>(`${environment.apiUrl}/userclinicas/list`, { headers }).toPromise();
 
             console.log('📥 Respuesta de clínicas recibida:', response);
 

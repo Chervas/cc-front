@@ -1,6 +1,7 @@
 import { Overlay } from '@angular/cdk/overlay';
 import { NgClass, NgFor, NgIf, NgTemplateOutlet } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
+import { environment } from 'environments/environment';
 import { Component, ElementRef, EventEmitter, HostBinding, inject, Input, OnChanges, OnDestroy, OnInit, Output, Renderer2, SimpleChanges, ViewChild, ViewEncapsulation } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
 import { MAT_AUTOCOMPLETE_SCROLL_STRATEGY, MatAutocomplete, MatAutocompleteModule } from '@angular/material/autocomplete';
@@ -153,7 +154,7 @@ export class SearchComponent implements OnChanges, OnInit, OnDestroy
             )
             .subscribe((value) =>
             {
-                this._httpClient.post('api/common/search', {query: value})
+                this._httpClient.post(`${environment.apiUrl}/common/search`, {query: value})
                     .subscribe((resultSets: any) =>
                     {
                         // Store the result sets
