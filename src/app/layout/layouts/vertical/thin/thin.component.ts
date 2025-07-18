@@ -244,5 +244,39 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
             return false;
         }
     }
+
+    // ✅ NUEVO: Métodos requeridos por el template HTML
+    getCurrentUserInfo(): string {
+        try {
+            if (!this.currentUser) return '';
+            return `${this.currentUser.nombre || ''} ${this.currentUser.apellidos || ''}`.trim() || 
+                   this.currentUser.name || 
+                   'Usuario';
+        } catch (error) {
+            console.warn('⚠️ [ThinLayout] Error obteniendo info del usuario:', error);
+            return 'Usuario';
+        }
+    }
+
+    getSelectedClinicaInfo(): string {
+        try {
+            if (!this.selectedClinic) return '';
+            return this.selectedClinic.name || 
+                   this.selectedClinic.description || 
+                   'Clínica seleccionada';
+        } catch (error) {
+            console.warn('⚠️ [ThinLayout] Error obteniendo info de clínica:', error);
+            return '';
+        }
+    }
+
+    hasSelectedClinica(): boolean {
+        try {
+            return this.selectedClinic !== null;
+        } catch (error) {
+            console.warn('⚠️ [ThinLayout] Error verificando clínica seleccionada:', error);
+            return false;
+        }
+    }
 }
 
