@@ -192,18 +192,28 @@ export class RoleService {
     }
 
     private loadClinicas(): void {
-        this.http.get<UsuarioClinicaResponse[]>('/api/userclinicas/list').pipe(
+        this.http.get<any>('/api/userclinicas/list').pipe(
             catchError(error => {
                 console.error('Error cargando clínicas:', error);
-                return of([]);
+                return of({ clinicas: [] }); // ✅ Devolver objeto con array vacío
             })
-        ).subscribe(clinicas => {
+        ).subscribe(response => {
+            // ✅ ADAPTACIÓN: Manejar tanto array directo como objeto con propiedad clinicas
+            const clinicas = Array.isArray(response) 
+                ? response 
+                : (response?.clinicas ?? []);
+                
             console.log('✅ Clínicas cargadas:', clinicas);
-            this.clinicasSubject.next(clinicas);
+            console.log('🔍 Tipo de respuesta:', Array.isArray(response) ? 'Array directo' : 'Objeto con clinicas');
             
-            if (clinicas.length > 0 && !this.selectedRoleSubject.value) {
-                this.selectRole(clinicas[0].userRole);
-                this.selectClinica(clinicas[0]);
+            // ✅ VERIFICACIÓN: Asegurar que siempre sea un array
+            const clinicasArray = Array.isArray(clinicas) ? clinicas : [];
+            
+            this.clinicasSubject.next(clinicasArray);
+            
+            if (clinicasArray.length > 0 && !this.selectedRoleSubject.value) {
+                this.selectRole(clinicasArray[0].userRole);
+                this.selectClinica(clinicasArray[0]);
             }
         });
     }

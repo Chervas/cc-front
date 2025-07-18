@@ -132,37 +132,59 @@ export const roleInterceptor: HttpInterceptorFn = (req, next) => {
 
     // ✅ Manejar APIs internas con headers de roles
     if (requestType === 'internal-api') {
-        const roleService = inject(RoleService);
-
         console.log('✅ [RoleInterceptor] Procesando API interna:', req.url);
 
         try {
+            // 🔧 VERIFICACIÓN DEFENSIVA MEJORADA: Inyectar y verificar RoleService
+            const roleService = inject(RoleService);
+            
+            // ✅ VERIFICACIÓN ROBUSTA: Múltiples checks
+            if (!roleService) {
+                console.warn('⚠️ [RoleInterceptor] RoleService no disponible');
+                return next(req);
+            }
+            
+            if (typeof roleService.getCurrentUser !== 'function') {
+                console.warn('⚠️ [RoleInterceptor] Método getCurrentUser no disponible');
+                return next(req);
+            }
+
             // 🔧 Preparar headers de roles
             const roleHeaders: { [key: string]: string } = {
                 'X-Role-Timestamp': new Date().toISOString()
             };
 
-            // 👤 Obtener información del usuario actual
-            // ✅ CAMBIO MÍNIMO: getCurrentUser() es SÍNCRONO, no Observable
-            const currentUser = roleService.getCurrentUser();
+            // 👤 Obtener información del usuario actual con try/catch adicional
+            let currentUser = null;
+            try {
+                currentUser = roleService.getCurrentUser();
+            } catch (methodError) {
+                console.warn('⚠️ [RoleInterceptor] Error ejecutando getCurrentUser:', methodError);
+                currentUser = null;
+            }
 
             if (currentUser && typeof currentUser === 'object') {
-                // ✅ CORREGIDO: No intentar usar .subscribe() en valor síncrono
                 const user = currentUser as any;
 
                 roleHeaders['X-User-Id'] = user.id_usuario?.toString() || user.id?.toString() || 'unknown';
                 roleHeaders['X-Is-Admin'] = (user.isAdmin === true).toString();
 
-                // 🏥 Agregar información de clínica seleccionada
-                const selectedClinica = roleService.getSelectedClinica();
-                if (selectedClinica && typeof selectedClinica === 'object') {
-                    const clinica = selectedClinica as any;
+                // 🏥 Agregar información de clínica seleccionada con verificación
+                if (typeof roleService.getSelectedClinica === 'function') {
+                    try {
+                        const selectedClinica = roleService.getSelectedClinica();
+                        if (selectedClinica && typeof selectedClinica === 'object') {
+                            const clinica = selectedClinica as any;
 
-                    roleHeaders['X-Selected-Clinic'] = clinica.id?.toString() || clinica.id_clinica?.toString() || 'unknown';
-                    roleHeaders['X-User-Role'] = clinica.userRole || clinica.rol_clinica || 'unknown';
+                            roleHeaders['X-Selected-Clinic'] = clinica.id?.toString() || clinica.id_clinica?.toString() || 'unknown';
+                            roleHeaders['X-User-Role'] = clinica.userRole || clinica.rol_clinica || 'unknown';
 
-                    if (clinica.userSubRole || clinica.subrol_clinica) {
-                        roleHeaders['X-User-SubRole'] = clinica.userSubRole || clinica.subrol_clinica;
+                            if (clinica.userSubRole || clinica.subrol_clinica) {
+                                roleHeaders['X-User-SubRole'] = clinica.userSubRole || clinica.subrol_clinica;
+                            }
+                        }
+                    } catch (clinicaError) {
+                        console.warn('⚠️ [RoleInterceptor] Error obteniendo clínica seleccionada:', clinicaError);
                     }
                 }
             } else {
