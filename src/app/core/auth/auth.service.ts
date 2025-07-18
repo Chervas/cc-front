@@ -94,6 +94,9 @@ export class AuthService {
                 
                 // 🔄 ADAPTADOR: Usuario Backend → FuseUser
                 const fuseUser = this.adaptUsuarioToFuseUser(response.user);
+
+                // ✅ Guardar usuario para futuros inicios automáticos
+                localStorage.setItem('userInfo', JSON.stringify(fuseUser));
                 
                 // ✅ Actualizar estado
                 this._authenticated = true;
@@ -135,8 +138,9 @@ export class AuthService {
      * 🚪 Sign out - MODIFICADO con RoleService
      */
     signOut(): Observable<any> {
-        // Remove the access token from the local storage
+      // Remove the access token and stored user from the local storage
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('userInfo');
 
         // Set the authenticated flag to false
         this._authenticated = false;
@@ -239,49 +243,41 @@ export class AuthService {
         return this.signInUsingToken();
     }
 
-    /**
+     /**
      * 🎫 Sign in using the access token - MODIFICADO con RoleService
+     * 🎫 Sign in using the access token - MODIFICADO para usar datos locales
+     *
+     * El backend no implementa `GET /api/auth/me`, por lo que recuperamos la
+     * información de usuario almacenada en `localStorage` durante el login.
      */
     signInUsingToken(): Observable<any> {
-        // Sign in using the token
-        return this._httpClient.get<{ user: Usuario }>('/api/auth/me').pipe(
-            map((response) => {
-                // ✅ ADAPTADOR: Usuario Backend → FuseUser
-                const fuseUser = this.adaptUsuarioToFuseUser(response.user);
-                
-                // Store the user on the user service
+       
+        const stored = localStorage.getItem('userInfo');
+
+        if (stored) {
+            try {
+                const fuseUser: FuseUser = JSON.parse(stored);
+
                 this._authenticated = true;
                 this._user.next(fuseUser);
 
-                // 🚀 NUEVO: Recargar RoleService también en signInUsingToken
+                // 🚀 Recargar RoleService también en signInUsingToken
                 try {
                     this._roleService.reloadUserData();
                     console.log('🔄 [AuthService] RoleService recargado en signInUsingToken');
                 } catch (error) {
                     console.warn('⚠️ [AuthService] Error recargando RoleService en signInUsingToken:', error);
                 }
-
-                // Return true
-                return true;
-            }),
-            catchError(() => {
-                // Si falla, crear usuario mock para que Fuse funcione
-                console.warn('⚠️ [AuthService] /api/auth/me falló, usando usuario mock');
-                
-                const mockUser: FuseUser = {
-                    id: 'mock-user',
-                    name: 'Usuario Mock',
-                    email: 'mock@clinicaclick.com',
-                    avatar: 'assets/images/avatars/default.jpg',
-                    status: 'online'
-                };
-                
-                this._authenticated = true;
-                this._user.next(mockUser);
                 
                 return of(true);
-            })
-        );
+            
+            } catch {
+                console.warn('⚠️ [AuthService] Error al leer userInfo de localStorage');
+                localStorage.removeItem('userInfo');
+            }
+        }
+
+        return of(false);
     }
 
     // -----------------------------------------------------------------------------------------------------

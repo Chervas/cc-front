@@ -153,21 +153,10 @@ export class RoleService {
     availableRoles$ = this.clinicasSubject.asObservable();
 
     constructor(private http: HttpClient) {
-    console.log('🔐 [RoleService] Inicializando...');
-    
-    // ✅ CAMBIO: No cargar datos en constructor, solo inicializar
-    // this.loadUserFromToken(); // ❌ REMOVER ESTA LÍNEA
-    
-    // ✅ Solo cargar si ya hay token (para casos de refresh)
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-        console.log('🎫 [RoleService] Token encontrado, cargando datos...');
-        this.loadUserFromToken();
-    } else {
-        console.log('⏳ [RoleService] Sin token, esperando login...');
+        console.log('🔐 [RoleService] Inicializando...');
+        // No cargar datos automáticamente al construir el servicio
     }
-}
-
+    
     private loadUserFromToken(): void {
         const token = localStorage.getItem('accessToken');
         if (token) {

@@ -53,6 +53,12 @@ function initializeRoleSystem(
                 } else {
                     console.warn('⚠️ [RoleSystem] Algunos servicios de roles no están disponibles');
                 }
+
+                // 🔄 Cargar datos del usuario si hay token almacenado
+                const token = localStorage.getItem('accessToken');
+                if (token) {
+                    roleService.reloadUserData();
+                }
                 
                 console.log('🎯 [RoleSystem] Sistema de roles listo');
                 resolve();
