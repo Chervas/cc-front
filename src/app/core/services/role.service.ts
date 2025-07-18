@@ -153,8 +153,20 @@ export class RoleService {
     availableRoles$ = this.clinicasSubject.asObservable();
 
     constructor(private http: HttpClient) {
+    console.log('🔐 [RoleService] Inicializando...');
+    
+    // ✅ CAMBIO: No cargar datos en constructor, solo inicializar
+    // this.loadUserFromToken(); // ❌ REMOVER ESTA LÍNEA
+    
+    // ✅ Solo cargar si ya hay token (para casos de refresh)
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+        console.log('🎫 [RoleService] Token encontrado, cargando datos...');
         this.loadUserFromToken();
+    } else {
+        console.log('⏳ [RoleService] Sin token, esperando login...');
     }
+}
 
     private loadUserFromToken(): void {
         const token = localStorage.getItem('accessToken');
@@ -216,6 +228,23 @@ export class RoleService {
                 this.selectClinica(clinicasArray[0]);
             }
         });
+    }
+
+    /**
+     * 🔄 Recargar datos del usuario después del login
+     * Este método se llama desde AuthService después de un login exitoso
+     */
+    public reloadUserData(): void {
+        console.log('🔄 [RoleService] Recargando datos del usuario...');
+        
+        // Limpiar datos actuales
+        this.currentUserSubject.next(null);
+        this.clinicasSubject.next([]);
+        this.selectedRoleSubject.next(null);
+        this.selectedClinicaSubject.next(null);
+        
+        // Recargar desde token
+        this.loadUserFromToken();
     }
 
     // ✅ USAR PROPIEDADES REALES - VERIFICADO

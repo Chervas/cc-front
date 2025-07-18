@@ -2,11 +2,13 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, of, throwError } from 'rxjs';
 import { map, tap, catchError } from 'rxjs/operators';
+import { RoleService } from 'app/core/services/role.service'; // ✅ NUEVO IMPORT
 
 /**
- * 🔐 AuthService COMPLETO con Adaptador Fuse
+ * 🔐 AuthService COMPLETO con Adaptador Fuse + RoleService
  * 
  * Incluye TODOS los métodos que esperan los componentes de autenticación
+ * + Integración con RoleService para recargar datos después del login
  */
 
 // 📋 Tipos del Backend (Reales)
@@ -43,7 +45,10 @@ export class AuthService {
     private _authenticated: boolean = false;
     private _user: BehaviorSubject<FuseUser | null> = new BehaviorSubject<FuseUser | null>(null);
 
-    constructor(private _httpClient: HttpClient) {}
+    constructor(
+        private _httpClient: HttpClient,
+        private _roleService: RoleService // ✅ NUEVO: Inyección de RoleService
+    ) {}
 
     // -----------------------------------------------------------------------------------------------------
     // @ Accessors
@@ -72,7 +77,7 @@ export class AuthService {
     // -----------------------------------------------------------------------------------------------------
 
     /**
-     * 🔐 Sign in
+     * 🔐 Sign in - MODIFICADO con RoleService
      */
     signIn(credentials: { email: string; password: string }): Observable<any> {
         // Return if the user is already logged in
@@ -95,6 +100,14 @@ export class AuthService {
                 this._user.next(fuseUser);
                 
                 console.log('✅ [AuthService] Usuario adaptado para Fuse:', fuseUser);
+                
+                // 🚀 NUEVO: Recargar datos en RoleService después del login
+                try {
+                    this._roleService.reloadUserData();
+                    console.log('🔄 [AuthService] RoleService recargado después del login');
+                } catch (error) {
+                    console.warn('⚠️ [AuthService] Error recargando RoleService:', error);
+                }
             }),
             catchError((error) => {
                 console.error('❌ [AuthService] Error en login:', error);
@@ -119,7 +132,7 @@ export class AuthService {
     }
 
     /**
-     * 🚪 Sign out
+     * 🚪 Sign out - MODIFICADO con RoleService
      */
     signOut(): Observable<any> {
         // Remove the access token from the local storage
@@ -130,6 +143,14 @@ export class AuthService {
 
         // Set the user to null
         this._user.next(null);
+
+        // 🚀 NUEVO: Limpiar datos de RoleService al cerrar sesión
+        try {
+            this._roleService.clearData();
+            console.log('🧹 [AuthService] RoleService limpiado después del logout');
+        } catch (error) {
+            console.warn('⚠️ [AuthService] Error limpiando RoleService:', error);
+        }
 
         // Return the observable
         return of(true);
@@ -219,7 +240,7 @@ export class AuthService {
     }
 
     /**
-     * 🎫 Sign in using the access token
+     * 🎫 Sign in using the access token - MODIFICADO con RoleService
      */
     signInUsingToken(): Observable<any> {
         // Sign in using the token
@@ -231,6 +252,14 @@ export class AuthService {
                 // Store the user on the user service
                 this._authenticated = true;
                 this._user.next(fuseUser);
+
+                // 🚀 NUEVO: Recargar RoleService también en signInUsingToken
+                try {
+                    this._roleService.reloadUserData();
+                    console.log('🔄 [AuthService] RoleService recargado en signInUsingToken');
+                } catch (error) {
+                    console.warn('⚠️ [AuthService] Error recargando RoleService en signInUsingToken:', error);
+                }
 
                 // Return true
                 return true;
