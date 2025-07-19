@@ -5,12 +5,12 @@ import { map, catchError } from 'rxjs/operators';
 
 // ✅ ESTRUCTURA EXACTA QUE DEVUELVE EL BACKEND - VERIFICADA
 export interface UsuarioClinicaResponse {
-    id: number;                      // ← REAL del backend
-    name: string;                    // ← REAL del backend
-    description: string;             // ← REAL del backend
-    userRole: string;                // ← REAL del backend
-    userSubRole: string;             // ← REAL del backend
-    permissions: {                   // ← REAL del backend
+    id: number;                    // ~ REAL del backend
+    name: string;                  // ~ REAL del backend
+    description: string;           // ~ REAL del backend
+    userRole: string;              // ~ REAL del backend
+    userSubRole: string;           // ~ REAL del backend
+    permissions: {                 // ~ REAL del backend
         canMapAssets: boolean;
         canManageSettings: boolean;
         canManageUsers: boolean;
@@ -18,25 +18,25 @@ export interface UsuarioClinicaResponse {
         canManagePatients: boolean;
         canManageAppointments: boolean;
     };
-}
+};
 
 // ✅ USUARIO COMO VIENE DEL BACKEND - VERIFICADO
 export interface Usuario {
-    id_usuario: number;              // ← REAL del backend
-    nombre: string;                  // ← REAL del backend
-    apellidos: string;               // ← REAL del backend
-    email_usuario: string;           // ← REAL del backend
-    email_factura: string;           // ← REAL del backend
-    email_notificacion: string;      // ← REAL del backend
-    password_usuario: string;        // ← REAL del backend
-    fecha_creacion: string;          // ← REAL del backend
-    id_gestor: number;               // ← REAL del backend
-    notas_usuario: string;           // ← REAL del backend
-    telefono: string;                // ← REAL del backend
-    cargo_usuario: string;           // ← REAL del backend
-    cumpleanos: string;              // ← REAL del backend
-    isProfesional: boolean;          // ← REAL del backend
-    isAdmin?: boolean;               // ← REAL del backend
+    id_usuario: number;            // ~ REAL del backend
+    nombre: string;                // ~ REAL del backend
+    apellidos: string;             // ~ REAL del backend
+    email_usuario: string;         // ~ REAL del backend
+    email_factura: string;         // ~ REAL del backend
+    email_notificacion: string;    // ~ REAL del backend
+    password_usuario: string;      // ~ REAL del backend
+    fecha_creacion: string;        // ~ REAL del backend
+    id_gestor: number;             // ~ REAL del backend
+    notas_usuario: string;         // ~ REAL del backend
+    telefono: string;              // ~ REAL del backend
+    cargo_usuario: string;         // ~ REAL del backend
+    cumpleanos: string;            // ~ REAL del backend
+    isProfessional: boolean;       // ~ REAL del backend
+    isAdmin?: boolean;             // ~ REAL del backend
 }
 
 export interface LoginResponse {
@@ -48,201 +48,286 @@ export interface LoginResponse {
 
 // ✅ CONSTANTES REQUERIDAS POR OTROS ARCHIVOS
 export const ROL_LEVELS: Record<string, number> = {
-    'administrador': 4,
+    'paciente': 1,
+    'medico': 2,
     'propietario': 3,
-    'personaldeclinica': 2,
-    'paciente': 1
+    'administrador': 4
 };
 
+// ✅ DEFINICIÓN COMPLETA DE PERMISOS POR ROL
 export const ROL_PERMISSIONS: Record<string, string[]> = {
     'administrador': [
-        'admin.access',
-        'users.manage',
+        // Permisos de clínicas
         'clinics.manage',
+        'clinics.create',
+        'clinics.edit',
+        'clinics.delete',
+        'clinics.view',
+        
+        // Permisos de pacientes
+        'patients.view',
+        'patients.create',
+        'patients.edit',
+        'patients.delete',
+        'patients.manage',
+        
+        // Permisos de usuarios
+        'users.manage',
+        'users.create',
+        'users.edit',
+        'users.delete',
+        'users.view',
+        
+        // Permisos de reportes
         'reports.view',
+        'reports.generate',
+        'reports.export',
+        
+        // Permisos de configuración
         'settings.manage',
-        'oauth.manage',
-        'all.permissions'
+        'settings.view',
+        
+        // Permisos de citas
+        'appointments.manage',
+        'appointments.view',
+        'appointments.create',
+        'appointments.edit',
+        'appointments.delete'
     ],
     'propietario': [
-        'clinic.manage',
-        'users.manage',
-        'reports.view',
-        'patients.manage',
-        'appointments.manage',
-        'settings.view'
-    ],
-    'personaldeclinica': [
+        'clinics.manage',
+        'clinics.edit',
+        'clinics.view',
         'patients.view',
-        'appointments.manage',
+        'patients.create',
+        'patients.edit',
+        'patients.manage',
+        'users.manage',
+        'users.create',
+        'users.edit',
+        'users.view',
         'reports.view',
-        'clinic.view'
+        'reports.generate',
+        'appointments.manage',
+        'appointments.view',
+        'appointments.create',
+        'appointments.edit'
+    ],
+    'medico': [
+        'patients.view',
+        'patients.edit',
+        'appointments.manage',
+        'appointments.view',
+        'appointments.create',
+        'appointments.edit',
+        'reports.view'
     ],
     'paciente': [
         'profile.view',
+        'profile.edit',
         'appointments.view'
     ]
-};
-
-// ✅ CONFIGURACIÓN DE ROLES PARA UI
-export const ROL_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
-    'administrador': {
-        label: 'Administrador',
-        color: 'red',
-        icon: 'heroicons_outline:shield-check'
-    },
-    'propietario': {
-        label: 'Propietario',
-        color: 'blue',
-        icon: 'heroicons_outline:building-office'
-    },
-    'personaldeclinica': {
-        label: 'Personal de Clínica',
-        color: 'green',
-        icon: 'heroicons_outline:user-group'
-    },
-    'paciente': {
-        label: 'Paciente',
-        color: 'gray',
-        icon: 'heroicons_outline:user'
-    }
 };
 
 @Injectable({
     providedIn: 'root'
 })
 export class RoleService {
+
+    // ✅ SUBJECTS PARA MANEJO DE ESTADO
     private currentUserSubject = new BehaviorSubject<Usuario | null>(null);
     private clinicasSubject = new BehaviorSubject<UsuarioClinicaResponse[]>([]);
     private selectedRoleSubject = new BehaviorSubject<string | null>(null);
     private selectedClinicaSubject = new BehaviorSubject<UsuarioClinicaResponse | null>(null);
 
+    // ✅ OBSERVABLES PÚBLICOS
     public currentUser$ = this.currentUserSubject.asObservable();
-    public availableRoles$ = this.clinicasSubject.asObservable();
+    public clinicas$ = this.clinicasSubject.asObservable();
     public selectedRole$ = this.selectedRoleSubject.asObservable();
     public selectedClinica$ = this.selectedClinicaSubject.asObservable();
 
-    // ✅ ALIAS REQUERIDO POR OTROS ARCHIVOS
-    public clinicasConRol$ = this.clinicasSubject.asObservable();
+    // ✅ ALIAS PARA COMPATIBILIDAD
+    public clinicasConRol$ = this.clinicas$;
 
     constructor(private http: HttpClient) {
-        this.loadUserFromToken();
+        console.log('🚀 [RoleService] Servicio inicializado');
     }
 
-    /**
-     * ✅ MÉTODO HASROLE CORREGIDO - FASE 1 CRÍTICA
-     * Reconoce correctamente el rol 'administrador' sin mapeos incorrectos
-     */
+    // ✅ MÉTODO PRINCIPAL PARA VERIFICAR ROLES
     hasRole(role: string | string[]): boolean {
         try {
-            const currentRole = this.getCurrentRole();
-            
-            if (!currentRole) {
-                console.warn('[RoleService] No hay rol actual disponible');
-                return false;
-            }
-
-            // Manejar array de roles
             if (Array.isArray(role)) {
-                return role.some(r => this.checkSingleRole(r, currentRole));
+                return role.some(r => this.checkSingleRole(r));
+            } else {
+                return this.checkSingleRole(role);
             }
-
-            // Manejar rol único
-            return this.checkSingleRole(role, currentRole);
         } catch (error) {
-            console.error('[RoleService] Error en hasRole:', error);
+            console.error('❌ [RoleService] Error en hasRole:', error);
             return false;
         }
     }
 
-    /**
-     * ✅ VERIFICACIÓN DE ROL INDIVIDUAL CON MAPEO CORRECTO
-     */
-    private checkSingleRole(roleToCheck: string, currentRole: string): boolean {
-        // Mapeo de compatibilidad - CORREGIDO
-        const roleMapping: Record<string, string[]> = {
-            // 'admin' es alias de 'administrador' - NO de 'propietario'
-            'admin': ['administrador', 'admin'],
-            'administrador': ['administrador', 'admin'],
-            'propietario': ['propietario'],
-            'personaldeclinica': ['personaldeclinica', 'personal'],
-            'personal': ['personaldeclinica', 'personal'],
-            'paciente': ['paciente']
-        };
-
-        const validRoles = roleMapping[roleToCheck] || [roleToCheck];
-        const isValid = validRoles.includes(currentRole);
-        
-        console.log(`🔍 [RoleService] Verificando rol: ${roleToCheck} vs ${currentRole} = ${isValid}`);
-        return isValid;
+    private checkSingleRole(role: string): boolean {
+        const currentRole = this.getCurrentRole();
+        console.log(`🔍 [DEBUG] ¿Tiene rol ${role}? ${currentRole === role}`);
+        return currentRole === role;
     }
 
-    /**
-     * ✅ MÉTODOS REQUERIDOS POR ROLE-TEST-COMPONENT
-     */
+    // ✅ NUEVO MÉTODO PARA VERIFICAR PERMISOS (SÍNCRONO)
+    hasPermission(permission: string): boolean {
+        try {
+            const currentRole = this.getCurrentRole();
+            if (!currentRole) {
+                console.log(`🔍 [DEBUG] ¿Tiene permiso '${permission}'? false (sin rol)`);
+                return false;
+            }
+
+            const rolePermissions = ROL_PERMISSIONS[currentRole] || [];
+            const hasPermission = rolePermissions.includes(permission);
+            
+            console.log(`🔍 [DEBUG] ¿Tiene permiso '${permission}'? ${hasPermission} (rol: ${currentRole})`);
+            return hasPermission;
+        } catch (error) {
+            console.error('❌ [RoleService] Error en hasPermission:', error);
+            return false;
+        }
+    }
+
+    // ✅ MÉTODO PARA VERIFICAR MÚLTIPLES PERMISOS
+    hasAnyPermission(permissions: string[]): boolean {
+        return permissions.some(permission => this.hasPermission(permission));
+    }
+
+    hasAllPermissions(permissions: string[]): boolean {
+        return permissions.every(permission => this.hasPermission(permission));
+    }
+
+    // ✅ MÉTODO PARA OBTENER PERMISOS DEL ROL ACTUAL
+    getCurrentPermissions(): string[] {
+        const currentRole = this.getCurrentRole();
+        if (!currentRole) return [];
+        
+        return ROL_PERMISSIONS[currentRole] || [];
+    }
+
+    // ✅ MÉTODO PARA VERIFICAR NIVEL DE ROL
+    hasRoleLevel(minimumLevel: number): boolean {
+        const currentRole = this.getCurrentRole();
+        if (!currentRole) return false;
+        
+        const currentLevel = ROL_LEVELS[currentRole] || 0;
+        return currentLevel >= minimumLevel;
+    }
+
     getRoleLevel(role: string): number {
         return ROL_LEVELS[role] || 0;
     }
 
     getRoleLabel(role: string): string {
-        return ROL_CONFIG[role]?.label || role;
+        const labels: Record<string, string> = {
+            'administrador': 'Administrador',
+            'propietario': 'Propietario',
+            'medico': 'Médico',
+            'paciente': 'Paciente'
+        };
+        return labels[role] || role;
     }
 
     getRoleColor(role: string): string {
-        return ROL_CONFIG[role]?.color || 'gray';
+        const colors: Record<string, string> = {
+            'administrador': 'red',
+            'propietario': 'blue',
+            'medico': 'green',
+            'paciente': 'yellow'
+        };
+        return colors[role] || 'gray';
     }
 
     getRoleIcon(role: string): string {
-        return ROL_CONFIG[role]?.icon || 'heroicons_outline:user';
+        const icons: Record<string, string> = {
+            'administrador': 'heroicons_outline:shield-check',
+            'propietario': 'heroicons_outline:building-office',
+            'medico': 'heroicons_outline:user',
+            'paciente': 'heroicons_outline:user-group'
+        };
+        return icons[role] || 'heroicons_outline:user';
     }
 
-    /**
-     * ✅ VERIFICAR SI ES ADMINISTRADOR
-     */
     isAdmin(): boolean {
-        const currentRole = this.getCurrentRole();
-        return currentRole === 'administrador';
+        return this.hasRole('administrador');
     }
 
-    /**
-     * ✅ OBTENER ROL ACTUAL
-     */
+    // ✅ MÉTODO CORREGIDO PARA getCurrentRole
     getCurrentRole(): string | null {
-        return this.selectedRoleSubject.value;
+        try {
+            // 1. Intentar obtener del selectedRoleSubject
+            let currentRole = this.selectedRoleSubject.value;
+            
+            if (currentRole) {
+                console.log(`🎭 [RoleService] Rol desde selectedRoleSubject: ${currentRole}`);
+                return currentRole;
+            }
+
+            // 2. Si no hay rol seleccionado, obtener del usuario actual
+            const currentUser = this.getCurrentUser();
+            if (currentUser && currentUser.isAdmin) {
+                console.log('🎭 [RoleService] Usuario es admin, estableciendo rol administrador');
+                this.selectedRoleSubject.next('administrador');
+                return 'administrador';
+            }
+
+            // 3. Si no es admin, obtener del primer rol disponible en clínicas
+            const clinicas = this.clinicasSubject.value;
+            if (clinicas.length > 0) {
+                const firstRole = clinicas[0].userRole;
+                console.log(`🎭 [RoleService] Estableciendo primer rol disponible: ${firstRole}`);
+                this.selectedRoleSubject.next(firstRole);
+                return firstRole;
+            }
+
+            // 4. Fallback: intentar obtener del token o localStorage
+            const roleFromStorage = this.getRoleFromStorage();
+            if (roleFromStorage) {
+                console.log(`🎭 [RoleService] Rol desde storage: ${roleFromStorage}`);
+                this.selectedRoleSubject.next(roleFromStorage);
+                return roleFromStorage;
+            }
+
+            console.warn('⚠️ [RoleService] No se pudo determinar el rol actual');
+            return null;
+        } catch (error) {
+            console.error('❌ [RoleService] Error en getCurrentRole:', error);
+            return null;
+        }
     }
 
-    /**
-     * ✅ OBTENER USUARIO ACTUAL
-     */
     getCurrentUser(): Usuario | null {
         return this.currentUserSubject.value;
     }
 
-    /**
-     * ✅ CARGAR DATOS DEL USUARIO DESDE TOKEN
-     */
-    private loadUserFromToken(): void {
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-            console.log('🔐 [RoleService] No hay token, usuario no autenticado');
-            return;
+    // ✅ MÉTODO PARA CARGAR USUARIO DESDE TOKEN
+    loadUserFromToken(): void {
+        try {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                console.warn('⚠️ [RoleService] No hay token disponible');
+                return;
+            }
+
+            console.log('🔍 [RoleService] Cargando usuario desde token...');
+            this.loadUserData();
+        } catch (error) {
+            console.error('❌ [RoleService] Error cargando usuario desde token:', error);
         }
-
-        console.log('🔄 [RoleService] Cargando datos del usuario...');
-        this.loadUserData();
     }
 
-    /**
-     * ✅ RECARGAR DATOS DEL USUARIO (LLAMADO DESDE AUTHSERVICE)
-     */
+    // ✅ MÉTODO PARA RECARGAR DATOS
     reloadUserData(): void {
-        console.log('🔄 [RoleService] Recargando datos del usuario...');
+        console.log('🔄 [RoleService] Recargando datos de usuario...');
         this.loadUserData();
     }
 
-    /**
-     * ✅ CARGAR DATOS DEL USUARIO
-     */
+    // ✅ MÉTODO CORREGIDO PARA CARGAR DATOS
     private loadUserData(): void {
         const userId = this.getUserIdFromToken();
         if (!userId) {
@@ -253,7 +338,7 @@ export class RoleService {
         console.log(`🔍 [RoleService] Cargando datos para usuario ${userId}`);
 
         // Cargar clínicas del usuario
-        this.http.get<any>(`/api/userclinicas/user/${userId}`).pipe(
+        this.http.get<any>(`/api/userclinicas/list`).pipe(
             catchError(error => {
                 console.error('❌ [RoleService] Error cargando clínicas:', error);
                 return of({ success: false, clinicas: [] });
@@ -266,10 +351,18 @@ export class RoleService {
                 const clinicas = this.adaptClinicasResponse(response.clinicas, response.userRole);
                 this.clinicasSubject.next(clinicas);
 
-                // Establecer rol inicial
+                // ✅ CORRECCIÓN CRÍTICA: Establecer rol inicial CORRECTAMENTE
                 if (response.userRole) {
+                    console.log(`🎭 [RoleService] Estableciendo rol desde backend: ${response.userRole}`);
                     this.selectedRoleSubject.next(response.userRole);
-                    console.log(`🎭 [RoleService] Rol inicial establecido: ${response.userRole}`);
+                    
+                    // ✅ GUARDAR EN LOCALSTORAGE PARA PERSISTENCIA
+                    localStorage.setItem('currentRole', response.userRole);
+                } else if (clinicas.length > 0) {
+                    const firstRole = clinicas[0].userRole;
+                    console.log(`🎭 [RoleService] Estableciendo primer rol disponible: ${firstRole}`);
+                    this.selectedRoleSubject.next(firstRole);
+                    localStorage.setItem('currentRole', firstRole);
                 }
 
                 // Seleccionar primera clínica si hay alguna
@@ -292,190 +385,152 @@ export class RoleService {
             if (user) {
                 console.log('✅ [RoleService] Usuario cargado:', user);
                 this.currentUserSubject.next(user);
+                
+                // ✅ CORRECCIÓN: Si es admin, establecer rol administrador
+                if (user.isAdmin && !this.selectedRoleSubject.value) {
+                    console.log('🎭 [RoleService] Usuario es admin, estableciendo rol administrador');
+                    this.selectedRoleSubject.next('administrador');
+                    localStorage.setItem('currentRole', 'administrador');
+                }
             }
         });
     }
 
-    /**
-     * ✅ ADAPTAR RESPUESTA DE CLÍNICAS DEL BACKEND
-     */
-    private adaptClinicasResponse(clinicas: any[], userRole: string): UsuarioClinicaResponse[] {
+    private adaptClinicasResponse(clinicas: any[], userRole?: string): UsuarioClinicaResponse[] {
         if (!Array.isArray(clinicas)) {
-            console.warn('⚠️ [RoleService] Clínicas no es un array, adaptando...');
+            console.warn('⚠️ [RoleService] Clínicas no es un array:', clinicas);
             return [];
         }
 
         return clinicas.map(clinica => ({
             id: clinica.id_clinica || clinica.id,
-            name: clinica.nombre_clinica || clinica.name || 'Clínica sin nombre',
-            description: clinica.descripcion || clinica.description || clinica.ciudad || '',
-            userRole: clinica.rol || userRole || 'paciente',
-            userSubRole: clinica.subrol || clinica.userSubRole || '',
-            permissions: {
-                canMapAssets: userRole === 'administrador' || userRole === 'propietario',
-                canManageSettings: userRole === 'administrador' || userRole === 'propietario',
-                canManageUsers: userRole === 'administrador' || userRole === 'propietario',
-                canViewReports: userRole !== 'paciente',
-                canManagePatients: userRole !== 'paciente',
-                canManageAppointments: userRole !== 'paciente'
+            name: clinica.nombre || clinica.name,
+            description: clinica.descripcion || clinica.description || '',
+            userRole: userRole || clinica.userRole || 'paciente',
+            userSubRole: clinica.userSubRole || '',
+            permissions: clinica.permissions || {
+                canMapAssets: false,
+                canManageSettings: false,
+                canManageUsers: false,
+                canViewReports: false,
+                canManagePatients: false,
+                canManageAppointments: false
             }
         }));
     }
 
-    /**
-     * ✅ OBTENER USER ID DEL TOKEN
-     */
     private getUserIdFromToken(): number | null {
         try {
             const token = localStorage.getItem('accessToken');
             if (!token) return null;
 
             const payload = JSON.parse(atob(token.split('.')[1]));
-            return payload.userId || payload.id || null;
+            return payload.userId || payload.id_usuario || payload.id || null;
         } catch (error) {
-            console.error('❌ [RoleService] Error decodificando token:', error);
+            console.error('❌ [RoleService] Error obteniendo userId del token:', error);
             return null;
         }
     }
 
-    /**
-     * ✅ SELECCIONAR ROL
-     */
-    selectRole(role: string): void {
-        console.log(`🎭 [RoleService] Seleccionando rol: ${role}`);
+    // ✅ MÉTODO HELPER PARA OBTENER ROL DEL STORAGE
+    private getRoleFromStorage(): string | null {
+        try {
+            // Intentar obtener del token JWT
+            const token = localStorage.getItem('accessToken');
+            if (token) {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload.userRole) {
+                    return payload.userRole;
+                }
+                
+                // Si el usuario es admin según el token
+                if (payload.isAdmin || payload.admin) {
+                    return 'administrador';
+                }
+            }
+
+            // Fallback: obtener de localStorage directo
+            const storedRole = localStorage.getItem('currentRole');
+            if (storedRole) {
+                return storedRole;
+            }
+
+            return null;
+        } catch (error) {
+            console.error('❌ [RoleService] Error obteniendo rol del storage:', error);
+            return null;
+        }
+    }
+
+    // ✅ MÉTODOS PARA CAMBIO DE ROL Y CLÍNICA
+    setRole(role: string): void {
+        console.log(`🔄 [RoleService] Cambiando a rol: ${role}`);
         this.selectedRoleSubject.next(role);
-        
-        // Filtrar clínicas por rol seleccionado
+        localStorage.setItem('currentRole', role);
         this.updateClinicasByRole(role);
     }
 
-    /**
-     * ✅ SELECCIONAR CLÍNICA
-     */
-    selectClinica(clinica: UsuarioClinicaResponse): void {
-        console.log(`🏥 [RoleService] Seleccionando clínica: ${clinica.name}`);
+    setClinica(clinica: UsuarioClinicaResponse): void {
+        console.log(`🔄 [RoleService] Cambiando a clínica: ${clinica.name}`);
         this.selectedClinicaSubject.next(clinica);
-        this.selectedRoleSubject.next(clinica.userRole);
+        
+        // Actualizar rol si es diferente
+        if (clinica.userRole !== this.selectedRoleSubject.value) {
+            this.setRole(clinica.userRole);
+        }
     }
 
-    /**
-     * ✅ ACTUALIZAR CLÍNICAS POR ROL
-     */
     private updateClinicasByRole(role: string): void {
-        const todasLasClinicas = this.clinicasSubject.value;
+        const allClinicas = this.clinicasSubject.value;
+        const clinicasWithRole = allClinicas.filter(c => c.userRole === role);
         
-        if (role === 'administrador') {
-            // Admin ve todas las clínicas
-            return;
-        }
-
-        // Otros roles ven solo sus clínicas asignadas
-        const clinicasFiltradas = todasLasClinicas.filter(clinica => 
-            clinica.userRole === role
-        );
-
-        // Seleccionar primera clínica del rol si hay alguna
-        if (clinicasFiltradas.length > 0) {
-            this.selectedClinicaSubject.next(clinicasFiltradas[0]);
+        if (clinicasWithRole.length > 0) {
+            this.selectedClinicaSubject.next(clinicasWithRole[0]);
         }
     }
 
-    /**
-     * ✅ OBTENER CLÍNICAS POR ROL
-     */
+    // ✅ MÉTODOS DE UTILIDAD
     getClinicasByRole(role: string): UsuarioClinicaResponse[] {
-        const clinicas = this.clinicasSubject.value;
-        
-        if (role === 'administrador') {
-            return clinicas; // Admin ve todas
-        }
-        
-        return clinicas.filter(clinica => clinica.userRole === role);
+        return this.clinicasSubject.value.filter(c => c.userRole === role);
     }
 
-    /**
-     * ✅ OBTENER CLÍNICA SELECCIONADA
-     */
     getSelectedClinica(): UsuarioClinicaResponse | null {
         return this.selectedClinicaSubject.value;
     }
 
-    /**
-     * ✅ OBTENER PERMISOS ACTUALES
-     */
-    getCurrentPermissions(): string[] {
-        const currentRole = this.getCurrentRole();
-        const selectedClinica = this.getSelectedClinica();
-
-        if (!currentRole) return [];
-
-        const basePermissions = ROL_PERMISSIONS[currentRole] || [];
-
-        // Permisos específicos de clínica
-        if (selectedClinica) {
-            const additionalPermissions: string[] = [];
-            
-            if (selectedClinica.permissions.canMapAssets) {
-                additionalPermissions.push('assets.map');
-            }
-            if (selectedClinica.permissions.canManageSettings) {
-                additionalPermissions.push('clinic.settings');
-            }
-            
-            return [...basePermissions, ...additionalPermissions];
-        }
-
-        return basePermissions;
-    }
-
-    /**
-     * ✅ VERIFICAR PERMISO ESPECÍFICO
-     */
-    hasPermission(permission: string): boolean {
-        const permissions = this.getCurrentPermissions();
-        return permissions.includes(permission);
-    }
-
-    /**
-     * ✅ OBTENER ROLES DISPONIBLES
-     */
     getAvailableRoles(): string[] {
         const clinicas = this.clinicasSubject.value;
-        const roles = clinicas.map(c => c.userRole);
-        return [...new Set(roles)]; // Eliminar duplicados
+        const roles = [...new Set(clinicas.map(c => c.userRole))];
+        
+        // Agregar administrador si el usuario es admin
+        const currentUser = this.getCurrentUser();
+        if (currentUser && currentUser.isAdmin && !roles.includes('administrador')) {
+            roles.unshift('administrador');
+        }
+        
+        return roles;
     }
 
-    /**
-     * ✅ LIMPIAR DATOS
-     */
     clearData(): void {
-        console.log('🧹 [RoleService] Limpiando datos...');
         this.currentUserSubject.next(null);
         this.clinicasSubject.next([]);
         this.selectedRoleSubject.next(null);
         this.selectedClinicaSubject.next(null);
+        localStorage.removeItem('currentRole');
     }
 
-    /**
-     * ✅ VERIFICAR SI TIENE ROL EN CLÍNICA ESPECÍFICA
-     */
+    // ✅ MÉTODOS ADICIONALES PARA COMPATIBILIDAD
     hasRoleInClinic(role: string, clinicaId: number): boolean {
         const clinicas = this.clinicasSubject.value;
         return clinicas.some(c => c.id === clinicaId && c.userRole === role);
     }
 
-    /**
-     * ✅ OBTENER ROL EN CLÍNICA ESPECÍFICA
-     */
     getRoleInClinic(clinicaId: number): string | null {
         const clinicas = this.clinicasSubject.value;
         const clinica = clinicas.find(c => c.id === clinicaId);
         return clinica ? clinica.userRole : null;
     }
 
-    /**
-     * ✅ AGRUPAR CLÍNICAS POR ROL
-     */
     groupClinicsByRole(): Record<string, UsuarioClinicaResponse[]> {
         const clinicas = this.clinicasSubject.value;
         const grouped: Record<string, UsuarioClinicaResponse[]> = {};
@@ -490,6 +545,17 @@ export class RoleService {
 
         console.log('🏥 [RoleService] Clínicas agrupadas por rol:', grouped);
         return grouped;
+    }
+
+    // ✅ MÉTODO ADICIONAL PARA DEBUG
+    debugCurrentState(): void {
+        console.log('🔍 [RoleService] Estado actual del servicio:');
+        console.log('  - selectedRoleSubject.value:', this.selectedRoleSubject.value);
+        console.log('  - currentUserSubject.value:', this.currentUserSubject.value);
+        console.log('  - clinicasSubject.value.length:', this.clinicasSubject.value.length);
+        console.log('  - localStorage currentRole:', localStorage.getItem('currentRole'));
+        console.log('  - getCurrentRole() result:', this.getCurrentRole());
+        console.log('  - Permisos disponibles:', this.getCurrentPermissions());
     }
 }
 

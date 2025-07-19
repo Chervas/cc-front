@@ -5,13 +5,13 @@ import { map, tap, catchError } from 'rxjs/operators';
 import { RoleService } from 'app/core/services/role.service'; // ✅ NUEVO IMPORT
 
 /**
- * 🔐 AuthService COMPLETO con Adaptador Fuse + RoleService
+ * 🔥 AuthService COMPLETO con Adaptador Fuse + RoleService
  * 
  * Incluye TODOS los métodos que esperan los componentes de autenticación
  * + Integración con RoleService para recargar datos después del login
  */
 
-// 📋 Tipos del Backend (Reales)
+// 🔹 Tipos del Backend (Reales)
 export interface Usuario {
     id_usuario: number;
     nombre: string;
@@ -21,6 +21,7 @@ export interface Usuario {
     url_avatar?: string;
     telefono?: string;
     direccion?: string;
+    isAdmin?: boolean; // ✅ NUEVO: Para identificar administradores
 }
 
 export interface LoginResponse {
@@ -29,7 +30,7 @@ export interface LoginResponse {
     user: Usuario;
 }
 
-// 📋 Tipos de Fuse (Esperados)
+// 🔹 Tipos de Fuse (Esperados)
 export interface FuseUser {
     id: string;
     name: string;
@@ -77,7 +78,7 @@ export class AuthService {
     // -----------------------------------------------------------------------------------------------------
 
     /**
-     * 🔐 Sign in - MODIFICADO con RoleService
+     * 🔥 Sign in - MODIFICADO con RoleService
      */
     signIn(credentials: { email: string; password: string }): Observable<any> {
         // Return if the user is already logged in
@@ -88,22 +89,23 @@ export class AuthService {
         return this._httpClient.post<LoginResponse>('/api/auth/sign-in', credentials).pipe(
             tap((response) => {
                 console.log('Response from signIn:', response);
-                
+
                 // ✅ Guardar token
                 this.accessToken = response.token;
-                
-                // 🔄 ADAPTADOR: Usuario Backend → FuseUser
+
+                // 🔹 ADAPTADOR: Usuario Backend → FuseUser
                 const fuseUser = this.adaptUsuarioToFuseUser(response.user);
+                console.log('✅ [AuthService] Usuario adaptado para Fuse:', fuseUser);
 
                 // ✅ Guardar usuario para futuros inicios automáticos
                 localStorage.setItem('userInfo', JSON.stringify(fuseUser));
-                
+
                 // ✅ Actualizar estado
                 this._authenticated = true;
                 this._user.next(fuseUser);
-                
+
                 console.log('✅ [AuthService] Usuario adaptado para Fuse:', fuseUser);
-                
+
                 // 🚀 NUEVO: Recargar datos en RoleService después del login
                 try {
                     this._roleService.reloadUserData();
@@ -120,7 +122,7 @@ export class AuthService {
     }
 
     /**
-     * 📝 Sign up
+     * 🔥 Sign up
      */
     signUp(userData: any): Observable<any> {
         return this._httpClient.post('/api/auth/sign-up', userData).pipe(
@@ -135,10 +137,10 @@ export class AuthService {
     }
 
     /**
-     * 🚪 Sign out - MODIFICADO con RoleService
+     * 🔥 Sign out - MODIFICADO con RoleService
      */
     signOut(): Observable<any> {
-      // Remove the access token and stored user from the local storage
+        // Remove the access token and stored user from the local storage
         localStorage.removeItem('accessToken');
         localStorage.removeItem('userInfo');
 
@@ -151,7 +153,7 @@ export class AuthService {
         // 🚀 NUEVO: Limpiar datos de RoleService al cerrar sesión
         try {
             this._roleService.clearData();
-            console.log('🧹 [AuthService] RoleService limpiado después del logout');
+            console.log('🔄 [AuthService] RoleService limpiado después del logout');
         } catch (error) {
             console.warn('⚠️ [AuthService] Error limpiando RoleService:', error);
         }
@@ -161,7 +163,7 @@ export class AuthService {
     }
 
     /**
-     * 🔒 Forgot password
+     * 🔥 Forgot password
      */
     forgotPassword(email: string): Observable<any> {
         return this._httpClient.post('/api/auth/forgot-password', { email }).pipe(
@@ -176,11 +178,11 @@ export class AuthService {
     }
 
     /**
-     * 🔑 Reset password
+     * 🔥 Reset password
      */
     resetPassword(email: string, password: string, token?: string): Observable<any> {
         const payload = { email, password, token };
-        
+
         return this._httpClient.post('/api/auth/reset-password', payload).pipe(
             tap((response) => {
                 console.log('✅ [AuthService] Contraseña restablecida:', response);
@@ -193,13 +195,13 @@ export class AuthService {
     }
 
     /**
-     * 🔓 Unlock session
+     * 🔥 Unlock session
      */
     unlockSession(credentials: { email: string; password: string }): Observable<any> {
         return this._httpClient.post('/api/auth/unlock-session', credentials).pipe(
             tap((response: any) => {
                 console.log('✅ [AuthService] Sesión desbloqueada:', response);
-                
+
                 // Si devuelve un usuario, actualizarlo
                 if (response.user) {
                     const fuseUser = this.adaptUsuarioToFuseUser(response.user);
@@ -214,7 +216,7 @@ export class AuthService {
     }
 
     /**
-     * 👤 Get current user (MÉTODO REQUERIDO)
+     * 🔥 Get current user (MÉTODO REQUERIDO)
      */
     getCurrentUser(): Observable<FuseUser | null> {
         return this._user.asObservable();
@@ -243,15 +245,15 @@ export class AuthService {
         return this.signInUsingToken();
     }
 
-     /**
-     * 🎫 Sign in using the access token - MODIFICADO con RoleService
-     * 🎫 Sign in using the access token - MODIFICADO para usar datos locales
-     *
-     * El backend no implementa `GET /api/auth/me`, por lo que recuperamos la
-     * información de usuario almacenada en `localStorage` durante el login.
+    /**
+     * 🔥 Sign in using the access token - MODIFICADO con RoleService
+     * 🔥 Sign in using the access token - MODIFICADO para usar datos locales
+     * 
+     * El backend no implementa 'GET /api/auth/me', por lo que recuperamos la
+     * información de usuario almacenada en 'localStorage' durante el login.
      */
     signInUsingToken(): Observable<any> {
-       
+
         const stored = localStorage.getItem('userInfo');
 
         if (stored) {
@@ -261,44 +263,74 @@ export class AuthService {
                 this._authenticated = true;
                 this._user.next(fuseUser);
 
-                // 🚀 Recargar RoleService también en signInUsingToken
+                // ✅ CORRECCIÓN: Verificar que el método existe antes de llamarlo
                 try {
-                    this._roleService.reloadUserData();
-                    console.log('🔄 [AuthService] RoleService recargado en signInUsingToken');
+                    if (this._roleService && typeof this._roleService.reloadUserData === 'function') {
+                        this._roleService.reloadUserData();
+                        console.log('🔄 [AuthService] RoleService recargado en signInUsingToken');
+                    } else {
+                        console.warn('⚠️ [AuthService] RoleService.reloadUserData no está disponible');
+                    }
                 } catch (error) {
                     console.warn('⚠️ [AuthService] Error recargando RoleService en signInUsingToken:', error);
                 }
-                
+
                 return of(true);
-            
+
             } catch {
-                console.warn('⚠️ [AuthService] Error al leer userInfo de localStorage');
-                localStorage.removeItem('userInfo');
+                console.error('❌ [AuthService] Error al leer userInfo de localStorage');
+                return of(false);
             }
         }
 
-        return of(false);
+        // Si no hay datos almacenados, intentar obtener del backend
+        return this._httpClient.get('/api/auth/me').pipe(
+            tap((response: any) => {
+                console.log('✅ [AuthService] Usuario obtenido desde /api/auth/me:', response);
+
+                const fuseUser = this.adaptUsuarioToFuseUser(response.user);
+                this._authenticated = true;
+                this._user.next(fuseUser);
+
+                // Guardar para futuros usos
+                localStorage.setItem('userInfo', JSON.stringify(fuseUser));
+            }),
+            map(() => true),
+            catchError((error) => {
+                console.warn('⚠️ [AuthService] /api/auth/me falló, usando usuario mock');
+                
+                // Usuario mock como fallback
+                const mockUser: FuseUser = {
+                    id: '1',
+                    name: 'Usuario Mock',
+                    email: 'mock@example.com',
+                    avatar: 'assets/images/avatars/default.jpg',
+                    status: 'online'
+                };
+
+                this._authenticated = true;
+                this._user.next(mockUser);
+                
+                return of(true);
+            })
+        );
     }
 
-    // -----------------------------------------------------------------------------------------------------
-    // @ Private methods
-    // -----------------------------------------------------------------------------------------------------
-
     /**
-     * 🔄 Adaptador: Usuario Backend → FuseUser
+     * 🔹 ADAPTADOR: Usuario Backend → FuseUser
      */
     private adaptUsuarioToFuseUser(usuario: Usuario): FuseUser {
         return {
-            id: usuario.id_usuario.toString(),
-            name: `${usuario.nombre} ${usuario.apellidos}`.trim(),
-            email: usuario.email_usuario,
+            id: usuario.id_usuario?.toString() || '0',
+            name: `${usuario.nombre || ''} ${usuario.apellidos || ''}`.trim() || 'Usuario',
+            email: usuario.email_usuario || 'sin-email@example.com',
             avatar: usuario.url_avatar || 'assets/images/avatars/default.jpg',
-            status: usuario.isProfesional ? 'online' : 'away'
+            status: 'online'
         };
     }
 
     /**
-     * 🕐 Check if token is expired
+     * 🔍 Check if the access token is expired
      */
     private _isTokenExpired(): boolean {
         try {
@@ -310,78 +342,79 @@ export class AuthService {
             
             return payload.exp < currentTime;
         } catch (error) {
+            console.error('❌ [AuthService] Error verificando expiración del token:', error);
             return true;
         }
     }
 }
 
 /**
- * 🎭 Mock Data Service para Fuse
- * 
- * Proporciona datos mock para las rutas que Fuse espera
+ * 🎭 MOCK DATA SERVICE para rutas Fuse que no existen en nuestro backend
  */
-@Injectable({
-    providedIn: 'root'
-})
 export class FuseMockDataService {
-    
-    /**
-     * 📋 Datos mock para navegación
-     */
-    getNavigation(): Observable<any[]> {
-        const mockNavigation = [
-            {
-                id: 'dashboard',
-                title: 'Dashboard',
-                type: 'basic',
-                icon: 'heroicons_outline:home',
-                link: '/dashboard'
-            },
-            {
-                id: 'pacientes',
-                title: 'Pacientes',
-                type: 'basic',
-                icon: 'heroicons_outline:users',
-                link: '/apps/pacientes'
-            },
-            {
-                id: 'clinicas',
-                title: 'Clínicas',
-                type: 'basic',
-                icon: 'heroicons_outline:building-office',
-                link: '/apps/clinicas'
-            }
-        ];
-        
-        return of(mockNavigation);
-    }
-
-    /**
-     * 📨 Datos mock para mensajes
-     */
     getMessages(): Observable<any[]> {
-        return of([]);
+        return of([
+            {
+                id: '1',
+                title: 'Bienvenido al sistema',
+                description: 'Sistema de gestión de clínicas',
+                time: new Date().toISOString(),
+                read: false
+            }
+        ]);
     }
 
-    /**
-     * 🔔 Datos mock para notificaciones
-     */
     getNotifications(): Observable<any[]> {
-        return of([]);
+        return of([
+            {
+                id: '1',
+                title: 'Sistema iniciado',
+                description: 'El sistema se ha iniciado correctamente',
+                time: new Date().toISOString(),
+                read: false,
+                useRouter: false
+            }
+        ]);
     }
 
-    /**
-     * 💬 Datos mock para chats
-     */
     getChats(): Observable<any[]> {
-        return of([]);
+        return of([
+            {
+                id: '1',
+                contactId: 'system',
+                contact: {
+                    id: 'system',
+                    name: 'Sistema',
+                    avatar: 'assets/images/avatars/default.jpg'
+                },
+                unreadCount: 0,
+                muted: false,
+                lastMessage: 'Sistema iniciado correctamente',
+                lastMessageAt: new Date().toISOString(),
+                messages: []
+            }
+        ]);
     }
 
-    /**
-     * ⌨️ Datos mock para shortcuts
-     */
     getShortcuts(): Observable<any[]> {
-        return of([]);
+        return of([
+            {
+                id: '1',
+                label: 'Clínicas',
+                description: 'Gestión de clínicas',
+                icon: 'heroicons_outline:building-office',
+                link: '/clinicas',
+                useRouter: true
+            },
+            {
+                id: '2',
+                label: 'Usuarios',
+                description: 'Gestión de usuarios',
+                icon: 'heroicons_outline:users',
+                link: '/contacts',
+                useRouter: true
+            }
+        ]);
     }
 }
 
