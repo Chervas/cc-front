@@ -248,10 +248,30 @@ export class RoleService {
         console.log('🏥 Clínica seleccionada:', clinica.name);  // ← PROPIEDAD REAL
     }
 
-    hasRole(role: string): boolean {
-        const clinicas = this.clinicasSubject.value;
-        return clinicas.some(clinica => clinica.userRole === role);  // ← PROPIEDAD REAL
+    hasRole(role: string | string[]): boolean {
+    try {
+        // ✅ MAPEO DE ROLES LEGACY
+        const mapRole = (r: string): string => {
+            const mapping: Record<string, string> = {
+                'admin': 'propietario',
+                'administrador': 'propietario'
+            };
+            return mapping[r] || r;
+        };
+
+        if (Array.isArray(role)) {
+            return role.some(r => this.hasRole(mapRole(r)));
+        }
+
+        const mappedRole = mapRole(role);
+        const currentRole = this.getCurrentRole();
+        
+        return currentRole === mappedRole;
+    } catch (error) {
+        console.error('Error verificando rol:', error);
+        return false;
     }
+}
 
     isAdmin(): boolean {
         return this.hasRole('administrador') || this.hasRole('propietario');

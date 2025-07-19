@@ -1,14 +1,16 @@
-import { Directive, Input, TemplateRef, ViewContainerRef, OnInit, OnDestroy } from '@angular/core';
-import { Subject, takeUntil } from 'rxjs';
+import { Directive, Input, TemplateRef, ViewContainerRef, OnDestroy, OnInit } from '@angular/core';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { RoleService } from 'app/core/services/role.service';
 import { UserRole } from 'app/core/constants/role.constants';
 
 /**
- * 🎭 Directiva para mostrar/ocultar elementos basado en roles
+ * ✅ DIRECTIVA *hasRole CORREGIDA COMPLETA
+ * Muestra/oculta elementos basado en el rol del usuario
  * 
- * Uso:
- * <div *hasRole="'admin'">Solo para administradores</div>
- * <div *hasRole="['admin', 'propietario']">Para admin o propietario</div>
+ * Ejemplos de uso:
+ * <div *hasRole="'administrador'">Solo para administradores</div>
+ * <div *hasRole="['administrador', 'propietario']">Para admin o propietario</div>
  */
 @Directive({
     selector: '[hasRole]',
@@ -17,9 +19,11 @@ import { UserRole } from 'app/core/constants/role.constants';
 export class HasRoleDirective implements OnInit, OnDestroy {
     private destroy$ = new Subject<void>();
     private hasView = false;
+    private currentRole: UserRole | null = null;
 
-    @Input() set hasRole(roles: UserRole | UserRole[]) {
-        this.checkRoles(roles);
+    @Input() set hasRole(role: UserRole) {
+        this.currentRole = role;
+        this.checkRole(role);
     }
 
     constructor(
@@ -29,8 +33,15 @@ export class HasRoleDirective implements OnInit, OnDestroy {
     ) {}
 
     ngOnInit(): void {
-        // Suscribirse a cambios en roles si el servicio lo soporta
-        // (opcional, depende de la implementación del servicio)
+        // Suscribirse a cambios en el rol seleccionado
+        this.roleService.selectedRole$.pipe(
+            takeUntil(this.destroy$)
+        ).subscribe(() => {
+            // Re-evaluar cuando cambie el rol
+            if (this.currentRole) {
+                this.checkRole(this.currentRole);
+            }
+        });
     }
 
     ngOnDestroy(): void {
@@ -38,53 +49,74 @@ export class HasRoleDirective implements OnInit, OnDestroy {
         this.destroy$.complete();
     }
 
-    private checkRoles(roles: UserRole | UserRole[]): void {
+    private checkRole(role: UserRole): void {
+        if (!role) {
+            this.hideElement();
+            return;
+        }
+
         try {
             let hasRole = false;
 
-            if (typeof roles === 'string') {
+            if (typeof role === 'string') {
                 // Rol único
-                const result = this.roleService.hasRole(roles);
-                if (result && typeof result.subscribe === 'function') {
+                const result = this.roleService.hasRole(role);
+                
+                // ✅ VERIFICAR SI ES OBSERVABLE O BOOLEAN
+                if (result && typeof (result as any).subscribe === 'function') {
                     // Es Observable<boolean>
-                    result.pipe(takeUntil(this.destroy$)).subscribe(value => {
-                        this.updateView((value as unknown) as boolean);
+                    (result as any).pipe(takeUntil(this.destroy$)).subscribe((value: boolean) => {
+                        this.updateView(value);
                     });
                     return;
                 } else {
                     // Es boolean directo
-                    hasRole = (result as unknown) as boolean;
+                    hasRole = Boolean(result);
                 }
-            } else if (Array.isArray(roles)) {
+            } else if (Array.isArray(role)) {
                 // Múltiples roles - verificar si tiene alguno
-                hasRole = roles.some(role => {
-                    const result = this.roleService.hasRole(role);
-                    if (result && typeof result.subscribe === 'function') {
-                        // Si es Observable, necesitamos manejar asincrónicamente
-                        result.pipe(takeUntil(this.destroy$)).subscribe(value => {
-                            if ((value as unknown) as boolean) {
-                                this.updateView(true);
+                hasRole = role.some(r => {
+                    const result = this.roleService.hasRole(r);
+                    
+                    if (result && typeof (result as any).subscribe === 'function') {
+                        // Si es Observable, manejar asincrónicamente
+                        (result as any).pipe(takeUntil(this.destroy$)).subscribe((value: boolean) => {
+                            if (value) {
+                                this.showElement();
                             }
                         });
                         return false; // Por ahora false, se actualizará asincrónicamente
                     } else {
-                        return (result as unknown) as boolean;
+                        return Boolean(result);
                     }
                 });
             }
 
             this.updateView(hasRole);
+            
         } catch (error) {
-            console.error('[HasRoleDirective] Error checking roles:', error);
-            this.updateView(false);
+            console.error('HasRoleDirective: Error verificando rol:', error);
+            this.hideElement();
         }
     }
 
-    private updateView(show: boolean): void {
-        if (show && !this.hasView) {
+    private updateView(hasRole: boolean): void {
+        if (hasRole && !this.hasView) {
+            this.showElement();
+        } else if (!hasRole && this.hasView) {
+            this.hideElement();
+        }
+    }
+
+    private showElement(): void {
+        if (!this.hasView) {
             this.viewContainer.createEmbeddedView(this.templateRef);
             this.hasView = true;
-        } else if (!show && this.hasView) {
+        }
+    }
+
+    private hideElement(): void {
+        if (this.hasView) {
             this.viewContainer.clear();
             this.hasView = false;
         }

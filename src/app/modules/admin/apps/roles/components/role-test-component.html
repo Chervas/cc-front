@@ -60,16 +60,16 @@
         <!-- Testing de directivas por rol -->
   <mat-card class="mb-4">
     <mat-card-header>
-      <mat-card-title>🎯 paaco Testing Directiva *hasRole</mat-card-title>
+      <mat-card-title>🎯 paco Testing Directiva *hasRole</mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <div *hasRole="'admin'" class="p-2 bg-red-100 mb-2">
+      <div *hasRole="'administrador'" class="p-2 bg-red-100 mb-2">
         ✅ Visible solo para ADMIN
       </div>
       <div *hasRole="'propietario'" class="p-2 bg-blue-100 mb-2">
         ✅ Visible solo para PROPIETARIO
       </div>
-      <div *hasRole="['propietario', 'admin']" class="p-2 bg-green-100 mb-2">
+      <div *hasRole="['propietario', 'administrador']" class="p-2 bg-green-100 mb-2">
         ✅ Visible para PROPIETARIO o ADMIN
       </div>
       <div *hasRole="'paciente'" class="p-2 bg-yellow-100 mb-2">
@@ -91,7 +91,7 @@
                 </div>
                 
                 <div class="space-y-4">
-                    <div *hasRole="'admin'" class="p-4 bg-red-50 border-l-4 border-red-400 rounded-r-lg">
+                   <div *hasRole="'administrador'" class="p-4 bg-red-50 border-l-4 border-red-400 rounded-r-lg">
                         <div class="flex items-center">
                             <mat-icon class="text-red-400 mr-2" [svgIcon]="'heroicons_outline:check-circle'"></mat-icon>
                             <span class="text-red-700 font-medium">Visible solo para ADMIN</span>
@@ -103,7 +103,7 @@
                             <span class="text-blue-700 font-medium">Visible solo para PROPIETARIO</span>
                         </div>
                     </div>
-                    <div *hasRole="['propietario', 'admin']" class="p-4 bg-green-50 border-l-4 border-green-400 rounded-r-lg">
+                    <div *hasRole="['propietario', 'administrador']" class="p-4 bg-green-50 border-l-4 border-green-400 rounded-r-lg">
                         <div class="flex items-center">
                             <mat-icon class="text-green-400 mr-2" [svgIcon]="'heroicons_outline:check-circle'"></mat-icon>
                             <span class="text-green-700 font-medium">Visible para PROPIETARIO o ADMIN</span>
@@ -160,7 +160,7 @@
                         <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:chart-bar'"></mat-icon>
                         Ver Reportes
                     </button>
-                    <button *hasPermission="'admin.access'" 
+                    <button *hasPermission="'administrador.access'">
                             mat-flat-button 
                             class="w-full justify-start">
                         <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:cog-6-tooth'"></mat-icon>

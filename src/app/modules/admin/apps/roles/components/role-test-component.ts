@@ -68,6 +68,11 @@ export class RoleTestComponent implements OnInit, OnDestroy {
         ).subscribe(role => {
             this.selectedRole = role;
             this.log(`🎭 Rol seleccionado: ${role}`);
+            console.log('🔍 [DEBUG] Rol actual del usuario:', this.getCurrentRole());
+            console.log('🔍 [DEBUG] ¿Tiene rol admin?', this.roleService.hasRole('administrador'));
+            console.log('🔍 [DEBUG] ¿Tiene rol propietario?', this.roleService.hasRole('propietario'));
+            console.log('🔍 [DEBUG] ¿Tiene rol administrador?', this.roleService.hasRole('administrador'));
+            console.log('🔍 [DEBUG] ¿Tiene rol personaldeclinica?', this.roleService.hasRole('personaldeclinica'));
         });
 
         this.roleService.selectedClinica$.pipe(

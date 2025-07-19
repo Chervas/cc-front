@@ -146,3 +146,35 @@ export {
     ROL_PERMISSIONS as ROLE_PERMISSIONS
 };
 
+// ✅ NUEVAS ADICIONES PARA SOLUCIONAR ERRORES:
+
+// 🎭 Tipo para compatibilidad con directivas
+export type UserRole = RolClinica | 'administrador' | string | string[];
+
+// 📋 Mapeo de roles legacy a nuevos
+export const ROLE_MAPPING: Record<string, RolClinica> = {
+    'admin': 'propietario',
+    'administrador': 'propietario',
+    'propietario': 'propietario',
+    'personaldeclinica': 'personaldeclinica',
+    'personal': 'personaldeclinica',
+    'paciente': 'paciente'
+};
+
+// 🔄 Función helper para mapear roles
+export function mapRole(role: string): RolClinica {
+    return ROLE_MAPPING[role] || 'paciente';
+}
+
+// 🎯 Verificar si un rol es de administrador
+export function isAdminRole(role: string): boolean {
+    const mappedRole = mapRole(role);
+    return ROLE_CONFIG.ADMIN_ROLES.includes(mappedRole);
+}
+
+// 🏥 Verificar si un rol es médico
+export function isMedicalRole(role: string): boolean {
+    const mappedRole = mapRole(role);
+    return ROLE_CONFIG.MEDICAL_ROLES.includes(mappedRole);
+}
+
