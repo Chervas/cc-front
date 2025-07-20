@@ -1,116 +1,245 @@
-<!-- ✅ TEMPLATE CON CLINIC-SELECTOR EXISTENTE -->
-<div class="flex flex-col w-full min-h-0 overflow-hidden">
+<!-- Loading bar -->
+<fuse-loading-bar></fuse-loading-bar>
 
-    <!-- Loading bar -->
-    <fuse-loading-bar></fuse-loading-bar>
+<!-- Wrapper -->
+<div class="flex flex-col w-full min-h-screen">
 
-    <!-- Vertical navigation -->
-    <fuse-vertical-navigation
-        class="dark bg-gray-900"
-        [mode]="isScreenSmall ? 'over' : 'side'"
-        [name]="'mainNavigation'"
-        [navigation]="navigation?.default"
-        [opened]="!isScreenSmall">
-
-        <!-- Navigation header -->
-        <div class="flex items-center px-8 py-6 border-b">
-            <!-- Logo -->
-            <div class="flex items-center">
-                <img class="w-8" src="assets/images/logo/logo.svg" alt="Logo">
-                <span class="ml-3 text-xl font-bold text-white">ClinicaClick</span>
-            </div>
-        </div>
-
-        <!-- Navigation content -->
-        <div class="flex flex-col flex-auto p-6">
-
-            <!-- ✅ CLINIC SELECTOR COMPONENT EXISTENTE -->
-            <div class="mb-6" *ngIf="hasAvailableRoles()">
-                <clinic-selector
-                    [selectedClinic]="selectedClinic"
-                    [clinicsGrouped]="clinicsGrouped"
-                    (clinicSelected)="onClinicSelected($event)">
-                </clinic-selector>
-            </div>
-
-            <!-- ✅ INFORMACION DEL USUARIO -->
-            <div class="mt-auto pt-6 border-t border-gray-700" *ngIf="currentUser">
-                <div class="text-xs text-gray-400 mb-1">Usuario Actual</div>
-                <div class="text-sm text-white">{{ getCurrentUserInfo() }}</div>
-                <div class="text-xs text-gray-400 mt-1" *ngIf="hasSelectedClinica()">
-                    {{ getSelectedClinicaInfo() }}
-                </div>
-            </div>
-
-            <!-- ✅ DEBUG INFO (SOLO EN DESARROLLO) -->
-            <div class="mt-4 p-3 bg-gray-800 rounded-lg" *ngIf="false">
-                <div class="text-xs text-gray-400 mb-2">Debug Info</div>
-                <div class="text-xs text-gray-300">
-                    <div>Clínicas: {{ getClinicasCount() }}</div>
-                    <div>Roles: {{ getRolesCount() }}</div>
-                    <div>Es Admin: {{ isCurrentUserAdmin() ? 'Sí' : 'No' }}</div>
-                    <div>Permisos: {{ getCurrentPermissions().length }}</div>
-                </div>
-                <button mat-button (click)="debugRoleSystem()" class="mt-2 text-xs">
-                    Ver Debug Completo
-                </button>
-            </div>
-
-        </div>
-
-    </fuse-vertical-navigation>
-
-    <!-- Main -->
-    <div class="flex flex-col flex-auto overflow-hidden">
-
-        <!-- Header -->
-        <div class="relative flex flex-0 items-center w-full h-16 px-4 md:px-6 z-49 shadow dark:shadow-none dark:border-b bg-card dark:bg-transparent print:hidden">
-
-            <!-- Navigation toggle for the mobile -->
+    <!-- Header -->
+    <div class="relative flex flex-0 items-center w-full h-16 px-4 md:px-6 z-49 shadow bg-card dark:bg-gray-900 dark:shadow-none print:hidden">
+        
+        <!-- Navigation toggle button (SIEMPRE VISIBLE) -->
+        <div class="flex items-center">
             <button
-                class="md:hidden -ml-2"
                 mat-icon-button
-                (click)="toggleNavigation('mainNavigation')">
+                (click)="toggleNavigation()"
+                [attr.aria-label]="'Toggle navigation'"
+                class="mr-2">
                 <mat-icon [svgIcon]="'heroicons_outline:bars-3'"></mat-icon>
             </button>
-
-            <!-- Logo for mobile -->
-            <div class="flex items-center md:hidden ml-2">
-                <img class="w-7" src="assets/images/logo/logo.svg" alt="Logo">
-                <span class="ml-2 text-lg font-bold">ClinicaClick</span>
-            </div>
-
-            <!-- Horizontal spacer -->
-            <div class="flex-1"></div>
-
-            <!-- Components -->
-            <div class="flex items-center pl-2 ml-2 space-x-2">
-
-                <!-- Search -->
-                <search [appearance]="'bar'"></search>
-
-                <!-- Shortcuts -->
-                <shortcuts></shortcuts>
-
-                <!-- Messages -->
-                <messages></messages>
-
-                <!-- Notifications -->
-                <notifications></notifications>
-
-                <!-- User -->
-                <user></user>
-
-            </div>
-
         </div>
 
-        <!-- Content -->
-        <div class="flex flex-col flex-auto overflow-hidden">
-            <router-outlet></router-outlet>
+        <!-- Logo -->
+        <div class="flex items-center ml-2">
+            <img
+                class="w-8 h-8"
+                src="assets/images/logo/logo.svg"
+                alt="Logo">
+        </div>
+
+        <!-- Role Selector -->
+        <div class="flex items-center ml-6" *ngIf="roleService.getCurrentRole()">
+            <mat-form-field appearance="outline" class="fuse-mat-dense">
+                <mat-label>Rol Activo</mat-label>
+                <mat-select 
+                    [value]="roleService.getCurrentRole()"
+                    (selectionChange)="onRoleChange($event.value)">
+                    <mat-option 
+                        *ngFor="let role of getAvailableRoles()" 
+                        [value]="role">
+                        {{ role | titlecase }}
+                    </mat-option>
+                </mat-select>
+            </mat-form-field>
+        </div>
+
+        <!-- Spacer -->
+        <div class="flex-1"></div>
+
+        <!-- Components -->
+        <div class="flex items-center space-x-2">
+            <!-- Search -->
+            <fuse-fullscreen class="hidden md:block"></fuse-fullscreen>
+            
+            <!-- Shortcuts -->
+            <button
+                mat-icon-button
+                class="hidden md:inline-flex"
+                [matTooltip]="'Shortcuts'"
+                [matMenuTriggerFor]="shortcutsMenu">
+                <mat-icon [svgIcon]="'heroicons_outline:squares-2x2'"></mat-icon>
+            </button>
+            
+            <!-- Messages -->
+            <button
+                mat-icon-button
+                [matTooltip]="'Messages'"
+                [matMenuTriggerFor]="messagesMenu">
+                <mat-icon [svgIcon]="'heroicons_outline:chat-bubble-left'"></mat-icon>
+            </button>
+            
+            <!-- Notifications -->
+            <button
+                mat-icon-button
+                [matTooltip]="'Notifications'"
+                [matMenuTriggerFor]="notificationsMenu">
+                <mat-icon [svgIcon]="'heroicons_outline:bell'"></mat-icon>
+            </button>
+            
+            <!-- User -->
+            <button
+                mat-button
+                [matMenuTriggerFor]="userMenu"
+                class="min-w-0 min-h-0 px-2 py-1 ml-2">
+                <div class="flex items-center">
+                    <div class="flex flex-col items-end leading-none">
+                        <div class="text-sm font-semibold">{{ getCurrentUserName() }}</div>
+                        <div class="text-xs text-secondary">{{ roleService.getCurrentRole() | titlecase }}</div>
+                    </div>
+                    <!-- Simple avatar with initials -->
+                    <div class="ml-2 w-8 h-8 bg-primary text-primary-contrast rounded-full flex items-center justify-center text-sm font-medium">
+                        {{ getCurrentUserInitials() }}
+                    </div>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Content wrapper -->
+    <div class="flex flex-1 overflow-hidden relative">
+
+        <!-- Navigation -->
+        <fuse-vertical-navigation
+            class="bg-card dark:bg-gray-900 print:hidden z-10"
+            [appearance]="'default'"
+            [mode]="'over'"
+            [name]="'mainNavigation'"
+            [navigation]="navigation"
+            [opened]="false">
+
+            <!-- Navigation footer -->
+            <ng-container fuseVerticalNavigationContentFooter>
+                
+                <!-- Clinic Selector -->
+                <div class="p-4 border-t border-gray-200 dark:border-gray-700" *ngIf="getClinicasForCurrentRole().length > 0">
+                    <div class="mb-3">
+                        <span class="text-xs font-medium text-secondary uppercase tracking-wider">Clínica Activa</span>
+                    </div>
+                    
+                    <mat-form-field appearance="outline" class="w-full fuse-mat-dense">
+                        <mat-label>Seleccionar Clínica</mat-label>
+                        <mat-select 
+                            [value]="getSelectedClinicId()"
+                            (selectionChange)="onClinicChange($event.value)">
+                            <mat-option 
+                                *ngFor="let clinica of getClinicasForCurrentRole()" 
+                                [value]="clinica.id">
+                                <div class="flex items-center">
+                                    <mat-icon 
+                                        [svgIcon]="'heroicons_outline:building-office'" 
+                                        class="mr-2 text-current icon-size-4">
+                                    </mat-icon>
+                                    {{ clinica.name }}
+                                </div>
+                            </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+
+                    <!-- Current clinic info -->
+                    <div *ngIf="roleService.getSelectedClinica()" class="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <div class="flex items-center text-sm">
+                            <mat-icon 
+                                [svgIcon]="'heroicons_outline:building-office'" 
+                                class="mr-2 text-primary icon-size-4">
+                            </mat-icon>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-medium truncate">{{ getSelectedClinicName() }}</div>
+                                <div class="text-xs text-secondary">Rol: {{ roleService.getCurrentRole() | titlecase }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User info -->
+                <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center">
+                        <!-- Simple avatar with initials -->
+                        <div class="w-10 h-10 bg-primary text-primary-contrast rounded-full flex items-center justify-center text-sm font-medium">
+                            {{ getCurrentUserInitials() }}
+                        </div>
+                        <div class="ml-3 flex-1 min-w-0">
+                            <div class="text-sm font-medium truncate">{{ getCurrentUserName() }}</div>
+                            <div class="text-xs text-secondary">{{ roleService.getCurrentRole() | titlecase }}</div>
+                        </div>
+                    </div>
+                </div>
+
+            </ng-container>
+
+        </fuse-vertical-navigation>
+
+        <!-- Main content -->
+        <div class="flex flex-col flex-1 overflow-hidden">
+            
+            <!-- Router outlet -->
+            <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6">
+                <router-outlet></router-outlet>
+            </div>
+
+            <!-- Footer -->
+            <div class="flex-0 px-6 py-3 border-t bg-card dark:bg-gray-900 print:hidden">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-secondary">
+                        Fuse &copy; {{ currentYear }}
+                    </div>
+                    <div class="text-sm text-secondary">
+                        <button mat-button (click)="debugLayout()" class="text-xs">
+                            Debug Layout
+                        </button>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
     </div>
 
 </div>
+
+<!-- Menus -->
+<!-- Shortcuts menu -->
+<mat-menu #shortcutsMenu="matMenu">
+    <button mat-menu-item>
+        <mat-icon [svgIcon]="'heroicons_outline:home'"></mat-icon>
+        <span>Inicio</span>
+    </button>
+    <button mat-menu-item>
+        <mat-icon [svgIcon]="'heroicons_outline:user-group'"></mat-icon>
+        <span>Pacientes</span>
+    </button>
+    <button mat-menu-item>
+        <mat-icon [svgIcon]="'heroicons_outline:calendar'"></mat-icon>
+        <span>Calendario</span>
+    </button>
+</mat-menu>
+
+<!-- Messages menu -->
+<mat-menu #messagesMenu="matMenu">
+    <button mat-menu-item>
+        <span>No hay mensajes nuevos</span>
+    </button>
+</mat-menu>
+
+<!-- Notifications menu -->
+<mat-menu #notificationsMenu="matMenu">
+    <button mat-menu-item>
+        <span>No hay notificaciones</span>
+    </button>
+</mat-menu>
+
+<!-- User menu -->
+<mat-menu #userMenu="matMenu">
+    <button mat-menu-item>
+        <mat-icon [svgIcon]="'heroicons_outline:user'"></mat-icon>
+        <span>Mi Perfil</span>
+    </button>
+    <button mat-menu-item>
+        <mat-icon [svgIcon]="'heroicons_outline:cog-6-tooth'"></mat-icon>
+        <span>Configuración</span>
+    </button>
+    <mat-divider></mat-divider>
+    <button mat-menu-item (click)="signOut()">
+        <mat-icon [svgIcon]="'heroicons_outline:arrow-right-on-rectangle'"></mat-icon>
+        <span>Cerrar Sesión</span>
+    </button>
+</mat-menu>
 

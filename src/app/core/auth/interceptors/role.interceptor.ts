@@ -1,197 +1,268 @@
-import { HttpInterceptorFn, HttpResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { of } from 'rxjs';
-import { RoleService } from 'app/core/services/role.service';
-import { compactNavigation, defaultNavigation, futuristicNavigation, horizontalNavigation } from 'app/mock-api/common/navigation/data';
+import { HttpInterceptorFn, HttpRequest, HttpResponse } from '@angular/common/http';
+import { RoleService } from '../../services/role.service';
+import { Observable, of } from 'rxjs';
 
-/**
- * 🛡️ Interceptor de Roles con Mock de Rutas Fuse
- * 
- * Maneja tanto headers de roles como mocks para rutas que Fuse espera
- */
+// Functional interceptor for Angular 17+
+export const roleInterceptor: HttpInterceptorFn = (req, next) => {
+    const roleService = inject(RoleService);
+    
+    // Obtener datos actuales del RoleService de forma segura
+    const currentRole = roleService.getCurrentRole();
+    const currentUser = roleService.getCurrentUser();
+    const currentClinica = roleService.getSelectedClinica();
 
-/**
- * 🎭 Rutas de Fuse que necesitan mock
- */
-const FUSE_MOCK_ROUTES = {
-    '/api/common/navigation': {
-        compact: compactNavigation,
-        default: defaultNavigation,
-        futuristic: futuristicNavigation,
-        horizontal: horizontalNavigation,
-    },
-    '/api/common/messages': [],
-    '/api/common/notifications': [],
-    '/api/apps/chat/chats': [],
-    '/api/common/shortcuts': []
+    // Preparar headers seguros
+    const headersToAdd: any = {};
+    let headersCount = 0;
+
+    // Solo agregar headers con valores válidos
+    if (currentRole && currentRole !== 'null' && currentRole !== 'undefined' && currentRole.trim() !== '') {
+        headersToAdd['role'] = currentRole;
+        headersCount++;
+    } else {
+        headersToAdd['role'] = 'no-role';
+        headersCount++;
+    }
+
+    if (currentUser?.id_usuario) {
+        headersToAdd['userId'] = currentUser.id_usuario.toString();
+        headersCount++;
+    } else {
+        // Fallback: intentar obtener userId del token
+        const userId = getUserIdFromToken();
+        if (userId) {
+            headersToAdd['userId'] = userId.toString();
+            headersCount++;
+        } else {
+            headersToAdd['userId'] = 'no-user';
+            headersCount++;
+        }
+    }
+
+    if (currentClinica?.id) {
+        headersToAdd['clinicId'] = currentClinica.id.toString();
+        headersCount++;
+    } else {
+        headersToAdd['clinicId'] = 'no-clinic';
+        headersCount++;
+    }
+
+    console.log('🔍 [RoleInterceptor] Headers agregados:', {
+        role: headersToAdd['role'],
+        userId: headersToAdd['userId'],
+        clinicId: headersToAdd['clinicId'],
+        headersCount
+    });
+
+    // Crear nueva request con headers
+    const modifiedReq = req.clone({
+        setHeaders: headersToAdd
+    });
+
+    // Manejar peticiones específicas
+    return handleSpecificRequests(modifiedReq, next);
 };
 
-/**
- * 🚫 Dominios externos a excluir
- */
-const EXCLUDED_DOMAINS = [
-    'graph.facebook.com',
-    'www.facebook.com',
-    'facebook.com',
-    'connect.facebook.net',
-    'accounts.google.com',
-    'oauth2.googleapis.com',
-    'www.googleapis.com'
-];
+function handleSpecificRequests(req: HttpRequest<any>, next: any): Observable<any> {
+    const url = req.url;
 
-/**
- * ✅ URLs internas que SÍ deben incluir headers de roles
- */
-const INTERNAL_API_PATTERNS = [
-    '/api/auth/sign-in',
-    '/api/users/',
-    '/api/userclinicas/',
-    '/api/clinicas/',
-    '/api/pacientes/',
-    '/api/servicios/',
-    '/api/facturas/',
-    '/api/reportes/',
-    '/api/configuracion/'
-];
-
-/**
- * 🔍 Función para determinar el tipo de petición
- */
-function getRequestType(url: string): 'fuse-mock' | 'internal-api' | 'external' | 'ignore' {
-    try {
-        // ✅ Verificar si es una ruta Fuse que necesita mock
-        if (Object.keys(FUSE_MOCK_ROUTES).some(route => url.includes(route))) {
-            return 'fuse-mock';
-        }
-
-        // ❌ Excluir dominios externos
-        const urlObj = new URL(url);
-        if (EXCLUDED_DOMAINS.some(domain => urlObj.hostname.includes(domain))) {
-            return 'external';
-        }
-
-        // ✅ Verificar si es API interna
-        if (INTERNAL_API_PATTERNS.some(pattern => url.includes(pattern))) {
-            return 'internal-api';
-        }
-
-        return 'ignore';
-    } catch (error) {
-        // Si no se puede parsear la URL, verificar patrones
-        if (Object.keys(FUSE_MOCK_ROUTES).some(route => url.includes(route))) {
-            return 'fuse-mock';
-        }
-        if (INTERNAL_API_PATTERNS.some(pattern => url.includes(pattern))) {
-            return 'internal-api';
-        }
-        return 'ignore';
+    // Mock de navegación con rutas SEGURAS de Fuse (que existen)
+    if (url.includes('/api/common/navigation')) {
+        console.log('🔍 [RoleInterceptor] Procesando petición de navegación');
+        const navigationData = createSafeNavigation();
+        console.log('✅ [RoleInterceptor] Navegación segura creada:', {
+            totalItems: navigationData.default?.length || 0,
+            groupsWithChildren: navigationData.default?.filter(item => item.children?.length > 0).length || 0
+        });
+        return of(new HttpResponse({
+            status: 200,
+            body: navigationData
+        }));
     }
+
+    // Mock de mensajes
+    if (url.includes('/api/common/messages')) {
+        console.log('🔍 [RoleInterceptor] Mock de mensajes');
+        return of(new HttpResponse({
+            status: 200,
+            body: []
+        }));
+    }
+
+    // Mock de notificaciones
+    if (url.includes('/api/common/notifications')) {
+        console.log('🔍 [RoleInterceptor] Mock de notificaciones');
+        return of(new HttpResponse({
+            status: 200,
+            body: []
+        }));
+    }
+
+    // Mock de chat
+    if (url.includes('/api/apps/chat/chats')) {
+        console.log('🔍 [RoleInterceptor] Mock de chat/chats');
+        return of(new HttpResponse({
+            status: 200,
+            body: []
+        }));
+    }
+
+    // Mock de shortcuts
+    if (url.includes('/api/common/shortcuts')) {
+        console.log('🔍 [RoleInterceptor] Mock de shortcuts');
+        return of(new HttpResponse({
+            status: 200,
+            body: []
+        }));
+    }
+
+    // Continuar con la petición normal
+    return next(req);
 }
 
-/**
- * 🛡️ Interceptor principal
- */
-export const roleInterceptor: HttpInterceptorFn = (req, next) => {
-    const requestType = getRequestType(req.url);
-
-    // 🎭 Manejar rutas Fuse con mock
-    if (requestType === 'fuse-mock') {
-        const mockRoute = Object.keys(FUSE_MOCK_ROUTES).find(route => req.url.includes(route));
-        if (mockRoute) {
-            console.log('🎭 [RoleInterceptor] Devolviendo mock para ruta Fuse:', req.url);
-
-            const mockData = FUSE_MOCK_ROUTES[mockRoute];
-            return of(new HttpResponse({
-                body: mockData,
-                status: 200,
-                statusText: 'OK'
-            }));
-        }
-    }
-
-    // 🚫 Ignorar peticiones externas
-    if (requestType === 'external' || requestType === 'ignore') {
-        return next(req);
-    }
-
-    // ✅ Manejar APIs internas con headers de roles
-    if (requestType === 'internal-api') {
-        console.log('✅ [RoleInterceptor] Procesando API interna:', req.url);
-
-        try {
-            // 🔧 VERIFICACIÓN DEFENSIVA MEJORADA: Inyectar y verificar RoleService
-            const roleService = inject(RoleService);
-            
-            // ✅ VERIFICACIÓN ROBUSTA: Múltiples checks
-            if (!roleService) {
-                console.warn('⚠️ [RoleInterceptor] RoleService no disponible');
-                return next(req);
-            }
-            
-            if (typeof roleService.getCurrentUser !== 'function') {
-                console.warn('⚠️ [RoleInterceptor] Método getCurrentUser no disponible');
-                return next(req);
-            }
-
-            // 🔧 Preparar headers de roles
-            const roleHeaders: { [key: string]: string } = {
-                'X-Role-Timestamp': new Date().toISOString()
-            };
-
-            // 👤 Obtener información del usuario actual con try/catch adicional
-            let currentUser = null;
-            try {
-                currentUser = roleService.getCurrentUser();
-            } catch (methodError) {
-                console.warn('⚠️ [RoleInterceptor] Error ejecutando getCurrentUser:', methodError);
-                currentUser = null;
-            }
-
-            if (currentUser && typeof currentUser === 'object') {
-                const user = currentUser as any;
-
-                roleHeaders['X-User-Id'] = user.id_usuario?.toString() || user.id?.toString() || 'unknown';
-                roleHeaders['X-Is-Admin'] = (user.isAdmin === true).toString();
-
-                // 🏥 Agregar información de clínica seleccionada con verificación
-                if (typeof roleService.getSelectedClinica === 'function') {
-                    try {
-                        const selectedClinica = roleService.getSelectedClinica();
-                        if (selectedClinica && typeof selectedClinica === 'object') {
-                            const clinica = selectedClinica as any;
-
-                            roleHeaders['X-Selected-Clinic'] = clinica.id?.toString() || clinica.id_clinica?.toString() || 'unknown';
-                            roleHeaders['X-User-Role'] = clinica.userRole || clinica.rol_clinica || 'unknown';
-
-                            if (clinica.userSubRole || clinica.subrol_clinica) {
-                                roleHeaders['X-User-SubRole'] = clinica.userSubRole || clinica.subrol_clinica;
-                            }
-                        }
-                    } catch (clinicaError) {
-                        console.warn('⚠️ [RoleInterceptor] Error obteniendo clínica seleccionada:', clinicaError);
+function createSafeNavigation(): any {
+    return {
+        default: [
+            {
+                id: 'panel',
+                title: 'Panel Principal',
+                type: 'basic',
+                icon: 'heroicons_outline:home',
+                link: '/dashboards/project'  // ✅ Ruta que existe en Fuse
+            },
+            {
+                id: 'reportes',
+                title: 'Reportes',
+                type: 'basic',
+                icon: 'heroicons_outline:chart-bar',
+                link: '/dashboards/analytics'  // ✅ Ruta que existe en Fuse
+            },
+            {
+                id: 'pacientes',
+                title: 'PACIENTES',
+                subtitle: 'Gestión de pacientes',
+                type: 'group',
+                icon: 'heroicons_outline:users',
+                children: [
+                    {
+                        id: 'pacientes.lista',
+                        title: 'Lista de Pacientes',
+                        type: 'basic',
+                        icon: 'heroicons_outline:user-group',
+                        link: '/apps/academy'  // ✅ Ruta que existe en Fuse
+                    },
+                    {
+                        id: 'pacientes.nuevo',
+                        title: 'Nuevo Paciente',
+                        type: 'basic',
+                        icon: 'heroicons_outline:user-plus',
+                        link: '/apps/contacts'  // ✅ Ruta que existe en Fuse
                     }
-                }
-            } else {
-                roleHeaders['X-User-Id'] = 'anonymous';
-                roleHeaders['X-Is-Admin'] = 'false';
+                ]
+            },
+            {
+                id: 'citas',
+                title: 'CITAS',
+                subtitle: 'Gestión de citas médicas',
+                type: 'group',
+                icon: 'heroicons_outline:calendar',
+                children: [
+                    {
+                        id: 'citas.calendario',
+                        title: 'Calendario de Citas',
+                        type: 'basic',
+                        icon: 'heroicons_outline:calendar-days',
+                        link: '/apps/calendar'  // ✅ Ruta que existe en Fuse
+                    },
+                    {
+                        id: 'citas.programar',
+                        title: 'Programar Cita',
+                        type: 'basic',
+                        icon: 'heroicons_outline:plus-circle',
+                        link: '/pages/activities'  // ✅ Ruta que existe en Fuse
+                    }
+                ]
+            },
+            {
+                id: 'clinica',
+                title: 'CLÍNICA',
+                subtitle: 'Administración de clínica',
+                type: 'group',
+                icon: 'heroicons_outline:building-office',
+                children: [
+                    {
+                        id: 'clinica.configuracion',
+                        title: 'Configuración',
+                        type: 'basic',
+                        icon: 'heroicons_outline:cog-6-tooth',
+                        link: '/pages/settings'  // ✅ Ruta que existe en Fuse
+                    },
+                    {
+                        id: 'clinica.personal',
+                        title: 'Personal',
+                        type: 'basic',
+                        icon: 'heroicons_outline:user-group',
+                        link: '/apps/help-center'  // ✅ Ruta que existe en Fuse
+                    }
+                ]
+            },
+            {
+                id: 'marketing',
+                title: 'MARKETING',
+                subtitle: 'Campañas y herramientas',
+                type: 'group',
+                icon: 'heroicons_outline:megaphone',
+                children: [
+                    {
+                        id: 'marketing.campanas',
+                        title: 'Campañas',
+                        type: 'basic',
+                        icon: 'heroicons_outline:speaker-wave',
+                        link: '/apps/mailbox'  // ✅ Ruta que existe en Fuse
+                    },
+                    {
+                        id: 'marketing.contactos',
+                        title: 'Contactos',
+                        type: 'basic',
+                        icon: 'heroicons_outline:address-book',
+                        link: '/apps/contacts'  // ✅ Ruta que existe en Fuse
+                    }
+                ]
+            },
+            {
+                id: 'ventas',
+                title: 'VENTAS',
+                subtitle: 'Gestión comercial',
+                type: 'group',
+                icon: 'heroicons_outline:banknotes',
+                children: [
+                    {
+                        id: 'ventas.dashboard',
+                        title: 'Dashboard Ventas',
+                        type: 'basic',
+                        icon: 'heroicons_outline:chart-pie',
+                        link: '/dashboards/finance'  // ✅ Ruta que existe en Fuse
+                    }
+                ]
             }
+        ],
+        compact: [],
+        futuristic: [],
+        horizontal: []
+    };
+}
 
-            // 🔧 Crear nueva petición con headers
-            const modifiedReq = req.clone({
-                setHeaders: roleHeaders
-            });
-
-            console.log('🔐 [RoleInterceptor] Headers agregados a:', req.url, roleHeaders);
-
-            return next(modifiedReq);
-
-        } catch (error) {
-            console.error('❌ [RoleInterceptor] Error procesando headers:', error);
-            return next(req);
+function getUserIdFromToken(): number | null {
+    try {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return payload.sub || payload.userId || payload.id || null;
         }
+    } catch (error) {
+        console.warn('⚠️ [RoleInterceptor] Error al extraer userId del token:', error);
     }
-
-    // 🚀 Para otros casos, continuar sin modificaciones
-    return next(req);
-};
+    return null;
+}
 

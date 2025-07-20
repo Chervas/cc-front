@@ -1,82 +1,129 @@
 import { NgIf, NgFor, TitleCasePipe, AsyncPipe } from '@angular/common';
 import { Component, OnDestroy, OnInit, ViewEncapsulation } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
-import { MatOptionModule } from '@angular/material/core';
-import { FuseNavigationService, FuseVerticalNavigationComponent } from '@fuse/components/navigation';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
+import { Router, RouterOutlet } from '@angular/router';
+import { Subject, takeUntil, combineLatest, filter, tap, Observable } from 'rxjs';
 import { FuseLoadingBarComponent } from '@fuse/components/loading-bar';
-import { FuseFullscreenComponent } from '@fuse/components/fullscreen';
-import { NavigationService } from 'app/core/navigation/navigation.service';
-import { Navigation } from 'app/core/navigation/navigation.types';
-import { LanguagesComponent } from 'app/layout/common/languages/languages.component';
-import { MessagesComponent } from 'app/layout/common/messages/messages.component';
-import { NotificationsComponent } from 'app/layout/common/notifications/notifications.component';
-import { QuickChatComponent } from 'app/layout/common/quick-chat/quick-chat.component';
-import { SearchComponent } from 'app/layout/common/search/search.component';
-import { ShortcutsComponent } from 'app/layout/common/shortcuts/shortcuts.component';
-import { UserComponent } from 'app/layout/common/user/user.component';
+import { FuseVerticalNavigationComponent } from '@fuse/components/navigation/vertical/vertical.component';
+import { FuseNavigationService } from '@fuse/components/navigation/navigation.service';
 import { FuseMediaWatcherService } from '@fuse/services/media-watcher';
-import { Subject, takeUntil, Observable, BehaviorSubject, combineLatest } from 'rxjs';
-import { RoleService, UsuarioClinicaResponse } from 'app/core/services/role.service';
-import { filter } from 'rxjs/operators';
+import { FuseFullscreenComponent } from '@fuse/components/fullscreen';
+import { Navigation } from 'app/core/navigation/navigation.types';
+import { NavigationService } from 'app/core/navigation/navigation.service';
+import { RoleService, UsuarioClinicaResponse, Usuario } from 'app/core/services/role.service';
+import { AuthService } from 'app/core/auth/auth.service';
 
 @Component({
     selector: 'thin-layout',
     templateUrl: './thin.component.html',
     encapsulation: ViewEncapsulation.None,
-    standalone: true,
     imports: [
         NgIf, NgFor, TitleCasePipe, AsyncPipe, RouterOutlet,
-        MatButtonModule, MatIconModule, MatFormFieldModule, MatSelectModule, MatOptionModule,
-        FuseLoadingBarComponent, FuseVerticalNavigationComponent, FuseFullscreenComponent,
-        LanguagesComponent, MessagesComponent, NotificationsComponent, QuickChatComponent,
-        SearchComponent, ShortcutsComponent, UserComponent
-    ]
+        MatButtonModule, MatIconModule, MatMenuModule, MatSelectModule,
+        MatFormFieldModule, MatTooltipModule, MatDividerModule,
+        FuseLoadingBarComponent, FuseVerticalNavigationComponent,
+        FuseFullscreenComponent
+    ],
+    standalone: true
 })
 export class ThinLayoutComponent implements OnInit, OnDestroy {
-    isScreenSmall: boolean;
-    navigation: Navigation;
-
-    // Propiedades para el sistema de roles
-    selectedClinic: UsuarioClinicaResponse | null = null;
-    clinicsGrouped: { [group: string]: UsuarioClinicaResponse[] } = {};
-    
-    // ✅ CORREGIDO: Usar Observable de clínicas en lugar de availableRoles$
-    availableRoles$: Observable<UsuarioClinicaResponse[]>;
-    selectedRole$: BehaviorSubject<string> = new BehaviorSubject<string>('');
-    currentUser: any = null;
-
-    // ✅ NUEVA PROPIEDAD: Estado de carga
-    isDataLoaded: boolean = false;
+    isScreenSmall: boolean = false;
+    navigation: any[] = [];
+    currentUser: Usuario | null = null;
+    availableClinicas: UsuarioClinicaResponse[] = [];
+    availableRoles: string[] = [];
+    currentYear: number = new Date().getFullYear();
 
     private _unsubscribeAll: Subject<any> = new Subject<any>();
 
     constructor(
-        private _fuseMediaWatcherService: FuseMediaWatcherService,
-        private _fuseNavigationService: FuseNavigationService,
+        private _router: Router,
         private _navigationService: NavigationService,
-        private roleService: RoleService
+        private _fuseNavigationService: FuseNavigationService,
+        private _fuseMediaWatcherService: FuseMediaWatcherService,
+        public roleService: RoleService,
+        private _authService: AuthService
     ) {
-        // ✅ CORREGIDO: Usar clinicas$ en lugar de availableRoles$
-        this.availableRoles$ = this.roleService.clinicas$;
+        console.log('🚀 [ThinLayout] Constructor iniciado');
     }
 
     ngOnInit(): void {
+        console.log('🚀 [ThinLayout] Iniciando componente funcional');
+
         // Subscribe to media changes
         this._fuseMediaWatcherService.onMediaChange$
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe(({ matchingAliases }) => {
                 this.isScreenSmall = !matchingAliases.includes('md');
+                console.log('📱 [ThinLayout] Media change:', { isScreenSmall: this.isScreenSmall, aliases: matchingAliases });
             });
 
-        // ✅ CORREGIDO: Inicializar navegación sin métodos inexistentes
-        this.initializeNavigation();
+        // Subscribe to navigation data
+        this._navigationService.navigation$
+            .pipe(
+                takeUntil(this._unsubscribeAll),
+                tap(navigation => console.log('🧭 [ThinLayout] Navegación recibida:', { type: Array.isArray(navigation) ? 'Array' : typeof navigation, count: Array.isArray(navigation) ? navigation.length : 'N/A' }))
+            )
+            .subscribe((navigation: Navigation) => {
+                try {
+                    if (Array.isArray(navigation)) {
+                        this.navigation = navigation;
+                        console.log('✅ [ThinLayout] Navegación establecida:', { count: navigation.length, items: navigation.map(n => n.title || n.id) });
+                    } else if (navigation && navigation.default) {
+                        this.navigation = navigation.default;
+                        console.log('✅ [ThinLayout] Navegación establecida (default):', { count: navigation.default.length });
+                    } else {
+                        this.navigation = [];
+                        console.warn('⚠️ [ThinLayout] Navegación no válida:', navigation);
+                    }
+                } catch (error) {
+                    console.error('❌ [ThinLayout] Error procesando navegación:', error);
+                    this.navigation = [];
+                }
+            });
 
-        // 🚀 NUEVO: Cargar datos con timing correcto usando combineLatest
-        this.loadDataWithCorrectTiming();
+        // Subscribe to current user changes
+        this.roleService.currentUser$
+            .pipe(
+                takeUntil(this._unsubscribeAll),
+                tap(user => console.log('👤 [ThinLayout] Usuario actualizado:', user ? `${user.nombre || ''} ${user.apellidos || ''}`.trim() || user.email_usuario : 'null'))
+            )
+            .subscribe(user => {
+                this.currentUser = user;
+            });
+
+        // Subscribe to clinicas changes
+        this.roleService.clinicas$
+            .pipe(
+                takeUntil(this._unsubscribeAll),
+                tap(clinicas => console.log('🏥 [ThinLayout] Clínicas recibidas:', { count: Array.isArray(clinicas) ? clinicas.length : 0 }))
+            )
+            .subscribe(clinicas => {
+                try {
+                    if (Array.isArray(clinicas)) {
+                        this.availableClinicas = clinicas;
+                        // Extraer roles únicos de las clínicas
+                        this.availableRoles = [...new Set(clinicas.map(c => c.userRole))];
+                        console.log('🏥 [ThinLayout] Clínicas y roles actualizados:', { 
+                            clinicas: clinicas.length, 
+                            roles: this.availableRoles 
+                        });
+                    } else {
+                        this.availableClinicas = [];
+                        this.availableRoles = [];
+                    }
+                } catch (error) {
+                    console.error('❌ [ThinLayout] Error procesando clínicas:', error);
+                    this.availableClinicas = [];
+                    this.availableRoles = [];
+                }
+            });
     }
 
     ngOnDestroy(): void {
@@ -84,259 +131,182 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
         this._unsubscribeAll.complete();
     }
 
-    // ✅ CORREGIDO: Inicialización de navegación simplificada
-    private initializeNavigation(): void {
-        // Usar estructura de navegación vacía para evitar errores antes de cargar
-        this.navigation = {compact: [], default: [], futuristic: [], horizontal: []};
-        console.log('📋 [ThinLayout] Navegación inicializada');
-    }
+    // **************************************************
+    // Public methods
+    // **************************************************
 
-    // 🚀 NUEVO: Método que garantiza timing correcto
-    private loadDataWithCorrectTiming(): void {
-        console.log('⏳ [ThinLayout] Esperando datos completos...');
-        
-        combineLatest([
-            this.roleService.currentUser$,
-            this.roleService.clinicas$  // ✅ CORREGIDO: Usar clinicas$ en lugar de availableRoles$
-        ]).pipe(
-            takeUntil(this._unsubscribeAll),
-            // ✅ FILTRO: Solo proceder cuando ambos datos estén disponibles
-            filter(([user, clinicas]) => {
-                const hasUser = user !== null;
-                const hasClinics = Array.isArray(clinicas) && clinicas.length > 0;
-                
-                if (!hasUser) {
-                    console.log('⏳ [ThinLayout] Esperando usuario...');
-                }
-                if (!hasClinics) {
-                    console.log('⏳ [ThinLayout] Esperando clínicas...');
-                }
-                
-                return hasUser && hasClinics;
-            })
-        ).subscribe(([user, clinicas]) => {
-            // ✅ DATOS COMPLETOS: Procesar todo junto
-            this.currentUser = user;
-            
-            // ✅ CORREGIDO: Verificar que clinicas no sea undefined
-            if (clinicas && Array.isArray(clinicas)) {
-                this.groupClinicsByRole(clinicas);
-            }
-            
-            this.isDataLoaded = true;
-            
-            console.log('✅ [ThinLayout] Datos completos cargados:');
-            console.log('👤 [ThinLayout] Usuario:', user);
-            console.log('🏥 [ThinLayout] Clínicas agrupadas:', this.clinicsGrouped);
-        });
-    }
-
-    // ✅ CORREGIDO: Toggle de navegación con tipos explícitos
-    toggleNavigation(name: string): void {
+    /**
+     * Toggle navigation
+     */
+    toggleNavigation(): void {
         try {
-            // ✅ TIPADO EXPLÍCITO para evitar error unknown
-            const navigationComponent: any = this._fuseNavigationService.getComponent(name);
-            
-            if (navigationComponent) {
+            const navigationComponent = this._fuseNavigationService.getComponent<FuseVerticalNavigationComponent>('mainNavigation');
+            if (navigationComponent && typeof navigationComponent.toggle === 'function') {
                 navigationComponent.toggle();
+                console.log('🔄 [ThinLayout] Navegación toggled');
             } else {
-                console.warn('⚠️ [ThinLayout] Componente de navegación no encontrado:', name);
+                console.warn('⚠️ [ThinLayout] No se pudo toggle la navegación');
             }
         } catch (error) {
-            console.warn('⚠️ [ThinLayout] Error en toggleNavigation:', error);
+            console.error('❌ [ThinLayout] Error en toggle navegación:', error);
         }
     }
 
-    private groupClinicsByRole(clinicas: UsuarioClinicaResponse[]): void {
-        this.clinicsGrouped = clinicas.reduce((groups, clinica) => {
-            const roleName = clinica.userRole || 'Sin rol';
-            if (!groups[roleName]) {
-                groups[roleName] = [];
+    /**
+     * Get current user name
+     */
+    getCurrentUserName(): string {
+        try {
+            if (this.currentUser) {
+                const fullName = `${this.currentUser.nombre || ''} ${this.currentUser.apellidos || ''}`.trim();
+                return fullName || this.currentUser.email_usuario || 'Usuario';
             }
-            groups[roleName].push(clinica);
-            return groups;
-        }, {} as { [group: string]: UsuarioClinicaResponse[] });
-    }
-
-    // ✅ CORREGIDO: Usar setClinica en lugar de selectClinica
-    onClinicSelected(clinica: UsuarioClinicaResponse): void {
-        try {
-            this.roleService.setClinica(clinica);  // ✅ CORREGIDO: setClinica existe
-            this.selectedClinic = clinica;
-            console.log('🏥 [ThinLayout] Clínica seleccionada:', clinica.name || clinica.description);
+            return 'Usuario';
         } catch (error) {
-            console.warn('⚠️ [ThinLayout] Error seleccionando clínica:', error);
-        }
-    }
-
-    // ✅ CORREGIDO: Usar setRole en lugar de selectRole
-    onRoleSelected(role: string): void {
-        try {
-            this.roleService.setRole(role);  // ✅ CORREGIDO: setRole existe
-            this.selectedRole$.next(role);
-            console.log('🎭 [ThinLayout] Rol seleccionado:', role);
-        } catch (error) {
-            console.warn('⚠️ [ThinLayout] Error seleccionando rol:', error);
-        }
-    }
-
-    // ✅ CORREGIDO: Obtener roles disponibles usando getAvailableRoles()
-    getAvailableRoles(): string[] {
-        try {
-            // ✅ USAR MÉTODO QUE EXISTE: getAvailableRoles()
-            return this.roleService.getAvailableRoles();
-        } catch (error) {
-            console.warn('⚠️ [ThinLayout] Error obteniendo roles:', error);
-            return [];
-        }
-    }
-
-    // ✅ CORREGIDO: Obtener clínicas por rol usando método del RoleService
-    getClinicsByRole(role: string): UsuarioClinicaResponse[] {
-        try {
-            // ✅ USAR MÉTODO QUE EXISTE: getClinicasByRole()
-            return this.roleService.getClinicasByRole(role);
-        } catch (error) {
-            console.warn('⚠️ [ThinLayout] Error obteniendo clínicas por rol:', error);
-            return [];
-        }
-    }
-
-    // ✅ CORREGIDO: Verificar si el usuario tiene un rol específico usando RoleService
-    hasRole(role: string): boolean {
-        try {
-            // ✅ USAR MÉTODO QUE EXISTE: hasRole()
-            return this.roleService.hasRole(role);
-        } catch (error) {
-            console.warn('⚠️ [ThinLayout] Error verificando rol:', error);
-            return false;
-        }
-    }
-
-    // ✅ CORREGIDO: Obtener el rol actual usando RoleService
-    getCurrentRole(): string {
-        try {
-            // ✅ USAR MÉTODO QUE EXISTE: getCurrentRole()
-            return this.roleService.getCurrentRole() || '';
-        } catch (error) {
-            console.warn('⚠️ [ThinLayout] Error obteniendo rol actual:', error);
-            return '';
-        }
-    }
-
-    // ✅ CORREGIDO: Verificar si el usuario es administrador usando RoleService
-    isAdmin(): boolean {
-        try {
-            // ✅ USAR MÉTODO QUE EXISTE: isAdmin()
-            return this.roleService.isAdmin();
-        } catch (error) {
-            console.warn('⚠️ [ThinLayout] Error verificando admin:', error);
-            return false;
-        }
-    }
-
-    // ✅ CORREGIDO: Obtener información del usuario actual usando RoleService
-    getCurrentUser(): any {
-        try {
-            // ✅ USAR MÉTODO QUE EXISTE: getCurrentUser()
-            return this.roleService.getCurrentUser();
-        } catch (error) {
-            console.warn('⚠️ [ThinLayout] Error obteniendo usuario actual:', error);
-            return null;
-        }
-    }
-
-    // ✅ CORREGIDO: Obtener clínica seleccionada usando RoleService
-    getSelectedClinic(): UsuarioClinicaResponse | null {
-        try {
-            // ✅ USAR MÉTODO QUE EXISTE: getSelectedClinica()
-            return this.roleService.getSelectedClinica();
-        } catch (error) {
-            console.warn('⚠️ [ThinLayout] Error obteniendo clínica seleccionada:', error);
-            return null;
-        }
-    }
-
-    // ✅ CORREGIDO: Verificar si hay datos cargados
-    hasDataLoaded(): boolean {
-        return this.isDataLoaded;
-    }
-
-    // ✅ NUEVO: Verificar si hay roles disponibles (requerido por template)
-    hasAvailableRoles(): boolean {
-        try {
-            return this.getAvailableRoles().length > 0;
-        } catch (error) {
-            console.warn('⚠️ [ThinLayout] Error verificando roles disponibles:', error);
-            return false;
-        }
-    }
-
-    // ✅ NUEVO: Métodos requeridos por el template HTML
-    getCurrentUserInfo(): string {
-        try {
-            const user = this.getCurrentUser();
-            if (!user) return '';
-            return `${user.nombre || ''} ${user.apellidos || ''}`.trim() || 
-                   user.name || 
-                   'Usuario';
-        } catch (error) {
-            console.warn('⚠️ [ThinLayout] Error obteniendo info del usuario:', error);
+            console.error('❌ [ThinLayout] Error obteniendo nombre usuario:', error);
             return 'Usuario';
         }
     }
 
-    getSelectedClinicaInfo(): string {
+    /**
+     * Get current user initials for avatar
+     */
+    getCurrentUserInitials(): string {
         try {
-            const clinica = this.getSelectedClinic();
-            if (!clinica) return '';
-            return clinica.name || 
-                   clinica.description || 
-                   'Clínica seleccionada';
+            if (this.currentUser) {
+                const nombre = this.currentUser.nombre || '';
+                const apellidos = this.currentUser.apellidos || '';
+                const email = this.currentUser.email_usuario || '';
+                
+                if (nombre && apellidos) {
+                    return `${nombre.charAt(0)}${apellidos.charAt(0)}`.toUpperCase();
+                } else if (nombre) {
+                    return nombre.substring(0, 2).toUpperCase();
+                } else if (email) {
+                    return email.substring(0, 2).toUpperCase();
+                }
+            }
+            return 'U';
         } catch (error) {
-            console.warn('⚠️ [ThinLayout] Error obteniendo info de clínica:', error);
-            return '';
+            console.error('❌ [ThinLayout] Error obteniendo iniciales usuario:', error);
+            return 'U';
         }
     }
 
-    hasSelectedClinica(): boolean {
+    /**
+     * Get available roles
+     */
+    getAvailableRoles(): string[] {
         try {
-            return this.getSelectedClinic() !== null;
+            console.log('🎭 [ThinLayout] Roles disponibles:', this.availableRoles);
+            return this.availableRoles;
         } catch (error) {
-            console.warn('⚠️ [ThinLayout] Error verificando clínica seleccionada:', error);
-            return false;
+            console.error('❌ [ThinLayout] Error obteniendo roles:', error);
+            return [];
         }
+    }
+
+    /**
+     * Handle role change
+     */
+    onRoleChange(newRole: string): void {
+        try {
+            console.log('🎭 [ThinLayout] Cambiando rol a:', newRole);
+            this.roleService.setRole(newRole);
+        } catch (error) {
+            console.error('❌ [ThinLayout] Error cambiando rol:', error);
+        }
+    }
+
+    /**
+     * Get clinics for current role
+     */
+    getClinicasForCurrentRole(): UsuarioClinicaResponse[] {
+        try {
+            const currentRole = this.roleService.getCurrentRole();
+            if (!currentRole) return [];
+            
+            const clinicas = this.availableClinicas.filter(c => c.userRole === currentRole);
+            console.log('🏥 [ThinLayout] Clínicas para rol actual:', { role: currentRole, count: clinicas.length });
+            return clinicas;
+        } catch (error) {
+            console.error('❌ [ThinLayout] Error obteniendo clínicas para rol:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Handle clinic change
+     */
+    onClinicChange(clinicId: number): void {
+        try {
+            console.log('🏥 [ThinLayout] Cambiando clínica a ID:', clinicId);
+            
+            const clinic = this.availableClinicas.find(c => c.id === clinicId);
+            if (clinic) {
+                this.roleService.setClinica(clinic);
+                console.log('✅ [ThinLayout] Clínica cambiada:', clinic.name);
+            } else {
+                console.warn('⚠️ [ThinLayout] Clínica no encontrada:', clinicId);
+            }
+        } catch (error) {
+            console.error('❌ [ThinLayout] Error cambiando clínica:', error);
+        }
+    }
+
+    /**
+     * Get selected clinic name
+     */
+    getSelectedClinicName(): string {
+        try {
+            const selectedClinica = this.roleService.getSelectedClinica();
+            return selectedClinica?.name || 'Sin clínica seleccionada';
+        } catch (error) {
+            console.error('❌ [ThinLayout] Error obteniendo nombre clínica:', error);
+            return 'Sin clínica seleccionada';
+        }
+    }
+
+    /**
+     * Get selected clinic ID
+     */
+    getSelectedClinicId(): number | null {
+        try {
+            const selectedClinica = this.roleService.getSelectedClinica();
+            return selectedClinica?.id || null;
+        } catch (error) {
+            console.error('❌ [ThinLayout] Error obteniendo ID clínica:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Sign out
+     */
+    signOut(): void {
+        try {
+            console.log('🚪 [ThinLayout] Cerrando sesión');
+            this._authService.signOut();
+            this._router.navigate(['/sign-in']);
+        } catch (error) {
+            console.error('❌ [ThinLayout] Error cerrando sesión:', error);
+        }
+    }
+
+    /**
+     * Debug layout state
+     */
+    debugLayout(): void {
+        console.log('🔍 [ThinLayout] Estado del layout:', {
+            isScreenSmall: this.isScreenSmall,
+            navigationCount: this.navigation.length,
+            currentUser: this.currentUser?.email_usuario,
+            availableClinicas: this.availableClinicas.length,
+            availableRoles: this.availableRoles,
+            currentRole: this.roleService.getCurrentRole(),
+            selectedClinic: this.getSelectedClinicName(),
+            currentYear: this.currentYear
+        });
     }
 }
-
-/**
- * 📋 ERRORES CORREGIDOS:
- * 
- * 1. ✅ ERROR: Property 'availableRoles$' does not exist
- *    SOLUCIÓN: Usar this.roleService.clinicas$ en lugar de availableRoles$
- * 
- * 2. ✅ ERROR: Property 'selectClinica' does not exist
- *    SOLUCIÓN: Usar this.roleService.setClinica() en lugar de selectClinica()
- * 
- * 3. ✅ ERROR: Property 'selectRole' does not exist
- *    SOLUCIÓN: Usar this.roleService.setRole() en lugar de selectRole()
- * 
- * 4. ✅ ERROR: Tuple type '[any]' of length '1' has no element
- *    SOLUCIÓN: Usar destructuring correcto en combineLatest
- * 
- * 5. ✅ ERROR: 'clinicas' is possibly 'undefined'
- *    SOLUCIÓN: Agregar verificación de undefined antes de usar clinicas
- * 
- * 6. ✅ MEJORAS ADICIONALES:
- *    - Usar métodos del RoleService en lugar de lógica local
- *    - Manejo de errores mejorado con try-catch
- *    - Logs más informativos
- *    - Compatibilidad total con la nueva implementación del RoleService
- * 
- * 📊 RESULTADO:
- * - ✅ Compilación sin errores
- * - ✅ Funcionalidad mantenida
- * - ✅ Compatible con RoleService actualizado
- * - ✅ Manejo de errores robusto
- */
 
