@@ -16,6 +16,18 @@
 - **Backend**: https://github.com/Chervas/cc-back
 - **Demo**: https://github.com/Chervas/cc-demo
 
+## Main Navigation
+
+The application provides several main routes that can be accessed from the side menu:
+
+- **Usuarios** – `/apps/contacts`
+- **Clínicas** – `/apps/clinicas`
+- **Pacientes** – `/pacientes`
+- **Contabilidad** – `/apps/ventas/*` (services, invoices, etc.)
+- **Marketing** – `/marketing`
+
+These entries are configured in `src/app/mock-api/common/navigation/data.ts` and dynamically loaded by the `RoleInterceptor`.
+
 ### **TECNOLOGÍAS PRINCIPALES**
 - **Frontend**: Angular 19, Fuse UI, TypeScript, RxJS, Transloco
 - **Backend**: Node.js, Express, Sequelize ORM

@@ -13,6 +13,7 @@ import { FuseMediaWatcherService } from '@fuse/services/media-watcher';
 import { NavigationService } from 'app/core/navigation/navigation.service';
 import { RoleService, UsuarioClinicaResponse, Usuario } from 'app/core/services/role.service';
 import { AuthService } from 'app/core/auth/auth.service';
+import { environment } from 'environments/environment';
 import { LanguagesComponent } from 'app/layout/common/languages/languages.component';
 import { MessagesComponent } from 'app/layout/common/messages/messages.component';
 import { NotificationsComponent } from 'app/layout/common/notifications/notifications.component';
@@ -71,7 +72,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
         private _authService: AuthService,
     )
     {
-        console.log('🎨 [ClassyLayout] Inicializando layout classy original...');
+         if (!environment.production) console.log('🎨 [ClassyLayout] Inicializando layout classy original...');
     }
 
     // -----------------------------------------------------------------------------------------------------
@@ -102,7 +103,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
             {
                 // Check if the screen is small
                 this.isScreenSmall = !matchingAliases.includes('md');
-                console.log('📱 [ClassyLayout] Screen small:', this.isScreenSmall);
+                if (!environment.production) console.log('📱 [ClassyLayout] Screen small:', this.isScreenSmall);
             });
 
         // Subscribe to navigation data
@@ -114,13 +115,13 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
                 if (navigation) {
                     this.navigation = (navigation as any)?.default || navigation || [];
                     const navArray = Array.isArray(this.navigation) ? this.navigation : [];
-                    console.log('🧭 [ClassyLayout] Navegación cargada:', {
+                    if (!environment.production) console.log('🧭 [ClassyLayout] Navegación cargada:', {
                         totalItems: navArray.length || 0,
                         groupsWithChildren: navArray.filter(item => item.children?.length > 0).length || 0
                     });
                 } else {
                     this.navigation = [];
-                    console.log('🧭 [ClassyLayout] Navegación vacía');
+                    if (!environment.production) console.log('🧭 [ClassyLayout] Navegación vacía');
                 }
             });
 
@@ -129,7 +130,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe((user) => {
                 this.user = user;
-                console.log('👤 [ClassyLayout] Usuario cargado:', user?.nombre || 'Sin usuario');
+                 if (!environment.production) console.log('👤 [ClassyLayout] Usuario cargado:', user?.nombre || 'Sin usuario');
             });
 
         // Subscribe to selected role
@@ -137,19 +138,19 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe((role) => {
                 this.selectedRole = role || '';
-                console.log('🎭 [ClassyLayout] Rol seleccionado:', role);
+                 if (!environment.production) console.log('🎭 [ClassyLayout] Rol seleccionado:', role);
             });
 
         // Get available roles
         this.availableRoles = this._roleService.getAvailableRoles() || [];
-        console.log('🎭 [ClassyLayout] Roles disponibles:', this.availableRoles);
+        if (!environment.production) console.log('🎭 [ClassyLayout] Roles disponibles:', this.availableRoles);
 
         // Subscribe to selected clinic
         this._roleService.selectedClinica$
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe((clinica) => {
                 this.selectedClinica = clinica;
-                console.log('🏥 [ClassyLayout] Clínica seleccionada:', clinica?.name);
+                 if (!environment.production) console.log('🏥 [ClassyLayout] Clínica seleccionada:', clinica?.name);
             });
 
         // Subscribe to clinics list
@@ -157,7 +158,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe((clinicas) => {
                 this.clinicas = clinicas || [];
-                console.log('🏥 [ClassyLayout] Clínicas disponibles:', clinicas?.length || 0);
+                if (!environment.production) console.log('🏥 [ClassyLayout] Clínicas disponibles:', clinicas?.length || 0);
             });
     }
 
@@ -197,7 +198,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
      */
     onRoleChange(newRole: string): void
     {
-        console.log('🎭 [ClassyLayout] Cambiando rol a:', newRole);
+         if (!environment.production) console.log('🎭 [ClassyLayout] Cambiando rol a:', newRole);
         this._roleService.setRole(newRole);
     }
 
@@ -206,7 +207,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
      */
     onClinicChange(clinica: UsuarioClinicaResponse): void
     {
-        console.log('🏥 [ClassyLayout] Cambiando clínica a:', clinica?.name);
+        if (!environment.production) console.log('🏥 [ClassyLayout] Cambiando clínica a:', clinica?.name);
         this._roleService.setClinica(clinica);
     }
 

@@ -150,7 +150,7 @@ function createSafeNavigation(): any {
                         title: 'Lista de Pacientes',
                         type: 'basic',
                         icon: 'heroicons_outline:user-group',
-                        link: '/apps/academy'  // ✅ Ruta que existe en Fuse
+                        link: '/apps/pacientes'  // ✅ Ruta que existe en Fuse
                     },
                     {
                         id: 'pacientes.nuevo',
@@ -225,7 +225,7 @@ function createSafeNavigation(): any {
                         id: 'marketing.contactos',
                         title: 'Contactos',
                         type: 'basic',
-                        icon: 'heroicons_outline:address-book',
+                        icon: 'heroicons_outline:book-open',
                         link: '/apps/contacts'  // ✅ Ruta que existe en Fuse
                     }
                 ]
