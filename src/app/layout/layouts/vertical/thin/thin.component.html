@@ -9,7 +9,8 @@
         class="dark bg-gray-900"
         [mode]="isScreenSmall ? 'over' : 'side'"
         [name]="'mainNavigation'"
-        [navigation]="navigation">
+        [navigation]="navigation?.default"
+        [opened]="!isScreenSmall">
 
         <!-- Navigation header -->
         <div class="flex items-center px-8 py-6 border-b">
@@ -22,7 +23,7 @@
 
         <!-- Navigation content -->
         <div class="flex flex-col flex-auto p-6">
-            
+
             <!-- ✅ CLINIC SELECTOR COMPONENT EXISTENTE -->
             <div class="mb-6" *ngIf="hasAvailableRoles()">
                 <clinic-selector
@@ -32,7 +33,7 @@
                 </clinic-selector>
             </div>
 
-            <!-- ✅ INFORMACIÓN DEL USUARIO -->
+            <!-- ✅ INFORMACION DEL USUARIO -->
             <div class="mt-auto pt-6 border-t border-gray-700" *ngIf="currentUser">
                 <div class="text-xs text-gray-400 mb-1">Usuario Actual</div>
                 <div class="text-sm text-white">{{ getCurrentUserInfo() }}</div>
@@ -97,14 +98,8 @@
                 <!-- Notifications -->
                 <notifications></notifications>
 
-                <!-- Languages -->
-                <languages></languages>
-
-                <!-- Fullscreen -->
-                <fuse-fullscreen class="hidden md:block"></fuse-fullscreen>
-
-                <!-- User menu -->
-                <user class="ml-2"></user>
+                <!-- User -->
+                <user></user>
 
             </div>
 
@@ -116,9 +111,6 @@
         </div>
 
     </div>
-
-    <!-- Quick chat -->
-    <quick-chat></quick-chat>
 
 </div>
 

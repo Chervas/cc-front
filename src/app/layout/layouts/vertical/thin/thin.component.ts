@@ -9,6 +9,8 @@ import { MatOptionModule } from '@angular/material/core';
 import { FuseNavigationService, FuseVerticalNavigationComponent } from '@fuse/components/navigation';
 import { FuseLoadingBarComponent } from '@fuse/components/loading-bar';
 import { FuseFullscreenComponent } from '@fuse/components/fullscreen';
+import { NavigationService } from 'app/core/navigation/navigation.service';
+import { Navigation } from 'app/core/navigation/navigation.types';
 import { LanguagesComponent } from 'app/layout/common/languages/languages.component';
 import { MessagesComponent } from 'app/layout/common/messages/messages.component';
 import { NotificationsComponent } from 'app/layout/common/notifications/notifications.component';
@@ -36,7 +38,7 @@ import { filter } from 'rxjs/operators';
 })
 export class ThinLayoutComponent implements OnInit, OnDestroy {
     isScreenSmall: boolean;
-    navigation: any;
+    navigation: Navigation;
 
     // Propiedades para el sistema de roles
     selectedClinic: UsuarioClinicaResponse | null = null;
@@ -55,6 +57,7 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
     constructor(
         private _fuseMediaWatcherService: FuseMediaWatcherService,
         private _fuseNavigationService: FuseNavigationService,
+        private _navigationService: NavigationService,
         private roleService: RoleService
     ) {
         // ✅ CORREGIDO: Usar clinicas$ en lugar de availableRoles$
@@ -83,8 +86,8 @@ export class ThinLayoutComponent implements OnInit, OnDestroy {
 
     // ✅ CORREGIDO: Inicialización de navegación simplificada
     private initializeNavigation(): void {
-        // Usar navegación por defecto o vacía
-        this.navigation = [];
+        // Usar estructura de navegación vacía para evitar errores antes de cargar
+        this.navigation = {compact: [], default: [], futuristic: [], horizontal: []};
         console.log('📋 [ThinLayout] Navegación inicializada');
     }
 

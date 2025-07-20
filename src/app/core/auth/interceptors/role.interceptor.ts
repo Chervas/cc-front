@@ -2,6 +2,7 @@ import { HttpInterceptorFn, HttpResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { of } from 'rxjs';
 import { RoleService } from 'app/core/services/role.service';
+import { compactNavigation, defaultNavigation, futuristicNavigation, horizontalNavigation } from 'app/mock-api/common/navigation/data';
 
 /**
  * 🛡️ Interceptor de Roles con Mock de Rutas Fuse
@@ -13,29 +14,12 @@ import { RoleService } from 'app/core/services/role.service';
  * 🎭 Rutas de Fuse que necesitan mock
  */
 const FUSE_MOCK_ROUTES = {
-    '/api/common/navigation': [
-        {
-            id: 'dashboard',
-            title: 'Dashboard',
-            type: 'basic',
-            icon: 'heroicons_outline:home',
-            link: '/dashboard'
-        },
-        {
-            id: 'pacientes',
-            title: 'Pacientes',
-            type: 'basic',
-            icon: 'heroicons_outline:users',
-            link: '/apps/pacientes'
-        },
-        {
-            id: 'clinicas',
-            title: 'Clínicas',
-            type: 'basic',
-            icon: 'heroicons_outline:building-office',
-            link: '/apps/clinicas'
-        }
-    ],
+    '/api/common/navigation': {
+        compact: compactNavigation,
+        default: defaultNavigation,
+        futuristic: futuristicNavigation,
+        horizontal: horizontalNavigation,
+    },
     '/api/common/messages': [],
     '/api/common/notifications': [],
     '/api/apps/chat/chats': [],
