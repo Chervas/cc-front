@@ -139,7 +139,7 @@ export const appConfig: ApplicationConfig = {
                 services: [],
             },
             fuse: {
-                layout: 'thin', // ✅ Layout thin con sistema de roles
+                layout: 'classy', // ✅ Layout thin con sistema de roles
                 scheme: 'light',
                 screens: {
                     sm: '600px',

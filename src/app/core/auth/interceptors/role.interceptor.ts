@@ -1,22 +1,20 @@
+import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { HttpInterceptorFn, HttpRequest, HttpResponse } from '@angular/common/http';
+import { of } from 'rxjs';
 import { RoleService } from '../../services/role.service';
-import { Observable, of } from 'rxjs';
 
-// Functional interceptor for Angular 17+
 export const roleInterceptor: HttpInterceptorFn = (req, next) => {
     const roleService = inject(RoleService);
-    
-    // Obtener datos actuales del RoleService de forma segura
+
+    // Add role headers to requests
     const currentRole = roleService.getCurrentRole();
     const currentUser = roleService.getCurrentUser();
     const currentClinica = roleService.getSelectedClinica();
 
-    // Preparar headers seguros
-    const headersToAdd: any = {};
+    const headersToAdd: { [key: string]: string } = {};
     let headersCount = 0;
 
-    // Solo agregar headers con valores válidos
+    // Add role header if available
     if (currentRole && currentRole !== 'null' && currentRole !== 'undefined' && currentRole.trim() !== '') {
         headersToAdd['role'] = currentRole;
         headersCount++;
@@ -25,11 +23,12 @@ export const roleInterceptor: HttpInterceptorFn = (req, next) => {
         headersCount++;
     }
 
+    // Add user ID header if available
     if (currentUser?.id_usuario) {
         headersToAdd['userId'] = currentUser.id_usuario.toString();
         headersCount++;
     } else {
-        // Fallback: intentar obtener userId del token
+        // Fallback: try to get userId from token
         const userId = getUserIdFromToken();
         if (userId) {
             headersToAdd['userId'] = userId.toString();
@@ -40,6 +39,7 @@ export const roleInterceptor: HttpInterceptorFn = (req, next) => {
         }
     }
 
+    // Add clinic ID header if available
     if (currentClinica?.id) {
         headersToAdd['clinicId'] = currentClinica.id.toString();
         headersCount++;
@@ -55,214 +55,246 @@ export const roleInterceptor: HttpInterceptorFn = (req, next) => {
         headersCount
     });
 
-    // Crear nueva request con headers
+    // Clone request and add headers
     const modifiedReq = req.clone({
         setHeaders: headersToAdd
     });
 
-    // Manejar peticiones específicas
     return handleSpecificRequests(modifiedReq, next);
 };
 
-function handleSpecificRequests(req: HttpRequest<any>, next: any): Observable<any> {
+function handleSpecificRequests(req: any, next: any) {
     const url = req.url;
 
-    // Mock de navegación con rutas SEGURAS de Fuse (que existen)
+    // Handle navigation requests
     if (url.includes('/api/common/navigation')) {
         console.log('🔍 [RoleInterceptor] Procesando petición de navegación');
-        const navigationData = createSafeNavigation();
-        console.log('✅ [RoleInterceptor] Navegación segura creada:', {
-            totalItems: navigationData.default?.length || 0,
-            groupsWithChildren: navigationData.default?.filter(item => item.children?.length > 0).length || 0
+        
+        const mockNavigation = {
+            default: [
+                // PANEL PRINCIPAL
+                {
+                    id: 'panel',
+                    title: 'Panel Principal',
+                    type: 'basic',
+                    icon: 'heroicons_outline:home',
+                    link: '/example'
+                },
+                {
+                    id: 'reportes',
+                    title: 'Reportes',
+                    type: 'basic',
+                    icon: 'heroicons_outline:chart-bar',
+                    link: '/dashboards/analytics'
+                },
+
+                // PACIENTES
+                {
+                    id: 'pacientes',
+                    title: 'PACIENTES',
+                    subtitle: 'Gestión de pacientes',
+                    type: 'group',
+                    icon: 'heroicons_outline:users',
+                    children: [
+                        {
+                            id: 'pacientes.lista',
+                            title: 'Lista de Pacientes',
+                            type: 'basic',
+                            icon: 'heroicons_outline:user-group',
+                            link: '/apps/academy'
+                        },
+                        {
+                            id: 'pacientes.nuevo',
+                            title: 'Nuevo Paciente',
+                            type: 'basic',
+                            icon: 'heroicons_outline:user-plus',
+                            link: '/apps/contacts'
+                        }
+                    ]
+                },
+
+                // CITAS
+                {
+                    id: 'citas',
+                    title: 'CITAS',
+                    subtitle: 'Gestión de citas médicas',
+                    type: 'group',
+                    icon: 'heroicons_outline:calendar',
+                    children: [
+                        {
+                            id: 'citas.calendario',
+                            title: 'Calendario de Citas',
+                            type: 'basic',
+                            icon: 'heroicons_outline:calendar-days',
+                            link: '/apps/calendar'
+                        },
+                        {
+                            id: 'citas.programar',
+                            title: 'Programar Cita',
+                            type: 'basic',
+                            icon: 'heroicons_outline:plus-circle',
+                            link: '/apps/tasks'
+                        }
+                    ]
+                },
+
+                // CLÍNICA
+                {
+                    id: 'clinica',
+                    title: 'CLÍNICA',
+                    subtitle: 'Administración de clínica',
+                    type: 'group',
+                    icon: 'heroicons_outline:building-office',
+                    children: [
+                        {
+                            id: 'clinica.configuracion',
+                            title: 'Configuración',
+                            type: 'basic',
+                            icon: 'heroicons_outline:cog-6-tooth',
+                            link: '/pages/settings'
+                        },
+                        {
+                            id: 'clinica.personal',
+                            title: 'Personal',
+                            type: 'basic',
+                            icon: 'heroicons_outline:user-group',
+                            link: '/apps/help-center'
+                        }
+                    ]
+                },
+
+                // MARKETING
+                {
+                    id: 'marketing',
+                    title: 'MARKETING',
+                    subtitle: 'Campañas y herramientas',
+                    type: 'group',
+                    icon: 'heroicons_outline:megaphone',
+                    children: [
+                        {
+                            id: 'marketing.campanas',
+                            title: 'Campañas',
+                            type: 'basic',
+                            icon: 'heroicons_outline:speaker-wave',
+                            link: '/apps/mailbox'
+                        },
+                        {
+                            id: 'marketing.contactos',
+                            title: 'Contactos',
+                            type: 'basic',
+                            icon: 'heroicons_outline:address-book',
+                            link: '/apps/contacts'
+                        }
+                    ]
+                }
+            ],
+            compact: [],
+            futuristic: [],
+            horizontal: []
+        };
+
+        console.log('✅ [RoleInterceptor] Navegación de clínica creada:', {
+            totalItems: mockNavigation.default.length,
+            groupsWithChildren: mockNavigation.default.filter(item => item.children?.length > 0).length
         });
-        return of(new HttpResponse({
+
+        return of({
+            body: mockNavigation,
             status: 200,
-            body: navigationData
-        }));
+            statusText: 'OK',
+            headers: new Headers(),
+            ok: true,
+            redirected: false,
+            type: 'basic',
+            url: req.url,
+            clone: () => ({})
+        } as any);
     }
 
-    // Mock de mensajes
-    if (url.includes('/api/common/messages')) {
-        console.log('🔍 [RoleInterceptor] Mock de mensajes');
-        return of(new HttpResponse({
-            status: 200,
-            body: []
-        }));
+    // Handle sign-in - NO INTERCEPTAR, dejar que AuthService maneje todo
+    if (url.includes('/api/auth/sign-in')) {
+        console.log('🔍 [RoleInterceptor] Petición de login detectada - pasando al AuthService');
+        return next(req);
     }
 
-    // Mock de notificaciones
-    if (url.includes('/api/common/notifications')) {
-        console.log('🔍 [RoleInterceptor] Mock de notificaciones');
-        return of(new HttpResponse({
-            status: 200,
-            body: []
-        }));
-    }
-
-    // Mock de chat
+    // Handle chat requests
     if (url.includes('/api/apps/chat/chats')) {
         console.log('🔍 [RoleInterceptor] Mock de chat/chats');
-        return of(new HttpResponse({
+        return of({
+            body: [],
             status: 200,
-            body: []
-        }));
+            statusText: 'OK',
+            headers: new Headers(),
+            ok: true,
+            redirected: false,
+            type: 'basic',
+            url: req.url,
+            clone: () => ({})
+        } as any);
     }
 
-    // Mock de shortcuts
+    // Handle messages requests
+    if (url.includes('/api/common/messages')) {
+        console.log('🔍 [RoleInterceptor] Mock de mensajes');
+        return of({
+            body: [],
+            status: 200,
+            statusText: 'OK',
+            headers: new Headers(),
+            ok: true,
+            redirected: false,
+            type: 'basic',
+            url: req.url,
+            clone: () => ({})
+        } as any);
+    }
+
+    // Handle notifications requests
+    if (url.includes('/api/common/notifications')) {
+        console.log('🔍 [RoleInterceptor] Mock de notificaciones');
+        return of({
+            body: [],
+            status: 200,
+            statusText: 'OK',
+            headers: new Headers(),
+            ok: true,
+            redirected: false,
+            type: 'basic',
+            url: req.url,
+            clone: () => ({})
+        } as any);
+    }
+
+    // Handle shortcuts requests
     if (url.includes('/api/common/shortcuts')) {
         console.log('🔍 [RoleInterceptor] Mock de shortcuts');
-        return of(new HttpResponse({
+        return of({
+            body: [],
             status: 200,
-            body: []
-        }));
+            statusText: 'OK',
+            headers: new Headers(),
+            ok: true,
+            redirected: false,
+            type: 'basic',
+            url: req.url,
+            clone: () => ({})
+        } as any);
     }
 
-    // Continuar con la petición normal
+    // Continue with the modified request for all other requests
     return next(req);
-}
-
-function createSafeNavigation(): any {
-    return {
-        default: [
-            {
-                id: 'panel',
-                title: 'Panel Principal',
-                type: 'basic',
-                icon: 'heroicons_outline:home',
-                link: '/dashboards/project'  // ✅ Ruta que existe en Fuse
-            },
-            {
-                id: 'reportes',
-                title: 'Reportes',
-                type: 'basic',
-                icon: 'heroicons_outline:chart-bar',
-                link: '/dashboards/analytics'  // ✅ Ruta que existe en Fuse
-            },
-            {
-                id: 'pacientes',
-                title: 'PACIENTES',
-                subtitle: 'Gestión de pacientes',
-                type: 'group',
-                icon: 'heroicons_outline:users',
-                children: [
-                    {
-                        id: 'pacientes.lista',
-                        title: 'Lista de Pacientes',
-                        type: 'basic',
-                        icon: 'heroicons_outline:user-group',
-                        link: '/apps/pacientes'  // ✅ Ruta que existe en Fuse
-                    },
-                    {
-                        id: 'pacientes.nuevo',
-                        title: 'Nuevo Paciente',
-                        type: 'basic',
-                        icon: 'heroicons_outline:user-plus',
-                        link: '/apps/contacts'  // ✅ Ruta que existe en Fuse
-                    }
-                ]
-            },
-            {
-                id: 'citas',
-                title: 'CITAS',
-                subtitle: 'Gestión de citas médicas',
-                type: 'group',
-                icon: 'heroicons_outline:calendar',
-                children: [
-                    {
-                        id: 'citas.calendario',
-                        title: 'Calendario de Citas',
-                        type: 'basic',
-                        icon: 'heroicons_outline:calendar-days',
-                        link: '/apps/calendar'  // ✅ Ruta que existe en Fuse
-                    },
-                    {
-                        id: 'citas.programar',
-                        title: 'Programar Cita',
-                        type: 'basic',
-                        icon: 'heroicons_outline:plus-circle',
-                        link: '/pages/activities'  // ✅ Ruta que existe en Fuse
-                    }
-                ]
-            },
-            {
-                id: 'clinica',
-                title: 'CLÍNICA',
-                subtitle: 'Administración de clínica',
-                type: 'group',
-                icon: 'heroicons_outline:building-office',
-                children: [
-                    {
-                        id: 'clinica.configuracion',
-                        title: 'Configuración',
-                        type: 'basic',
-                        icon: 'heroicons_outline:cog-6-tooth',
-                        link: '/pages/settings'  // ✅ Ruta que existe en Fuse
-                    },
-                    {
-                        id: 'clinica.personal',
-                        title: 'Personal',
-                        type: 'basic',
-                        icon: 'heroicons_outline:user-group',
-                        link: '/apps/help-center'  // ✅ Ruta que existe en Fuse
-                    }
-                ]
-            },
-            {
-                id: 'marketing',
-                title: 'MARKETING',
-                subtitle: 'Campañas y herramientas',
-                type: 'group',
-                icon: 'heroicons_outline:megaphone',
-                children: [
-                    {
-                        id: 'marketing.campanas',
-                        title: 'Campañas',
-                        type: 'basic',
-                        icon: 'heroicons_outline:speaker-wave',
-                        link: '/apps/mailbox'  // ✅ Ruta que existe en Fuse
-                    },
-                    {
-                        id: 'marketing.contactos',
-                        title: 'Contactos',
-                        type: 'basic',
-                        icon: 'heroicons_outline:book-open',
-                        link: '/apps/contacts'  // ✅ Ruta que existe en Fuse
-                    }
-                ]
-            },
-            {
-                id: 'ventas',
-                title: 'VENTAS',
-                subtitle: 'Gestión comercial',
-                type: 'group',
-                icon: 'heroicons_outline:banknotes',
-                children: [
-                    {
-                        id: 'ventas.dashboard',
-                        title: 'Dashboard Ventas',
-                        type: 'basic',
-                        icon: 'heroicons_outline:chart-pie',
-                        link: '/dashboards/finance'  // ✅ Ruta que existe en Fuse
-                    }
-                ]
-            }
-        ],
-        compact: [],
-        futuristic: [],
-        horizontal: []
-    };
 }
 
 function getUserIdFromToken(): number | null {
     try {
         const token = localStorage.getItem('accessToken');
-        if (token) {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            return payload.sub || payload.userId || payload.id || null;
-        }
+        if (!token) return null;
+
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.sub || payload.userId || payload.id || null;
     } catch (error) {
-        console.warn('⚠️ [RoleInterceptor] Error al extraer userId del token:', error);
+        console.warn('🔍 [RoleInterceptor] Error extrayendo userId del token:', error);
+        return null;
     }
-    return null;
 }
 
