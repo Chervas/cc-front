@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { environment } from 'environments/environment';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
@@ -9,6 +10,8 @@ export interface UsuarioClinicaResponse {
     name: string;                  // ~ REAL del backend
     description: string;           // ~ REAL del backend
     userRole: string;              // ~ REAL del backend
+    groupId?: number;              // Grupo al que pertenece la clínica
+    groupName?: string;            // Nombre del grupo
     userSubRole: string;           // ~ REAL del backend
     permissions: {                 // ~ REAL del backend
         canMapAssets: boolean;
@@ -408,6 +411,8 @@ export class RoleService {
             description: clinica.descripcion || clinica.description || '',
             userRole: userRole || clinica.userRole || 'paciente',
             userSubRole: clinica.userSubRole || '',
+            groupId: clinica.grupoClinica?.id_grupo || clinica.id_grupo || null,
+            groupName: clinica.grupoClinica?.nombre_grupo || clinica.nombre_grupo || null,
             permissions: clinica.permissions || {
                 canMapAssets: false,
                 canManageSettings: false,
@@ -544,6 +549,30 @@ export class RoleService {
         });
 
         console.log('🏥 [RoleService] Clínicas agrupadas por rol:', grouped);
+        return grouped;
+    }
+
+    
+
+      /**
+     * Agrupa las clínicas por nombre de grupo
+     */
+    groupClinicsByGroup(): Record<string, UsuarioClinicaResponse[]> {
+        const clinicas = this.clinicasSubject.value;
+        const grouped: Record<string, UsuarioClinicaResponse[]> = {};
+
+        clinicas.forEach(clinica => {
+            const groupName = (clinica as any).grupoClinica?.nombre_grupo || 'Sin Grupo';
+            if (!grouped[groupName]) {
+                grouped[groupName] = [];
+            }
+            grouped[groupName].push(clinica);
+        });
+
+        if (!environment.production) {
+            console.log('🏥 [RoleService] Clínicas agrupadas por grupo:', grouped);
+        }
+
         return grouped;
     }
 
