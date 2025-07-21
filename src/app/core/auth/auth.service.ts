@@ -80,46 +80,49 @@ export class AuthService {
     /**
      * 🔥 Sign in - MODIFICADO con RoleService
      */
+    // 🚀 MÉTODO SIGNIN CON REDIRECCIÓN FORZADA
+// 🚀 MÉTODO SIGNIN CORREGIDO SIN DEPENDENCIAS FALTANTES
     signIn(credentials: { email: string; password: string }): Observable<any> {
-        // Return if the user is already logged in
-        if (this._authenticated) {
-            return of(true);
-        }
+    return this._httpClient.post<LoginResponse>('/api/auth/sign-in', credentials).pipe(
+        tap((response) => {
+            console.log('Response from signIn:', response);
 
-        return this._httpClient.post<LoginResponse>('/api/auth/sign-in', credentials).pipe(
-            tap((response) => {
-                console.log('Response from signIn:', response);
+            // Store the access token in the access token
+            this.accessToken = response.token;
 
-                // ✅ Guardar token
-                this.accessToken = response.token;
+            // Set the authenticated flag to true
+            this._authenticated = true;
 
-                // 🔹 ADAPTADOR: Usuario Backend → FuseUser
-                const fuseUser = this.adaptUsuarioToFuseUser(response.user);
-                console.log('✅ [AuthService] Usuario adaptado para Fuse:', fuseUser);
+            // 🔄 Recargar datos del RoleService
+            console.log('🔄 [RoleService] Recargando datos de usuario...');
+            this._roleService.reloadUserData();
+            console.log('🔄 [AuthService] RoleService recargado después del login');
 
-                // ✅ Guardar usuario para futuros inicios automáticos
-                localStorage.setItem('userInfo', JSON.stringify(fuseUser));
+            // 🚀 REDIRECCIÓN FORZADA USANDO WINDOW.LOCATION
+            setTimeout(() => {
+                console.log('🚀 [AuthService] Iniciando redirección...');
+                console.log('🚀 [AuthService] URL actual:', window.location.href);
+                
+                // Lista de rutas a probar
+                const rutasAProbar = ['/example', '/dashboards/project', '/apps/academy'];
+                
+                // Probar primera ruta disponible
+                const rutaDestino = rutasAProbar[0]; // Usar /example como primera opción
+                
+                console.log(`🚀 [AuthService] Redirigiendo a: ${rutaDestino}`);
+                
+                // Redirección directa usando window.location
+                window.location.href = rutaDestino;
+                
+            }, 2000); // Esperar 2 segundos para que se carguen los datos del RoleService
 
-                // ✅ Actualizar estado
-                this._authenticated = true;
-                this._user.next(fuseUser);
-
-                console.log('✅ [AuthService] Usuario adaptado para Fuse:', fuseUser);
-
-                // 🚀 NUEVO: Recargar datos en RoleService después del login
-                try {
-                    this._roleService.reloadUserData();
-                    console.log('🔄 [AuthService] RoleService recargado después del login');
-                } catch (error) {
-                    console.warn('⚠️ [AuthService] Error recargando RoleService:', error);
-                }
-            }),
-            catchError((error) => {
-                console.error('❌ [AuthService] Error en login:', error);
-                throw error;
-            })
-        );
-    }
+        }),
+        catchError((error) => {
+            console.error('❌ [AuthService] Error en login:', error);
+            throw error;
+        })
+    );
+}
 
     /**
      * 🔥 Sign up

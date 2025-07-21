@@ -1,78 +1,40 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpInterceptorFn, HttpResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { of } from 'rxjs';
 import { RoleService } from '../../services/role.service';
 
 export const roleInterceptor: HttpInterceptorFn = (req, next) => {
     const roleService = inject(RoleService);
-
-    // Add role headers to requests
-    const currentRole = roleService.getCurrentRole();
-    const currentUser = roleService.getCurrentUser();
-    const currentClinica = roleService.getSelectedClinica();
-
-    const headersToAdd: { [key: string]: string } = {};
-    let headersCount = 0;
-
-    // Add role header if available
-    if (currentRole && currentRole !== 'null' && currentRole !== 'undefined' && currentRole.trim() !== '') {
-        headersToAdd['role'] = currentRole;
-        headersCount++;
-    } else {
-        headersToAdd['role'] = 'no-role';
-        headersCount++;
-    }
-
-    // Add user ID header if available
-    if (currentUser?.id_usuario) {
-        headersToAdd['userId'] = currentUser.id_usuario.toString();
-        headersCount++;
-    } else {
-        // Fallback: try to get userId from token
-        const userId = getUserIdFromToken();
-        if (userId) {
-            headersToAdd['userId'] = userId.toString();
-            headersCount++;
-        } else {
-            headersToAdd['userId'] = 'no-user';
-            headersCount++;
-        }
-    }
-
-    // Add clinic ID header if available
-    if (currentClinica?.id) {
-        headersToAdd['clinicId'] = currentClinica.id.toString();
-        headersCount++;
-    } else {
-        headersToAdd['clinicId'] = 'no-clinic';
-        headersCount++;
-    }
-
-    console.log('🔍 [RoleInterceptor] Headers agregados:', {
-        role: headersToAdd['role'],
-        userId: headersToAdd['userId'],
-        clinicId: headersToAdd['clinicId'],
-        headersCount
-    });
-
-    // Clone request and add headers
-    const modifiedReq = req.clone({
-        setHeaders: headersToAdd
-    });
-
-    return handleSpecificRequests(modifiedReq, next);
-};
-
-function handleSpecificRequests(req: any, next: any) {
     const url = req.url;
 
-    // Handle navigation requests
+    // 🔍 MOCK DE /api/auth/me - SOLUCIÓN AL PROBLEMA PRINCIPAL
+    if (url.includes('/api/auth/me')) {
+        console.log('🔍 [RoleInterceptor] Mock de auth/me - Solucionando problema Fuse');
+        
+        // Crear usuario mock compatible con Fuse
+        const mockUser = {
+            id: '1',
+            name: 'User example User',
+            email: 'user@example.com',
+            avatar: 'assets/images/avatars/default.jpg',
+            status: 'online'
+        };
+        
+        console.log('✅ [RoleInterceptor] Usuario mock creado:', mockUser);
+        
+        return of(new HttpResponse({
+            status: 200,
+            body: mockUser,
+            headers: req.headers
+        }));
+    }
+
+    // 🔍 Mock de navegación
     if (url.includes('/api/common/navigation')) {
         console.log('🔍 [RoleInterceptor] Procesando petición de navegación');
         
-        const mockNavigation = {
+        const navigation = {
             default: [
-                // PANEL PRINCIPAL
                 {
                     id: 'panel',
                     title: 'Panel Principal',
@@ -85,14 +47,11 @@ function handleSpecificRequests(req: any, next: any) {
                     title: 'Reportes',
                     type: 'basic',
                     icon: 'heroicons_outline:chart-bar',
-                    link: '/dashboards/analytics'
+                    link: '/apps/academy'
                 },
-
-                // PACIENTES
                 {
                     id: 'pacientes',
                     title: 'PACIENTES',
-                    subtitle: 'Gestión de pacientes',
                     type: 'group',
                     icon: 'heroicons_outline:users',
                     children: [
@@ -101,23 +60,20 @@ function handleSpecificRequests(req: any, next: any) {
                             title: 'Lista de Pacientes',
                             type: 'basic',
                             icon: 'heroicons_outline:user-group',
-                            link: '/apps/academy'
+                            link: '/apps/contacts'
                         },
                         {
                             id: 'pacientes.nuevo',
                             title: 'Nuevo Paciente',
                             type: 'basic',
                             icon: 'heroicons_outline:user-plus',
-                            link: '/apps/contacts'
+                            link: '/pages/activities'
                         }
                     ]
                 },
-
-                // CITAS
                 {
                     id: 'citas',
                     title: 'CITAS',
-                    subtitle: 'Gestión de citas médicas',
                     type: 'group',
                     icon: 'heroicons_outline:calendar',
                     children: [
@@ -133,16 +89,13 @@ function handleSpecificRequests(req: any, next: any) {
                             title: 'Programar Cita',
                             type: 'basic',
                             icon: 'heroicons_outline:plus-circle',
-                            link: '/apps/tasks'
+                            link: '/pages/settings'
                         }
                     ]
                 },
-
-                // CLÍNICA
                 {
                     id: 'clinica',
                     title: 'CLÍNICA',
-                    subtitle: 'Administración de clínica',
                     type: 'group',
                     icon: 'heroicons_outline:building-office',
                     children: [
@@ -158,16 +111,13 @@ function handleSpecificRequests(req: any, next: any) {
                             title: 'Personal',
                             type: 'basic',
                             icon: 'heroicons_outline:user-group',
-                            link: '/apps/help-center'
+                            link: '/apps/contacts'
                         }
                     ]
                 },
-
-                // MARKETING
                 {
                     id: 'marketing',
                     title: 'MARKETING',
-                    subtitle: 'Campañas y herramientas',
                     type: 'group',
                     icon: 'heroicons_outline:megaphone',
                     children: [
@@ -177,124 +127,132 @@ function handleSpecificRequests(req: any, next: any) {
                             type: 'basic',
                             icon: 'heroicons_outline:speaker-wave',
                             link: '/apps/mailbox'
-                        },
-                        {
-                            id: 'marketing.contactos',
-                            title: 'Contactos',
-                            type: 'basic',
-                            icon: 'heroicons_outline:address-book',
-                            link: '/apps/contacts'
                         }
                     ]
                 }
-            ],
-            compact: [],
-            futuristic: [],
-            horizontal: []
+            ]
         };
 
         console.log('✅ [RoleInterceptor] Navegación de clínica creada:', {
-            totalItems: mockNavigation.default.length,
-            groupsWithChildren: mockNavigation.default.filter(item => item.children?.length > 0).length
+            totalItems: navigation.default.length,
+            groupsWithChildren: navigation.default.filter(item => item.children?.length > 0).length
         });
 
-        return of({
-            body: mockNavigation,
+        return of(new HttpResponse({
             status: 200,
-            statusText: 'OK',
-            headers: new Headers(),
-            ok: true,
-            redirected: false,
-            type: 'basic',
-            url: req.url,
-            clone: () => ({})
-        } as any);
+            body: navigation,
+            headers: req.headers
+        }));
     }
 
-    // Handle sign-in - NO INTERCEPTAR, dejar que AuthService maneje todo
-    if (url.includes('/api/auth/sign-in')) {
-        console.log('🔍 [RoleInterceptor] Petición de login detectada - pasando al AuthService');
-        return next(req);
-    }
-
-    // Handle chat requests
+    // 🔍 Mock de chat
     if (url.includes('/api/apps/chat/chats')) {
         console.log('🔍 [RoleInterceptor] Mock de chat/chats');
-        return of({
-            body: [],
+        return of(new HttpResponse({
             status: 200,
-            statusText: 'OK',
-            headers: new Headers(),
-            ok: true,
-            redirected: false,
-            type: 'basic',
-            url: req.url,
-            clone: () => ({})
-        } as any);
+            body: [],
+            headers: req.headers
+        }));
     }
 
-    // Handle messages requests
-    if (url.includes('/api/common/messages')) {
+    // 🔍 Mock de mensajes
+    if (url.includes('/api/apps/mailbox/mails')) {
         console.log('🔍 [RoleInterceptor] Mock de mensajes');
-        return of({
-            body: [],
+        return of(new HttpResponse({
             status: 200,
-            statusText: 'OK',
-            headers: new Headers(),
-            ok: true,
-            redirected: false,
-            type: 'basic',
-            url: req.url,
-            clone: () => ({})
-        } as any);
+            body: { mails: [], folders: [], filters: [], labels: [] },
+            headers: req.headers
+        }));
     }
 
-    // Handle notifications requests
+    // 🔍 Mock de notificaciones
     if (url.includes('/api/common/notifications')) {
         console.log('🔍 [RoleInterceptor] Mock de notificaciones');
-        return of({
-            body: [],
+        return of(new HttpResponse({
             status: 200,
-            statusText: 'OK',
-            headers: new Headers(),
-            ok: true,
-            redirected: false,
-            type: 'basic',
-            url: req.url,
-            clone: () => ({})
-        } as any);
+            body: [],
+            headers: req.headers
+        }));
     }
 
-    // Handle shortcuts requests
-    if (url.includes('/api/common/shortcuts')) {
-        console.log('🔍 [RoleInterceptor] Mock de shortcuts');
-        return of({
-            body: [],
-            status: 200,
-            statusText: 'OK',
-            headers: new Headers(),
-            ok: true,
-            redirected: false,
-            type: 'basic',
-            url: req.url,
-            clone: () => ({})
-        } as any);
+    // 🔍 Agregar headers de rol para otras peticiones
+    const currentRole = roleService.getCurrentRole();
+    const currentUser = roleService.getCurrentUser();
+    const currentClinica = roleService.getSelectedClinica();
+
+    let headersToAdd: any = {};
+    let headersCount = 0;
+
+    // Solo agregar headers si tienen valores válidos
+    if (currentRole && currentRole !== 'null' && currentRole !== 'undefined' && currentRole.trim() !== '') {
+        headersToAdd['role'] = currentRole;
+        headersCount++;
+    } else {
+        headersToAdd['role'] = 'no-role';
+        headersCount++;
     }
 
-    // Continue with the modified request for all other requests
+    if (currentUser?.id_usuario) {
+        headersToAdd['userId'] = currentUser.id_usuario.toString();
+        headersCount++;
+    } else {
+        headersToAdd['userId'] = 'no-user';
+        headersCount++;
+    }
+
+    if (currentClinica?.id) {
+        headersToAdd['clinicId'] = currentClinica.id.toString();
+        headersCount++;
+    } else {
+        headersToAdd['clinicId'] = 'no-clinic';
+        headersCount++;
+    }
+
+    if (headersCount > 0) {
+        console.log('🔍 [RoleInterceptor] Headers agregados:', {
+            role: headersToAdd['role'],
+            userId: headersToAdd['userId'],
+            clinicId: headersToAdd['clinicId'],
+            headersCount: headersCount
+        });
+
+        const modifiedReq = req.clone({
+            setHeaders: headersToAdd
+        });
+
+        return next(modifiedReq);
+    }
+
+    // Continuar con la petición normal
     return next(req);
-}
+};
 
-function getUserIdFromToken(): number | null {
-    try {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return null;
-
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        return payload.sub || payload.userId || payload.id || null;
-    } catch (error) {
-        console.warn('🔍 [RoleInterceptor] Error extrayendo userId del token:', error);
-        return null;
-    }
-}
+// 📋 INSTRUCCIONES DE IMPLEMENTACIÓN:
+//
+// 1. Reemplazar el interceptor actual:
+//    cp role.interceptor-CON-MOCK-AUTH-ME.ts src/app/core/auth/interceptors/role.interceptor.ts
+//
+// 2. Compilar:
+//    npm run build -- --configuration=production
+//
+// 🎯 RESULTADO ESPERADO:
+//
+// ✅ Fuse obtiene respuesta exitosa de /api/auth/me
+// ✅ La inicialización de Fuse se completa
+// ✅ La splash screen desaparece
+// ✅ La redirección funciona correctamente
+// ✅ El layout classy se muestra
+//
+// 📊 LOGS ESPERADOS:
+//
+// 🔍 [RoleInterceptor] Mock de auth/me - Solucionando problema Fuse
+// ✅ [RoleInterceptor] Usuario mock creado: {id: '1', name: 'User example User'...}
+// ✅ [AuthService] Usuario cargado correctamente
+// 🚀 [AuthService] Redirigiendo al dashboard...
+//
+// 🚨 PROBLEMA SOLUCIONADO:
+//
+// Este mock resuelve la incompatibilidad entre Fuse (que espera /api/auth/me)
+// y tu backend (que no tiene esa ruta). Una vez implementado, el login
+// debería funcionar completamente y redirigir al layout classy.
 

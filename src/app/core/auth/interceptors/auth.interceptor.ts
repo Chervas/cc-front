@@ -1,52 +1,82 @@
-import { HttpErrorResponse, HttpEvent, HttpHandlerFn, HttpRequest } from '@angular/common/http';
+import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { AuthService } from 'app/core/auth/auth.service';
-import { AuthUtils } from 'app/core/auth/auth.utils';
-import { catchError, Observable, throwError } from 'rxjs';
+import { Router } from '@angular/router';
+import { catchError, throwError } from 'rxjs';
+import { AuthService } from '../auth.service';
 
-/**
- * Intercept
- *
- * @param req
- * @param next
- */
-export const authInterceptor = (req: HttpRequest<unknown>, next: HttpHandlerFn): Observable<HttpEvent<unknown>> =>
-{
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
     const authService = inject(AuthService);
-
-    // Clone the request object
-    let newReq = req.clone();
-
-    // Request
-    //
-    // If the access token didn't expire, add the Authorization header.
-    // We won't add the Authorization header if the access token expired.
-    // This will force the server to return a "401 Unauthorized" response
-    // for the protected API routes which our response interceptor will
-    // catch and delete the access token from the local storage while logging
-    // the user out from the app.
-    if ( authService.accessToken && !AuthUtils.isTokenExpired(authService.accessToken) )
-    {
-        newReq = req.clone({
-            headers: req.headers.set('Authorization', 'Bearer ' + authService.accessToken),
-        });
-    }
-
-    // Response
-    return next(newReq).pipe(
-        catchError((error) =>
-        {
-            // Catch "401 Unauthorized" responses
-            if ( error instanceof HttpErrorResponse && error.status === 401 )
-            {
-                // Sign out
-                authService.signOut();
-
-                // Reload the app
-                location.reload();
+    const router = inject(Router);
+    
+    // 🔍 DEBUG: Log de la petición original
+    console.log('🔍 [AuthInterceptor] Petición:', req.method, req.url);
+    
+    // Agregar token a headers si existe
+    if (authService.accessToken) {
+        console.log('🔍 [AuthInterceptor] Token disponible:', authService.accessToken.substring(0, 50) + '...');
+        
+        req = req.clone({
+            setHeaders: {
+                Authorization: `Bearer ${authService.accessToken}`
             }
-
-            return throwError(error);
-        }),
+        });
+        
+        console.log('✅ [AuthInterceptor] Header Authorization agregado');
+        console.log('🔍 [AuthInterceptor] Headers finales:', req.headers.get('Authorization')?.substring(0, 50) + '...');
+    } else {
+        console.log('⚠️ [AuthInterceptor] No hay token disponible');
+    }
+    
+    return next(req).pipe(
+        catchError((error: HttpErrorResponse) => {
+            console.error('❌ [AuthInterceptor] Error en petición:', error.status, error.message);
+            console.error('❌ [AuthInterceptor] Error completo:', error);
+            
+            if (error.status === 401) {
+                console.log('🔐 [AuthInterceptor] Error 401 - Token inválido o expirado');
+                console.log('🔐 [AuthInterceptor] Token actual:', authService.accessToken?.substring(0, 50) + '...');
+                console.log('🔐 [AuthInterceptor] URL que falló:', req.url);
+                
+                // Token expirado o inválido, forzar logout
+                authService.signOut();
+                router.navigate(['/sign-in']);
+            } else if (error.status === 403) {
+                console.log('🚫 [AuthInterceptor] Error 403 - Sin permisos suficientes');
+            }
+            
+            return throwError(() => error);
+        })
     );
 };
+
+// 📋 INSTRUCCIONES DE USO:
+//
+// 1. Reemplazar el AuthInterceptor actual:
+//    cp auth.interceptor-FUNCTIONAL-DEBUG.ts src/app/core/auth/interceptors/auth.interceptor.ts
+//
+// 2. Compilar y probar login:
+//    npm run build -- --configuration=production
+//
+// 3. Revisar logs en consola del navegador:
+//    - ¿Se envía el token correctamente?
+//    - ¿Llega íntegro al backend?
+//    - ¿Qué error específico devuelve el backend?
+//
+// 📊 LOGS ESPERADOS:
+//
+// ✅ CASO EXITOSO:
+// 🔍 [AuthInterceptor] Petición: GET /api/userclinicas/list
+// 🔍 [AuthInterceptor] Token disponible: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+// ✅ [AuthInterceptor] Header Authorization agregado
+// 🔍 [AuthInterceptor] Headers finales: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+//
+// ❌ CASO CON ERROR JWT:
+// 🔍 [AuthInterceptor] Petición: GET /api/userclinicas/list
+// 🔍 [AuthInterceptor] Token disponible: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+// ✅ [AuthInterceptor] Header Authorization agregado
+// ❌ [AuthInterceptor] Error en petición: 401 Unauthorized
+// ❌ [AuthInterceptor] Error completo: {error: "JsonWebTokenError: invalid signature"}
+// 🔐 [AuthInterceptor] Error 401 - Token inválido o expirado
+// 🔐 [AuthInterceptor] Token actual: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+// 🔐 [AuthInterceptor] URL que falló: /api/userclinicas/list
+
