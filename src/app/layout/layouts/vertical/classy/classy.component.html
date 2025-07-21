@@ -20,6 +20,8 @@
             </div>
         </div>
     </ng-container>
+
+    
     
     <!-- User -->
     <div class="flex w-full items-center p-4" *ngIf="user">
@@ -49,28 +51,50 @@
         </div>
     </div>
     
-    <!-- Clinic selector at top of navigation -->
-    <div class="flex flex-col p-4 border-b border-gray-700" *ngIf="clinicas.length > 0">
-        <label class="block text-sm font-medium text-gray-300 mb-2">CLÍNICA ACTIVA</label>
-        <mat-form-field appearance="outline" class="w-full clinic-selector">
-            <mat-select 
-                [value]="selectedClinica?.id" 
-                (selectionChange)="onClinicChange($event.value)"
-                placeholder="Seleccionar clínica">
-                <mat-option 
-                    *ngFor="let clinica of clinicas" 
-                    [value]="clinica">
-                    <div class="flex flex-col">
-                        <div class="font-medium">{{ clinica.name }}</div>
-                        <div class="text-sm text-gray-500">{{ clinica.description || 'Sin descripción' }}</div>
-                    </div>
-                </mat-option>
-            </mat-select>
-        </mat-form-field>
-    </div>
-    
-    <!-- Navigation footer hook -->
+    <!-- Clinic Selector copied from thin layout -->
+   <!-- Navigation footer hook -->
     <ng-container fuseVerticalNavigationContentFooter>
+        <!-- Clinic Selector -->
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700" *ngIf="getClinicasForCurrentRole().length > 0">
+            <div class="mb-3">
+                <span class="text-xs font-medium text-secondary uppercase tracking-wider">Clínica Activa</span>
+            </div>
+
+            <mat-form-field appearance="outline" class="w-full fuse-mat-dense">
+                <mat-label>Seleccionar Clínica</mat-label>
+                <mat-select
+                    [value]="getSelectedClinicId()"
+                    (selectionChange)="onClinicChange($event.value)">
+                    <mat-option
+                        *ngFor="let clinica of getClinicasForCurrentRole()"
+                        [value]="clinica.id">
+                        <div class="flex items-center">
+                            <mat-icon
+                                [svgIcon]="'heroicons_outline:building-office'"
+                                class="mr-2 text-current icon-size-4">
+                            </mat-icon>
+                            {{ clinica.name }}
+                        </div>
+                    </mat-option>
+                </mat-select>
+            </mat-form-field>
+
+            <div *ngIf="roleService.getSelectedClinica()" class="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div class="flex items-center text-sm">
+                    <mat-icon
+                        [svgIcon]="'heroicons_outline:building-office'"
+                        class="mr-2 text-primary icon-size-4">
+                    </mat-icon>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium truncate">{{ getSelectedClinicName() }}</div>
+                        <div class="text-xs text-secondary">Rol: {{ roleService.getCurrentRole() | titlecase }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    
+   
         <div
             class="mb-4 mt-2 flex h-16 flex-0 items-center justify-center pl-2 pr-6 opacity-12">
             <img

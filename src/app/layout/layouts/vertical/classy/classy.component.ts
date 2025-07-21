@@ -11,7 +11,7 @@ import { FuseNavigationService, FuseVerticalNavigationComponent } from '@fuse/co
 import { FuseMediaWatcherService } from '@fuse/services/media-watcher';
 import { NavigationService } from 'app/core/navigation/navigation.service';
 import { Navigation } from 'app/core/navigation/navigation.types';
-import { RoleService } from 'app/core/services/role.service';
+import { RoleService, UsuarioClinicaResponse } from 'app/core/services/role.service';
 import { AuthService } from 'app/core/auth/auth.service';
 import { LanguagesComponent } from 'app/layout/common/languages/languages.component';
 import { MessagesComponent } from 'app/layout/common/messages/messages.component';
@@ -54,8 +54,8 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
     // Role and clinic data
     availableRoles: string[] = [];
     selectedRole: string | null = null;
-    clinicas: any[] = [];
-    selectedClinica: any = null;
+    clinicas: UsuarioClinicaResponse[] = [];
+    selectedClinica: UsuarioClinicaResponse | null = null;
     
     private _unsubscribeAll: Subject<any> = new Subject<any>();
 
@@ -68,7 +68,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
         private _navigationService: NavigationService,
         private _fuseMediaWatcherService: FuseMediaWatcherService,
         private _fuseNavigationService: FuseNavigationService,
-        private _roleService: RoleService,
+        public roleService: RoleService,
         private _authService: AuthService,
     ) {}
 
@@ -111,7 +111,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
             });
 
         // Subscribe to current user
-        this._roleService.currentUser$
+        this.roleService.currentUser$
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe((user) => {
                 this.user = user;
@@ -119,7 +119,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
             });
 
         // Subscribe to selected role
-        this._roleService.selectedRole$
+        this.roleService.selectedRole$
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe((role) => {
                 this.selectedRole = role;
@@ -127,7 +127,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
             });
 
         // Subscribe to clinicas
-        this._roleService.clinicas$
+        this.roleService.clinicas$
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe((clinicas) => {
                 this.clinicas = clinicas || [];
@@ -135,7 +135,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
             });
 
         // Subscribe to selected clinica
-        this._roleService.selectedClinica$
+        this.roleService.selectedClinica$
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe((clinica) => {
                 this.selectedClinica = clinica;
@@ -143,7 +143,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
             });
 
         // Get available roles
-        this.availableRoles = this._roleService.getAvailableRoles() || [];
+        this.availableRoles = this.roleService.getAvailableRoles() || [];
         console.log('🎭 [ClassyLayout] Roles disponibles:', this.availableRoles);
     }
 
@@ -192,15 +192,46 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
      */
     onRoleChange(newRole: string): void {
         console.log('🎭 [ClassyLayout] Cambiando rol a:', newRole);
-        this._roleService.setRole(newRole);
+        this.roleService.setRole(newRole);
     }
+
+        /**
+     * Get clinics available for the current role
+     */
+    getClinicasForCurrentRole(): UsuarioClinicaResponse[] {
+        const currentRole = this.roleService.getCurrentRole();
+        if (!currentRole) {
+            return [];
+        }
+        return this.clinicas.filter(c => c.userRole === currentRole);
+    }
+
 
     /**
      * Handle clinic change
      */
-    onClinicChange(newClinic: any): void {
-        console.log('🏥 [ClassyLayout] Cambiando clínica a:', newClinic?.name);
-        this._roleService.setClinica(newClinic);
+     onClinicChange(clinicId: number): void {
+        const clinic = this.clinicas.find(c => c.id === clinicId);
+        if (clinic) {
+            this.roleService.setClinica(clinic);
+        }
+    }
+
+    /**
+     * Get the currently selected clinic ID
+     */
+    getSelectedClinicId(): number | null {
+        const selected = this.roleService.getSelectedClinica();
+        return selected?.id || null;
+    }
+
+    /**
+     * Get the currently selected clinic name
+     */
+    getSelectedClinicName(): string {
+        const selected = this.roleService.getSelectedClinica();
+        return selected?.name || '';
+
     }
 }
 
