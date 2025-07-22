@@ -231,7 +231,8 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
         if (!currentRole) {
             return {};
         }
-        return this.roleService.groupClinicsByGroup(currentRole);
+        return this.roleService.groupClinicsByGroup();
+
     }
 
     /**
