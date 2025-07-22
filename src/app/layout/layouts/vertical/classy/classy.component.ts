@@ -58,7 +58,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
     selectedRole: string | null = null;
     clinicas: UsuarioClinicaResponse[] = [];
     selectedClinica: UsuarioClinicaResponse | null = null;
-        clinicasForRole: UsuarioClinicaResponse[] = [];
+    clinicasForRole: UsuarioClinicaResponse[] = [];
     groupedClinicas: Record<string, UsuarioClinicaResponse[]> = {};
     
     private _unsubscribeAll: Subject<any> = new Subject<any>();
@@ -221,16 +221,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
     }
 
 
-        /**
-     * Get clinics available for the current role
-     */
-    getClinicasForCurrentRole(): UsuarioClinicaResponse[] {
-        const currentRole = this.roleService.getCurrentRole();
-        if (!currentRole) {
-            return [];
-        }
-        return this.clinicas.filter(c => c.userRole === currentRole);
-    }
+      
 
     /**
      * Obtain clinics grouped by group name for the current role

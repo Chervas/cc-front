@@ -12,6 +12,7 @@ export interface UsuarioClinicaResponse {
     userRole: string;              // ~ REAL del backend
     groupId?: number;              // Grupo al que pertenece la clínica
     groupName?: string;            // Nombre del grupo
+    grupoClinica?: { id_grupo: number; nombre_grupo: string };
     userSubRole: string;           // ~ REAL del backend
     permissions: {                 // ~ REAL del backend
         canMapAssets: boolean;
@@ -413,6 +414,10 @@ export class RoleService {
             userSubRole: clinica.userSubRole || '',
             groupId: clinica.grupoClinica?.id_grupo || clinica.id_grupo || null,
             groupName: clinica.grupoClinica?.nombre_grupo || clinica.nombre_grupo || null,
+            grupoClinica: clinica.grupoClinica ||
+                (clinica.id_grupo && clinica.nombre_grupo
+                    ? { id_grupo: clinica.id_grupo, nombre_grupo: clinica.nombre_grupo }
+                    : undefined),
             permissions: clinica.permissions || {
                 canMapAssets: false,
                 canManageSettings: false,

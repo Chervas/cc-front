@@ -65,10 +65,10 @@
                 <mat-select
                     [value]="selectedClinica?.id"
                     (selectionChange)="onClinicChange($event.value)">
-                    <ng-container *ngFor="let group of getGroupedClinicasForCurrentRole() | keyvalue">
+                    <ng-container *ngFor="let group of groupedClinicas | keyvalue">
                         <mat-optgroup [label]="group.key">
                             <mat-option
-                        *ngFor="let clinica of clinicasForRole"
+                        *ngFor="let clinica of group.value"
                         [value]="clinica.id">
                         <div class="flex items-center">
                             <mat-icon
