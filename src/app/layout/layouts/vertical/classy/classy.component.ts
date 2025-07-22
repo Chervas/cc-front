@@ -128,6 +128,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
             .subscribe((role) => {
                 this.selectedRole = role;
                 console.log('🎭 [ClassyLayout] Rol seleccionado:', role);
+                this.updateClinicLists();
             });
 
         // Subscribe to clinicas
