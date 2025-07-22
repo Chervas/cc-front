@@ -98,23 +98,7 @@ export class AuthService {
             this._roleService.reloadUserData();
             console.log('🔄 [AuthService] RoleService recargado después del login');
 
-            // 🚀 REDIRECCIÓN FORZADA USANDO WINDOW.LOCATION
-            setTimeout(() => {
-                console.log('🚀 [AuthService] Iniciando redirección...');
-                console.log('🚀 [AuthService] URL actual:', window.location.href);
-                
-                // Lista de rutas a probar
-                const rutasAProbar = ['/example', '/dashboards/project', '/apps/academy'];
-                
-                // Probar primera ruta disponible
-                const rutaDestino = rutasAProbar[0]; // Usar /example como primera opción
-                
-                console.log(`🚀 [AuthService] Redirigiendo a: ${rutaDestino}`);
-                
-                // Redirección directa usando window.location
-                window.location.href = rutaDestino;
-                
-            }, 2000); // Esperar 2 segundos para que se carguen los datos del RoleService
+            
 
         }),
         catchError((error) => {

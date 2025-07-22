@@ -567,7 +567,7 @@ export class RoleService {
         const grouped: Record<string, UsuarioClinicaResponse[]> = {};
 
         clinicas.forEach(clinica => {
-            const groupName = (clinica as any).grupoClinica?.nombre_grupo || 'Sin Grupo';
+            const groupName = clinica.grupoClinica?.nombre_grupo || 'Sin Grupo';
             if (!grouped[groupName]) {
                 grouped[groupName] = [];
             }

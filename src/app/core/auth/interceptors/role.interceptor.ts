@@ -158,7 +158,8 @@ const EXCLUDED_DOMAINS = [
     'facebook.com',
     'connect.facebook.net',
     'oauth2.googleapis.com',
-    'www.googleapis.com'
+    'www.googleapis.com',
+    'autenticacion.clinicaclick.com'
 ];
 
 /**
