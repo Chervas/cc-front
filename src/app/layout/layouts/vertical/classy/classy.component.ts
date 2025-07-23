@@ -139,17 +139,17 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
         this.roleService.clinicas$
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe((clinicas: UsuarioClinicaResponse[]) => {
-                this.selectedClinica = clinic;
-                console.log('🏥 [ClassyLayout] Clínica seleccionada:', clinic?.name);
-                this.clinicFilterService.setSelectedClinicId(clinic ? String(clinic.id) : null);
+                this.clinicas = Array.isArray(clinicas) ? clinicas : [];
+                console.log('🏥 [ClassyLayout] Clínicas actualizadas:', this.clinicas.length);
+                this.updateClinicLists();
             });
 
         // Subscribe to selected clinica
         this.roleService.selectedClinica$
             .pipe(takeUntil(this._unsubscribeAll))
              .subscribe((clinic: UsuarioClinicaResponse | null) => {
-                this.selectedClinica = clinica;
-                console.log('🏥 [ClassyLayout] Clínica seleccionada:', clinica?.name);
+                this.selectedClinica = clinic;
+                console.log('🏥 [ClassyLayout] Clínica seleccionada:', clinic?.name);
             });
 
         // Get available roles
