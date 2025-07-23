@@ -93,6 +93,14 @@ export class AuthService {
             // Set the authenticated flag to true
             this._authenticated = true;
 
+            // 🔧 CORRECCIÓN MÍNIMA: Mapear y guardar usuario para OAuth
+            if (response.user) {
+                const fuseUser = this.adaptUsuarioToFuseUser(response.user);
+                this._user.next(fuseUser);
+                localStorage.setItem('userInfo', JSON.stringify(fuseUser));
+                localStorage.setItem('currentUser', JSON.stringify(response.user)); // Para OAuth
+            }
+
             // 🔄 Recargar datos del RoleService
             console.log('🔄 [RoleService] Recargando datos de usuario...');
             this._roleService.reloadUserData();
@@ -130,6 +138,7 @@ export class AuthService {
         // Remove the access token and stored user from the local storage
         localStorage.removeItem('accessToken');
         localStorage.removeItem('userInfo');
+        localStorage.removeItem('currentUser'); // 🔧 CORRECCIÓN: Limpiar también currentUser
 
         // Set the authenticated flag to false
         this._authenticated = false;

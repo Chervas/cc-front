@@ -7,11 +7,12 @@ export const roleInterceptor: HttpInterceptorFn = (req, next) => {
     const roleService = inject(RoleService);
 
     // Función para determinar el tipo de petición
-    function getRequestType(url: string): 'internal_api' | 'external_domain' | 'asset' | 'fuse_mock' {
+    function getRequestType(url: string): 'internal_api' | 'external_domain' | 'asset' | 'fuse_mock' | 'oauth_route' {
         // Dominios externos que NO deben tener headers
         const externalDomains = [
             'facebook.com', 'google.com', 'googleapis.com', 
-            'gstatic.com', 'doubleclick.net', 'analytics.google.com'
+            'gstatic.com', 'doubleclick.net', 'analytics.google.com',
+            'autenticacion.clinicaclick.com'  // Excluir dominio OAuth
         ];
         
         // Verificar si es dominio externo
@@ -23,6 +24,11 @@ export const roleInterceptor: HttpInterceptorFn = (req, next) => {
         if (url.includes('/assets/') || 
             url.match(/\.(css|js|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|ico)(\?|$)/)) {
             return 'asset';
+        }
+        
+        // Verificar si es ruta OAuth DE VERIFICACIÓN (solo Google y TikTok)
+        if (url.includes('/oauth/') && url.includes('/connection-status')) {
+            return 'oauth_route';
         }
         
         // Verificar si es mock de Fuse
@@ -37,9 +43,38 @@ export const roleInterceptor: HttpInterceptorFn = (req, next) => {
     const url = req.url;
     const requestType = getRequestType(url);
 
-    // Solo procesar APIs internas y mocks de Fuse
+    // Solo procesar APIs internas, mocks de Fuse y rutas OAuth (excluyendo Meta)
     if (requestType === 'external_domain' || requestType === 'asset') {
+        console.log('🚫 [RoleInterceptor] Petición excluida del procesamiento:', url);
         return next(req);
+    }
+
+    // Mocks para rutas OAuth - CORRECCIÓN CRÍTICA (Meta excluido)
+    if (requestType === 'oauth_route') {
+        
+        // Mock para OAuth Google connection status
+        if (url.includes('/oauth/google/connection-status')) {
+            console.log('🎯 [RoleInterceptor] Mock response para /oauth/google/connection-status');
+            const mockOAuthStatus = {
+                connected: false,
+                message: 'No hay conexión Google activa',
+                status: 'disconnected'
+            };
+            return of(new HttpResponse({ status: 200, body: mockOAuthStatus }));
+        }
+        
+        // Mock para OAuth TikTok connection status
+        if (url.includes('/oauth/tiktok/connection-status')) {
+            console.log('🎯 [RoleInterceptor] Mock response para /oauth/tiktok/connection-status');
+            const mockOAuthStatus = {
+                connected: false,
+                message: 'No hay conexión TikTok activa',
+                status: 'disconnected'
+            };
+            return of(new HttpResponse({ status: 200, body: mockOAuthStatus }));
+        }
+        
+        // NOTA: Meta OAuth completamente excluido del interceptor - va directo al servidor
     }
 
     // Mocks para Fuse - TODOS los endpoints necesarios
@@ -365,20 +400,22 @@ export const roleInterceptor: HttpInterceptorFn = (req, next) => {
         }
     }
 
-    // Para APIs internas, agregar headers de rol
+    // Para APIs internas, agregar headers de rol (si están disponibles)
     if (requestType === 'internal_api') {
         try {
             const headers: { [key: string]: string } = {};
             
-            // Obtener usuario actual
+            // Obtener usuario actual (puede ser null durante carga inicial)
             const user = roleService.getCurrentUser();
-            if (user) {
-                headers['X-User-Id'] = user.id_usuario?.toString() || '';
+            if (user && user.id_usuario) {
+                headers['X-User-Id'] = user.id_usuario.toString();
                 headers['X-User-Email'] = user.email_usuario || '';
                 headers['X-User-Name'] = user.nombre || '';
+            } else {
+                console.log('⚠️ [RoleInterceptor] Usuario no disponible, continuando sin headers de usuario');
             }
 
-            // Obtener rol actual
+            // Obtener rol actual (puede ser null durante carga inicial)
             const currentRole = roleService.getCurrentRole();
             if (currentRole) {
                 headers['X-Current-Role'] = currentRole;
@@ -387,25 +424,33 @@ export const roleInterceptor: HttpInterceptorFn = (req, next) => {
                 const isAdmin = currentRole === 'administrador' || 
                                (user && user.isAdmin === true);
                 headers['X-Is-Admin'] = isAdmin.toString();
+            } else {
+                console.log('⚠️ [RoleInterceptor] Rol no disponible, continuando sin headers de rol');
             }
 
-            // Obtener clínica seleccionada
+            // Obtener clínica seleccionada (puede ser null durante carga inicial)
             const selectedClinica = roleService.getSelectedClinica();
-            if (selectedClinica) {
-                headers['X-Selected-Clinic'] = selectedClinica.id?.toString() || '';
+            if (selectedClinica && selectedClinica.id) {
+                headers['X-Selected-Clinic'] = selectedClinica.id.toString();
                 headers['X-Clinic-Name'] = selectedClinica.name || '';
+            } else {
+                console.log('⚠️ [RoleInterceptor] Clínica no disponible, continuando sin headers de clínica');
             }
 
-            // Crear nueva petición con headers
-            const modifiedReq = req.clone({
-                setHeaders: headers
-            });
-
-            console.log('🔧 [RoleInterceptor] Headers agregados para API interna:', Object.keys(headers));
-            return next(modifiedReq);
+            // Solo agregar headers si hay al menos uno disponible
+            if (Object.keys(headers).length > 0) {
+                const modifiedReq = req.clone({
+                    setHeaders: headers
+                });
+                console.log('🔧 [RoleInterceptor] Headers agregados para API interna:', Object.keys(headers));
+                return next(modifiedReq);
+            } else {
+                console.log('⚠️ [RoleInterceptor] No hay headers disponibles, continuando con petición original');
+                return next(req);
+            }
 
         } catch (error) {
-            console.warn('⚠️ [RoleInterceptor] Error agregando headers:', error);
+            console.warn('⚠️ [RoleInterceptor] Error agregando headers, continuando con petición original:', error);
             return next(req);
         }
     }
