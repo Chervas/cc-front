@@ -186,15 +186,9 @@ export class SettingsConnectedAccountsComponent implements OnInit {
                 this._changeDetectorRef.markForCheck();
             },
             (error) => {
-                if (error.status === 401) {
-                    console.warn('No hay conexión Meta activa (401).');
-                } else {
-                    console.error('Error al consultar estado de conexión Meta:', error);
-                }
+                console.error('Error al consultar estado de conexión Meta:', error);
                 const metaAccount = this.accounts.find(acc => acc.id === 'meta');
-                if (metaAccount) {
-                    metaAccount.connected = false;
-                }
+                if (metaAccount) metaAccount.connected = false;
                 this._changeDetectorRef.markForCheck();
             }
         );
