@@ -14,6 +14,8 @@ import { NavigationService } from 'app/core/navigation/navigation.service';
 import { Navigation } from 'app/core/navigation/navigation.types';
 import { RoleService, UsuarioClinicaResponse } from 'app/core/services/role.service';
 import { AuthService } from 'app/core/auth/auth.service';
+import { GroupsService } from 'app/modules/admin/apps/clinicas/groups/groups.service';
+import { GroupClinica } from 'app/modules/admin/apps/clinicas/clinicas.types';
 import { ClinicFilterService } from 'app/core/services/clinic-filter-service';
 import { LanguagesComponent } from 'app/layout/common/languages/languages.component';
 import { MessagesComponent } from 'app/layout/common/messages/messages.component';
@@ -59,8 +61,17 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
     selectedRole: string | null = null;
     clinicas: UsuarioClinicaResponse[] = [];
     selectedClinica: UsuarioClinicaResponse | null = null;
+     /** Valor actualmente seleccionado en el desplegable de clínicas. Puede ser
+     *  'all', 'group:<nombre>' o el ID numérico de la clínica  */
+    selectedClinicOption: string | number | null = 'all';
+    /** Nombre del grupo seleccionado (si aplica) */
+    selectedGroupName: string | null = null;
     clinicasForRole: UsuarioClinicaResponse[] = [];
-    groupedClinicas: Record<string, UsuarioClinicaResponse[]> = {};
+     /** Agrupaciones de clínicas disponibles para el rol actual */
+    clinicGroups: { name: string; clinics: UsuarioClinicaResponse[] }[] = [];
+     /** Lista de grupos obtenidos desde la API */
+    groups: GroupClinica[] = [];
+    
     
     private _unsubscribeAll: Subject<any> = new Subject<any>();
 
@@ -76,6 +87,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
         public roleService: RoleService,
         private _authService: AuthService,
         private clinicFilterService: ClinicFilterService,
+        private _groupsService: GroupsService,
     ) {}
 
     // -----------------------------------------------------------------------------------------------------
@@ -149,7 +161,27 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this._unsubscribeAll))
              .subscribe((clinic: UsuarioClinicaResponse | null) => {
                 this.selectedClinica = clinic;
-                console.log('🏥 [ClassyLayout] Clínica seleccionada:', clinic?.name);
+                if (clinic) {
+                    this.selectedClinicOption = clinic.id;
+                    this.selectedGroupName = null;
+                } else if (!this.selectedGroupName) {
+                    this.selectedClinicOption = 'all';
+                }
+                const name = clinic ? clinic.name : this.selectedGroupName || 'Todas';
+                console.log('🏥 [ClassyLayout] Clínica seleccionada:', name);
+            });
+
+        // Load available clinic groups
+        this._groupsService.getAllGroups()
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe({
+                next: (groups) => {
+                    this.groups = groups;
+                    this.updateClinicLists();
+                },
+                error: (error) => {
+                    console.error('❌ [ClassyLayout] Error cargando grupos:', error);
+                }
             });
 
         // Get available roles
@@ -208,25 +240,38 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
     updateClinicLists(): void {
         if (!this.selectedRole) {
             this.clinicasForRole = [];
-            this.groupedClinicas = {};
+              this.clinicGroups = [];
             this.clinicFilterService.setFilteredClinics([]);
             return;
         }
 
         this.clinicasForRole = this.clinicas.filter(c => c.userRole === this.selectedRole);
 
-        const allGrouped = this.roleService.groupClinicsByGroup();
-        const filtered: Record<string, UsuarioClinicaResponse[]> = {};
-        Object.keys(allGrouped).forEach(key => {
-            const groupClinics = allGrouped[key].filter(c => c.userRole === this.selectedRole);
+        
+         const groups: { name: string; clinics: UsuarioClinicaResponse[] }[] = [];
+
+
+       
+        // Build groups using API-provided groups
+        this.groups.forEach(g => {
+           const groupId = typeof g.id_grupo === 'string' ? Number(g.id_grupo) : g.id_grupo;
+            const groupClinics = this.clinicasForRole.filter(c => c.grupoClinica?.id_grupo === groupId);
             if (groupClinics.length > 0) {
-                filtered[key] = groupClinics;
+                groups.push({ name: g.nombre_grupo, clinics: groupClinics });
             }
         });
-        this.groupedClinicas = filtered;
+
+        // Ungrouped clinics
+        const ungrouped = this.clinicasForRole.filter(c => !c.grupoClinica);
+        if (ungrouped.length > 0) {
+            groups.push({ name: 'Sin Grupo', clinics: ungrouped });
+        }
+
+        this.clinicGroups = groups;
 
         this.clinicFilterService.setFilteredClinics(this.clinicasForRole);
     }
+
 
 
       
@@ -235,23 +280,46 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
      * Obtain clinics grouped by group name for the current role
      */
     getGroupedClinicasForCurrentRole(): Record<string, UsuarioClinicaResponse[]> {
-        const currentRole = this.roleService.getCurrentRole();
-        if (!currentRole) {
-            return {};
-        }
-        return this.roleService.groupClinicsByGroup();
+         const grouped: Record<string, UsuarioClinicaResponse[]> = {};
+        this.clinicGroups.forEach(g => {
+            grouped[g.name] = g.clinics;
+        });
+        return grouped;
 
     }
 
     /**
      * Handle clinic change
      */
-     onClinicChange(clinicId: number | null): void {
-        const clinic = this.clinicas.find(c => c.id === clinicId);
+     onClinicChange(value: number | string | null): void {
+        if (value === null || value === 'all') {
+            this.selectedGroupName = null;
+            this.selectedClinicOption = 'all';
+            this.roleService.clearSelectedClinica();
+            this.clinicFilterService.setSelectedClinicId(null);
+            return;
+        }
+
+        if (typeof value === 'string' && value.startsWith('group:')) {
+            const groupName = value.slice(6);
+            const group = this.clinicGroups.find(g => g.name === groupName);
+            const ids = group ? group.clinics.map(c => c.id).join(',') : '';
+            this.selectedGroupName = groupName;
+            this.selectedClinicOption = value;
+            this.roleService.clearSelectedClinica();
+            this.clinicFilterService.setSelectedClinicId(ids || null);
+            return;
+        }
+
+        const clinic = this.clinicas.find(c => c.id === value);
         if (clinic) {
+            this.selectedGroupName = null;
+            this.selectedClinicOption = clinic.id;
             this.roleService.setClinica(clinic);
             this.clinicFilterService.setSelectedClinicId(String(clinic.id));
         } else {
+            this.selectedGroupName = null;
+            this.selectedClinicOption = 'all';
             this.roleService.clearSelectedClinica();
             this.clinicFilterService.setSelectedClinicId(null);
         }
@@ -260,18 +328,19 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
     /**
      * Get the currently selected clinic ID
      */
-    getSelectedClinicId(): number | null {
-        const selected = this.roleService.getSelectedClinica();
-        return selected?.id || null;
+     getSelectedClinicId(): number | string | null {
+        return this.selectedClinicOption;
     }
 
     /**
      * Get the currently selected clinic name
      */
     getSelectedClinicName(): string {
+         if (this.selectedGroupName) {
+            return this.selectedGroupName;
+        }
         const selected = this.roleService.getSelectedClinica();
-        return selected?.name || '';
-
+        return selected?.name || 'Todas';
     }
 }
 

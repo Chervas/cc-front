@@ -18,11 +18,12 @@
             <div *ngIf="clinicasForRole.length > 0">
                 <mat-form-field appearance="outline" class="w-full fuse-mat-dense clinic-selector">
                     <mat-label>Seleccionar Clínica</mat-label>
-                    <mat-select [value]="selectedClinica?.id" (selectionChange)="onClinicChange($event.value)">
-                        <mat-option [value]="null">Todos</mat-option>
-                        <ng-container *ngFor="let group of groupedClinicas | keyvalue">
-                            <mat-optgroup [label]="group.key">
-                                <mat-option *ngFor="let clinica of group.value" [value]="clinica.id">
+                    <mat-select [value]="getSelectedClinicId()" (selectionChange)="onClinicChange($event.value)">
+                        <mat-option value="all">Todas</mat-option>
+                          <ng-container *ngFor="let group of clinicGroups">
+                            <mat-optgroup [label]="group.name">
+                                <mat-option *ngIf="group.name !== 'Sin Grupo'" [value]="'group:' + group.name" class="font-semibold">{{ group.name }} (todas)</mat-option>
+                                <mat-option *ngFor="let clinica of group.clinics" [value]="clinica.id">
                                     <div class="flex items-center">
                                         <mat-icon [svgIcon]="'heroicons_outline:building-office'" class="mr-2 text-current icon-size-4"></mat-icon>
                                         {{ clinica.name }}
