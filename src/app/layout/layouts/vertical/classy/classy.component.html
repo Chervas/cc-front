@@ -10,13 +10,28 @@
     [opened]="!isScreenSmall">
     
     <!-- Navigation header hook -->
-    <ng-container fuseVerticalNavigationContentHeader>
-        <div class="flex items-center w-full p-4 pl-6">
-            <!-- Logo -->
+   <ng-container fuseVerticalNavigationContentHeader>
+        <div class="flex flex-col w-full p-4 pl-6 space-y-4">
             <div class="flex items-center justify-center">
-                <img
-                    class="w-8"
-                    src="assets/images/logo/logo.svg">
+                <img class="w-8" src="assets/images/logo/logo.svg">
+            </div>
+            <div *ngIf="clinicasForRole.length > 0">
+                <mat-form-field appearance="outline" class="w-full fuse-mat-dense clinic-selector">
+                    <mat-label>Seleccionar Clínica</mat-label>
+                    <mat-select [value]="selectedClinica?.id" (selectionChange)="onClinicChange($event.value)">
+                        <mat-option [value]="null">Todos</mat-option>
+                        <ng-container *ngFor="let group of groupedClinicas | keyvalue">
+                            <mat-optgroup [label]="group.key">
+                                <mat-option *ngFor="let clinica of group.value" [value]="clinica.id">
+                                    <div class="flex items-center">
+                                        <mat-icon [svgIcon]="'heroicons_outline:building-office'" class="mr-2 text-current icon-size-4"></mat-icon>
+                                        {{ clinica.name }}
+                                    </div>
+                                </mat-option>
+                            </mat-optgroup>
+                        </ng-container>
+                    </mat-select>
+                </mat-form-field>
             </div>
         </div>
     </ng-container>
@@ -53,58 +68,10 @@
     
     <!-- Clinic Selector copied from thin layout -->
    <!-- Navigation footer hook -->
-    <ng-container fuseVerticalNavigationContentFooter>
-        <!-- Clinic Selector -->
-         <div class="p-4 border-t border-gray-200 dark:border-gray-700" *ngIf="clinicasForRole.length > 0">
-            <div class="mb-3">
-                <span class="text-xs font-medium text-secondary uppercase tracking-wider">Clínica Activa</span>
-            </div>
-
-            <mat-form-field appearance="outline" class="w-full fuse-mat-dense">
-                <mat-label>Seleccionar Clínica</mat-label>
-                <mat-select
-                    [value]="selectedClinica?.id"
-                    (selectionChange)="onClinicChange($event.value)">
-                    <ng-container *ngFor="let group of groupedClinicas | keyvalue">
-                        <mat-optgroup [label]="group.key">
-                            <mat-option
-                        *ngFor="let clinica of group.value"
-                        [value]="clinica.id">
-                        <div class="flex items-center">
-                            <mat-icon
-                                [svgIcon]="'heroicons_outline:building-office'"
-                                class="mr-2 text-current icon-size-4">
-                            </mat-icon>
-                            {{ clinica.name }}
-                        </div>
-                    </mat-option>
-
-                        </mat-optgroup>
-                    </ng-container>
-                </mat-select>
-            </mat-form-field>
-
-            <div *ngIf="roleService.getSelectedClinica()" class="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div class="flex items-center text-sm">
-                    <mat-icon
-                        [svgIcon]="'heroicons_outline:building-office'"
-                        class="mr-2 text-primary icon-size-4">
-                    </mat-icon>
-                    <div class="flex-1 min-w-0">
-                        <div class="font-medium truncate">{{ getSelectedClinicName() }}</div>
-                         <div class="text-xs text-secondary">Rol: {{ selectedRole | titlecase }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     
-   
-        <div
-            class="mb-4 mt-2 flex h-16 flex-0 items-center justify-center pl-2 pr-6 opacity-12">
-            <img
-                class="max-w-160"
-                src="assets/images/logo/logo-text-on-dark.svg" />
+        <ng-container fuseVerticalNavigationContentFooter>
+        <div class="mb-4 mt-2 flex h-16 flex-0 items-center justify-center pl-2 pr-6 opacity-12">
+            <img class="max-w-160" src="assets/images/logo/logo-text-on-dark.svg" />
         </div>
     </ng-container>
 </fuse-vertical-navigation>

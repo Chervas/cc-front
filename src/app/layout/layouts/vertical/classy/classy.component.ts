@@ -14,6 +14,7 @@ import { NavigationService } from 'app/core/navigation/navigation.service';
 import { Navigation } from 'app/core/navigation/navigation.types';
 import { RoleService, UsuarioClinicaResponse } from 'app/core/services/role.service';
 import { AuthService } from 'app/core/auth/auth.service';
+import { ClinicFilterService } from 'app/core/services/clinic-filter-service';
 import { LanguagesComponent } from 'app/layout/common/languages/languages.component';
 import { MessagesComponent } from 'app/layout/common/messages/messages.component';
 import { NotificationsComponent } from 'app/layout/common/notifications/notifications.component';
@@ -74,6 +75,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
         private _fuseNavigationService: FuseNavigationService,
         public roleService: RoleService,
         private _authService: AuthService,
+        private clinicFilterService: ClinicFilterService,
     ) {}
 
     // -----------------------------------------------------------------------------------------------------
@@ -120,6 +122,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
             .subscribe((user) => {
                 this.user = user;
                 console.log('👤 [ClassyLayout] Usuario cargado:', user);
+                this.clinicFilterService.setCurrentUser(user);
             });
 
         // Subscribe to selected role
@@ -128,22 +131,23 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
             .subscribe((role) => {
                 this.selectedRole = role;
                 console.log('🎭 [ClassyLayout] Rol seleccionado:', role);
+                this.clinicFilterService.setSelectedRole(role || '');
                 this.updateClinicLists();
             });
 
         // Subscribe to clinicas
         this.roleService.clinicas$
             .pipe(takeUntil(this._unsubscribeAll))
-            .subscribe((clinicas) => {
-                this.clinicas = clinicas || [];
-                console.log('🏥 [ClassyLayout] Clínicas disponibles:', this.clinicas.length);
-                this.updateClinicLists();
+            .subscribe((clinicas: UsuarioClinicaResponse[]) => {
+                this.selectedClinica = clinic;
+                console.log('🏥 [ClassyLayout] Clínica seleccionada:', clinic?.name);
+                this.clinicFilterService.setSelectedClinicId(clinic ? String(clinic.id) : null);
             });
 
         // Subscribe to selected clinica
         this.roleService.selectedClinica$
             .pipe(takeUntil(this._unsubscribeAll))
-            .subscribe((clinica) => {
+             .subscribe((clinic: UsuarioClinicaResponse | null) => {
                 this.selectedClinica = clinica;
                 console.log('🏥 [ClassyLayout] Clínica seleccionada:', clinica?.name);
             });
@@ -205,6 +209,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
         if (!this.selectedRole) {
             this.clinicasForRole = [];
             this.groupedClinicas = {};
+            this.clinicFilterService.setFilteredClinics([]);
             return;
         }
 
@@ -219,6 +224,8 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
             }
         });
         this.groupedClinicas = filtered;
+
+        this.clinicFilterService.setFilteredClinics(this.clinicasForRole);
     }
 
 
@@ -239,10 +246,14 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy {
     /**
      * Handle clinic change
      */
-     onClinicChange(clinicId: number): void {
+     onClinicChange(clinicId: number | null): void {
         const clinic = this.clinicas.find(c => c.id === clinicId);
         if (clinic) {
             this.roleService.setClinica(clinic);
+            this.clinicFilterService.setSelectedClinicId(String(clinic.id));
+        } else {
+            this.roleService.clearSelectedClinica();
+            this.clinicFilterService.setSelectedClinicId(null);
         }
     }
 

@@ -12,7 +12,7 @@ export const defaultNavigation: FuseNavigationItem[] = [
         children: [
             {
                 id   : 'apps.contacts',
-                title: 'Usuarioss',
+                title: 'Personal',
                 type : 'basic',
                 icon : 'heroicons_outline:identification',
                 link : '/apps/contacts',
@@ -56,10 +56,10 @@ export const defaultNavigation: FuseNavigationItem[] = [
                 title   : 'Pacientes',
                 type    : 'basic',
                 icon    : 'heroicons_outline:user-group',
-                link    : '/pacientes'
-            }            
+                link    : '/apps/pacientes'
+            }
         ],
-    },    
+    },
     {
         id   : 'contabilidad',
         title: 'Contabilidad',
@@ -137,8 +137,8 @@ export const compactNavigation: FuseNavigationItem[] = [
     /* aquí van los elementos del menú de primer nivel, por ejmeplo, la bola tendría que ir a este */
     {
         id      : 'paneles',
-        title   : 'Paneles',
-        tooltip : 'Paneles',
+        title   : 'Panel principal',
+        tooltip : 'Panel principal',
         type    : 'basic',
         icon    : 'heroicons_outline:chart-bar',
         link    : '/apps/paneles',

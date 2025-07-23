@@ -4,6 +4,9 @@ import { environment } from 'environments/environment';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
+// IDs de usuarios que se consideran administradores
+export const ADMIN_USER_IDS = [1];
+
 // ✅ ESTRUCTURA EXACTA QUE DEVUELVE EL BACKEND - VERIFICADA
 export interface UsuarioClinicaResponse {
     id: number;                    // ~ REAL del backend
@@ -388,6 +391,10 @@ export class RoleService {
         ).subscribe(user => {
             if (user) {
                 console.log('✅ [RoleService] Usuario cargado:', user);
+
+                // Marcar administrador según lista de IDs
+                user.isAdmin = ADMIN_USER_IDS.includes(user.id_usuario);
+
                 this.currentUserSubject.next(user);
                 
                 // ✅ CORRECCIÓN: Si es admin, establecer rol administrador
@@ -527,6 +534,13 @@ export class RoleService {
         this.selectedRoleSubject.next(null);
         this.selectedClinicaSubject.next(null);
         localStorage.removeItem('currentRole');
+    }
+
+      /**
+     * Limpiar la clínica seleccionada
+     */
+    clearSelectedClinica(): void {
+        this.selectedClinicaSubject.next(null);
     }
 
     // ✅ MÉTODOS ADICIONALES PARA COMPATIBILIDAD
