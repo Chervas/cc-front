@@ -24,7 +24,7 @@ import { QuickChatComponent } from 'app/layout/common/quick-chat/quick-chat.comp
 import { SearchComponent } from 'app/layout/common/search/search.component';
 import { ShortcutsComponent } from 'app/layout/common/shortcuts/shortcuts.component';
 import { UserComponent } from 'app/layout/common/user/user.component';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, Observable } from 'rxjs';
 
 @Component({
     selector     : 'classy-layout',
@@ -57,8 +57,8 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
     navigation: Navigation;
     user: any;
 
-    // Role and clinic data
-    availableRoles: string[] = [];
+    // ✅ CORREGIDO: Usar Observable para roles disponibles
+    availableRoles$: Observable<string[]>;
     selectedRole: string | null = null;
     clinicas: UsuarioClinicaResponse[] = [];
     selectedClinica: UsuarioClinicaResponse | null = null;
@@ -141,8 +141,15 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
                 this.clinicFilterService.setCurrentUser(user);
             });
 
-        // ✅ CORREGIDO: Usar getAvailableRoles() en lugar de availableRoles$
-        this.loadAvailableRoles();
+        // ✅ CORREGIDO: Usar Observable reactivo para roles disponibles
+        this.availableRoles$ = this.roleService.availableRoles$;
+        
+        // ✅ OPCIONAL: Suscribirse para debug (se puede quitar en producción)
+        this.roleService.availableRoles$
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((roles) => {
+                console.log('🎭 [ClassyLayout] Roles disponibles actualizados:', roles);
+            });
 
         // Subscribe to selected role
         this.roleService.selectedRole$
@@ -214,16 +221,6 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
     }
 
     /**
-     * ✅ NUEVO MÉTODO: Cargar roles disponibles usando el método correcto
-     */
-    private loadAvailableRoles(): void
-    {
-        // Usar getAvailableRoles() que devuelve un array directamente
-        this.availableRoles = this.roleService.getAvailableRoles();
-        console.log('🎭 [ClassyLayout] Roles disponibles cargados:', this.availableRoles);
-    }
-
-    /**
      * Handle role change
      */
     onRoleChange(role: string): void
@@ -231,6 +228,20 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
         console.log('🎭 [ClassyLayout] Cambio de rol:', role);
         // ✅ CORREGIDO: Usar setRole() en lugar de setSelectedRole()
         this.roleService.setRole(role);
+    }
+
+    /**
+     * ✅ NUEVO: Get role icon using Fuse icons
+     */
+    getRoleIcon(role: string): string
+    {
+        const icons: Record<string, string> = {
+            'administrador': 'heroicons_outline:shield-check',
+            'propietario': 'heroicons_outline:building-office',
+            'medico': 'heroicons_outline:user-circle',
+            'paciente': 'heroicons_outline:user'
+        };
+        return icons[role] || 'heroicons_outline:user';
     }
 
     /**
@@ -244,8 +255,8 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
             .subscribe({
                 next: (groups) => {
                     this.groups = groups;
+                    console.log('✅ [ClassyLayout] Grupos cargados:', this.groups.length, this.groups);
                     this.updateClinicLists();
-                    console.log('✅ [ClassyLayout] Grupos cargados:', this.groups.length);
                 },
                 error: (error) => {
                     console.error('❌ [ClassyLayout] Error cargando grupos:', error);
@@ -271,78 +282,89 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
         console.log('🔄 [ClassyLayout] Actualizando listas para rol:', this.selectedRole);
         console.log('🏥 [ClassyLayout] Clínicas para rol:', this.clinicasForRole.length);
 
-        // ✅ LÓGICA JERÁRQUICA INTELIGENTE
+        // ✅ LÓGICA JERÁRQUICA CORREGIDA
         this.buildHierarchicalGroups();
     }
 
     /**
-     * ✅ NUEVA FUNCIÓN: Construir grupos jerárquicos inteligentes
+     * ✅ FUNCIÓN CORREGIDA: Construir grupos jerárquicos
      */
     private buildHierarchicalGroups(): void {
         const totalClinics = this.clinicasForRole.length;
-        const hasGroups = this.groups.length > 0;
 
         console.log('🔍 [ClassyLayout] Construyendo grupos jerárquicos:', {
             totalClinics,
-            hasGroups,
-            groups: this.groups.length
+            groups: this.groups.length,
+            clinicasForRole: this.clinicasForRole.map(c => ({
+                name: c.name,
+                groupId: c.groupId,
+                grupoClinica: c.grupoClinica
+            }))
         });
 
-        // Lógica condicional inteligente
-        if (!hasGroups || totalClinics === 0) {
-            // Sin grupos o sin clínicas: mostrar clínicas directamente
-            this.clinicGroups = totalClinics > 0 ? [{
-                name: 'Sin Grupo',
-                clinics: this.clinicasForRole
-            }] : [];
+        if (totalClinics === 0) {
+            this.clinicGroups = [];
             return;
         }
 
         // Group clinics by their groups
         const grouped: { [key: string]: UsuarioClinicaResponse[] } = {};
 
-        // First, group by existing groups
+        // ✅ CORREGIDO: Primero agrupar por grupos existentes
         this.groups.forEach(group => {
             const groupClinics = this.clinicasForRole.filter(clinica => {
                 const clinicGroupId = clinica.grupoClinica?.id_grupo || clinica.groupId;
-                // ✅ CORREGIDO: Usar String() para evitar comparación number vs string
-                return String(clinicGroupId) === String(group.id_grupo);
+                const matches = String(clinicGroupId) === String(group.id_grupo);
+                
+                if (matches) {
+                    console.log(`✅ [ClassyLayout] Clínica "${clinica.name}" pertenece al grupo "${group.nombre_grupo}"`);
+                }
+                
+                return matches;
             });
 
             if (groupClinics.length > 0) {
                 grouped[group.nombre_grupo] = groupClinics;
+                console.log(`📋 [ClassyLayout] Grupo "${group.nombre_grupo}": ${groupClinics.length} clínicas`);
             }
-
-            console.log(`🏥 [ClassyLayout] Grupo "${group.nombre_grupo}" (ID: ${group.id_grupo}):`, {
-                clinicsFound: groupClinics.length,
-                clinics: groupClinics.map(c => ({
-                    name: c.name,
-                    grupoClinica: c.grupoClinica,
-                    groupId: c.groupId,
-                    groupName: c.groupName
-                }))
-            });
         });
 
-        // Add clinics without group
+        // ✅ CORREGIDO: Clínicas sin grupo
         const ungrouped = this.clinicasForRole.filter(c => {
             const clinicGroupId = c.grupoClinica?.id_grupo || c.groupId;
-            return !clinicGroupId;
+            const hasGroup = clinicGroupId && this.groups.some(g => String(g.id_grupo) === String(clinicGroupId));
+            
+            if (!hasGroup) {
+                console.log(`🔍 [ClassyLayout] Clínica "${c.name}" sin grupo (groupId: ${clinicGroupId})`);
+            }
+            
+            return !hasGroup;
         });
 
         if (ungrouped.length > 0) {
             grouped['Sin Grupo'] = ungrouped;
+            console.log(`📋 [ClassyLayout] Sin Grupo: ${ungrouped.length} clínicas`);
         }
 
-        console.log(`🏥 [ClassyLayout] Clínicas sin grupo: ${ungrouped.length}`);
+        // ✅ CORREGIDO: Ordenar grupos - grupos reales primero, "Sin Grupo" al final
+        const groupNames = Object.keys(grouped);
+        const realGroups = groupNames.filter(name => name !== 'Sin Grupo').sort();
+        const orderedGroupNames = [...realGroups];
+        
+        if (grouped['Sin Grupo']) {
+            orderedGroupNames.push('Sin Grupo');
+        }
 
-        // Convert to array
-        this.clinicGroups = Object.keys(grouped).map(groupName => ({
+        // Convert to array in correct order
+        this.clinicGroups = orderedGroupNames.map(groupName => ({
             name: groupName,
             clinics: grouped[groupName]
         }));
 
-        console.log('📋 [ClassyLayout] Grupos para template:', Object.keys(grouped));
+        console.log('📋 [ClassyLayout] Grupos finales para template:', this.clinicGroups.map(g => ({
+            name: g.name,
+            count: g.clinics.length
+        })));
     }
 
     /**
@@ -354,7 +376,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
     }
 
     /**
-     * Handle clinic selection change
+     * ✅ CORREGIDO: Handle clinic selection change - ahora maneja "Sin Grupo" como seleccionable
      */
     onClinicChange(value: string | number): void
     {
@@ -366,7 +388,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
             this.selectedGroupName = null;
             this.clinicFilterService.setSelectedClinicId(null);
         } else if (typeof value === 'string' && value.startsWith('group:')) {
-            // Group selected
+            // Group selected (including "Sin Grupo")
             const groupName = value.replace('group:', '');
             this.selectedClinicOption = value;
             this.selectedGroupName = groupName;
@@ -374,6 +396,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
             // Get all clinic IDs from this group
             const group = this.clinicGroups.find(g => g.name === groupName);
             if (group && group.clinics.length > 0) {
+                console.log(`🏥 [ClassyLayout] Seleccionado grupo "${groupName}" con ${group.clinics.length} clínicas`);
                 this.clinicFilterService.setFilteredClinics(group.clinics);
             }
         } else {
@@ -384,6 +407,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
             if (clinic) {
                 this.selectedClinicOption = clinicId;
                 this.selectedGroupName = null;
+                console.log(`🏥 [ClassyLayout] Seleccionada clínica individual: ${clinic.name}`);
                 this.clinicFilterService.setSelectedClinicId(clinicId.toString());
             }
         }
@@ -403,33 +427,6 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
         }
         
         return 'Todas';
-    }
-
-    /**
-     * ✅ NUEVA FUNCIÓN: Check if a group option should be shown
-     */
-    shouldShowGroupOption(groupName: string): boolean
-    {
-        // Don't show group option if there's only one clinic in the group
-        const group = this.clinicGroups.find(g => g.name === groupName);
-        return group ? group.clinics.length > 1 : false;
-    }
-
-    /**
-     * ✅ NUEVA FUNCIÓN: Get clinic count for a group
-     */
-    getClinicCountForGroup(groupName: string): number
-    {
-        const group = this.clinicGroups.find(g => g.name === groupName);
-        return group ? group.clinics.length : 0;
-    }
-
-    /**
-     * ✅ NUEVA FUNCIÓN: Check if we should show the "all" option
-     */
-    shouldShowAllOption(): boolean
-    {
-        return this.clinicasForRole.length > 1;
     }
 
     /**

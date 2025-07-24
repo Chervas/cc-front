@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from 'environments/environment';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { BehaviorSubject, Observable, of, combineLatest } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
 // IDs de usuarios que se consideran administradores
@@ -146,18 +146,52 @@ export class RoleService {
     private clinicasSubject = new BehaviorSubject<UsuarioClinicaResponse[]>([]);
     private selectedRoleSubject = new BehaviorSubject<string | null>(null);
     private selectedClinicaSubject = new BehaviorSubject<UsuarioClinicaResponse | null>(null);
+    
+    // ✅ NUEVO: Subject para roles disponibles (SOLO CAMBIO MÍNIMO NECESARIO)
+    private availableRolesSubject = new BehaviorSubject<string[]>([]);
 
     // ✅ OBSERVABLES PÚBLICOS
     public currentUser$ = this.currentUserSubject.asObservable();
     public clinicas$ = this.clinicasSubject.asObservable();
     public selectedRole$ = this.selectedRoleSubject.asObservable();
     public selectedClinica$ = this.selectedClinicaSubject.asObservable();
+    
+    // ✅ NUEVO: Observable para roles disponibles (SOLO CAMBIO MÍNIMO NECESARIO)
+    public availableRoles$ = this.availableRolesSubject.asObservable();
 
     // ✅ ALIAS PARA COMPATIBILIDAD
     public clinicasConRol$ = this.clinicas$;
 
     constructor(private http: HttpClient) {
         console.log('🚀 [RoleService] Servicio inicializado');
+        
+        // ✅ NUEVO: Configurar actualización automática de roles disponibles (SOLO CAMBIO MÍNIMO NECESARIO)
+        this.setupAvailableRolesUpdater();
+    }
+
+    // ✅ NUEVO: Configurar actualizador automático de roles disponibles (SOLO CAMBIO MÍNIMO NECESARIO)
+    private setupAvailableRolesUpdater(): void {
+        // Combinar cambios en usuario y clínicas para actualizar roles disponibles
+        combineLatest([
+            this.currentUser$,
+            this.clinicas$
+        ]).subscribe(([user, clinicas]) => {
+            const roles = this.calculateAvailableRoles(user, clinicas);
+            this.availableRolesSubject.next(roles);
+            console.log('🎭 [RoleService] Roles disponibles actualizados:', roles);
+        });
+    }
+
+    // ✅ NUEVO: Calcular roles disponibles basado en usuario y clínicas (SOLO CAMBIO MÍNIMO NECESARIO)
+    private calculateAvailableRoles(user: Usuario | null, clinicas: UsuarioClinicaResponse[]): string[] {
+        const roles = [...new Set(clinicas.map(c => c.userRole))];
+        
+        // Agregar administrador si el usuario es admin
+        if (user && user.isAdmin && !roles.includes('administrador')) {
+            roles.unshift('administrador');
+        }
+        
+        return roles;
     }
 
     // ✅ MÉTODO PRINCIPAL PARA VERIFICAR ROLES
@@ -515,6 +549,7 @@ export class RoleService {
         return this.selectedClinicaSubject.value;
     }
 
+    // ✅ MÉTODO MANTENIDO PARA COMPATIBILIDAD (ahora también actualiza el Observable)
     getAvailableRoles(): string[] {
         const clinicas = this.clinicasSubject.value;
         const roles = [...new Set(clinicas.map(c => c.userRole))];
@@ -533,6 +568,8 @@ export class RoleService {
         this.clinicasSubject.next([]);
         this.selectedRoleSubject.next(null);
         this.selectedClinicaSubject.next(null);
+        // ✅ NUEVO: Limpiar también roles disponibles
+        this.availableRolesSubject.next([]);
         localStorage.removeItem('currentRole');
     }
 
@@ -555,6 +592,7 @@ export class RoleService {
         return clinica ? clinica.userRole : null;
     }
 
+    // ✅ MÉTODO PRESERVADO: groupClinicsByRole
     groupClinicsByRole(): Record<string, UsuarioClinicaResponse[]> {
         const clinicas = this.clinicasSubject.value;
         const grouped: Record<string, UsuarioClinicaResponse[]> = {};
@@ -571,11 +609,7 @@ export class RoleService {
         return grouped;
     }
 
-    
-
-      /**
-     * Agrupa las clínicas por nombre de grupo
-     */
+    // ✅ MÉTODO PRESERVADO: groupClinicsByGroup
     groupClinicsByGroup(): Record<string, UsuarioClinicaResponse[]> {
         const clinicas = this.clinicasSubject.value;
         const grouped: Record<string, UsuarioClinicaResponse[]> = {};
@@ -601,6 +635,7 @@ export class RoleService {
         console.log('  - selectedRoleSubject.value:', this.selectedRoleSubject.value);
         console.log('  - currentUserSubject.value:', this.currentUserSubject.value);
         console.log('  - clinicasSubject.value.length:', this.clinicasSubject.value.length);
+        console.log('  - availableRolesSubject.value:', this.availableRolesSubject.value);
         console.log('  - localStorage currentRole:', localStorage.getItem('currentRole'));
         console.log('  - getCurrentRole() result:', this.getCurrentRole());
         console.log('  - Permisos disponibles:', this.getCurrentPermissions());

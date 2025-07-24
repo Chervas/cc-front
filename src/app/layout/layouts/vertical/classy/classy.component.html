@@ -19,32 +19,76 @@
                 <mat-form-field appearance="outline" class="w-full fuse-mat-dense clinic-selector">
                     <mat-label>Seleccionar Clínica</mat-label>
                     <mat-select [value]="getSelectedClinicId()" (selectionChange)="onClinicChange($event.value)">
-                        <!-- LÓGICA JERÁRQUICA: Solo mostrar "Todas" si hay más de una clínica -->
-                        <mat-option *ngIf="shouldShowAllOption()" value="all">
-                            📋 Todas mis clínicas ({{ getTotalClinicCount() }})
-                        </mat-option>
                         
-                        <ng-container *ngFor="let group of clinicGroups">
-                            <mat-optgroup [label]="group.name">
-                                <!-- OPCIÓN DE GRUPO: Solo si hay más de una clínica en el grupo -->
-                                <mat-option 
-                                    *ngIf="shouldShowGroupOption(group.name)" 
-                                    [value]="'group:' + group.name" 
-                                    class="font-semibold">
-                                    👥 {{ group.name }} ({{ getClinicCountForGroup(group.name) }})
-                                </mat-option>
+                        <!-- CASO 1: UNA SOLA CLÍNICA - Solo mostrar la clínica -->
+                        <ng-container *ngIf="clinicasForRole.length === 1">
+                            <mat-option [value]="clinicasForRole[0].id">
+                                <div class="flex items-center ml-4">
+                                    <mat-icon [svgIcon]="'heroicons_outline:building-storefront'" class="mr-2 text-current icon-size-4"></mat-icon>
+                                    {{ clinicasForRole[0].name }}
+                                </div>
+                            </mat-option>
+                        </ng-container>
+
+                        <!-- CASO 2: MÚLTIPLES CLÍNICAS -->
+                        <ng-container *ngIf="clinicasForRole.length > 1">
+                            
+                            <!-- OPCIÓN "TODAS MIS CLÍNICAS" - Siempre seleccionable cuando hay más de una -->
+                            <mat-option value="all">
+                                <div class="flex items-center">
+                                    <mat-icon [svgIcon]="'heroicons_outline:squares-2x2'" class="mr-2 text-current icon-size-4"></mat-icon>
+                                    Todas las clínicas ({{ getTotalClinicCount() }})
+                                </div>
+                            </mat-option>
+                            
+                            <!-- ITERAR SOBRE GRUPOS EN ORDEN: GRUPOS REALES PRIMERO, "SIN GRUPO" AL FINAL -->
+                            <ng-container *ngFor="let group of clinicGroups">
                                 
-                                <!-- CLÍNICAS INDIVIDUALES: Con iconos y indentación -->
-                                <mat-option *ngFor="let clinica of group.clinics" [value]="clinica.id">
-                                    <div class="flex items-center" [class.ml-4]="shouldShowGroupOption(group.name)">
-                                        <mat-icon [svgIcon]="'heroicons_outline:building-office'" class="mr-2 text-current icon-size-4"></mat-icon>
-                                        {{ clinica.name }}
-                                    </div>
-                                </mat-option>
-                                
-                                <!-- SEPARADOR VISUAL: Entre grupos -->
-                                <div *ngIf="group.name !== 'Sin Grupo'" class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
-                            </mat-optgroup>
+                                <!-- GRUPOS REALES (no "Sin Grupo") - Seleccionables y en negrita -->
+                                <ng-container *ngIf="group.name !== 'Sin Grupo'">
+                                    <!-- Opción del grupo (seleccionable) -->
+                                    <mat-option 
+                                        [value]="'group:' + group.name" 
+                                        class="font-bold">
+                                        <div class="flex items-center font-bold">
+                                            <mat-icon [svgIcon]="'heroicons_outline:folder'" class="mr-2 text-current icon-size-4"></mat-icon>
+                                            {{ group.name }} ({{ group.clinics.length }})
+                                        </div>
+                                    </mat-option>
+                                    
+                                    <!-- Clínicas del grupo con indentación -->
+                                    <mat-option *ngFor="let clinica of group.clinics" [value]="clinica.id">
+                                        <div class="flex items-center ml-4">
+                                            <mat-icon [svgIcon]="'heroicons_outline:building-storefront'" class="mr-2 text-current icon-size-4"></mat-icon>
+                                            {{ clinica.name }}
+                                        </div>
+                                    </mat-option>
+                                </ng-container>
+                            </ng-container>
+
+                            <!-- SECCIÓN "SIN GRUPO" - También seleccionable y en negrita -->
+                            <ng-container *ngFor="let group of clinicGroups">
+                                <ng-container *ngIf="group.name === 'Sin Grupo' && group.clinics.length > 0">
+                                    <!-- Opción "Sin Grupo" (seleccionable) -->
+                                    <mat-option 
+                                        [value]="'group:Sin Grupo'" 
+                                        class="font-bold">
+                                        <div class="flex items-center font-bold">
+                                            <mat-icon [svgIcon]="'heroicons_outline:folder'" class="mr-2 text-current icon-size-4"></mat-icon>
+                                            Sin Grupo ({{ group.clinics.length }})
+                                        </div>
+                                    </mat-option>
+                                    
+                                    <!-- Clínicas sin grupo con indentación -->
+                                    <mat-option *ngFor="let clinica of group.clinics" [value]="clinica.id">
+                                        <div class="flex items-center ml-4">
+                                            <mat-icon [svgIcon]="'heroicons_outline:building-storefront'" class="mr-2 text-current icon-size-4"></mat-icon>
+                                            {{ clinica.name }}
+                                        </div>
+                                    </mat-option>
+                                </ng-container>
+                            </ng-container>
+
                         </ng-container>
                     </mat-select>
                 </mat-form-field>
@@ -102,21 +146,26 @@
             <mat-icon [svgIcon]="'heroicons_outline:bars-3'"></mat-icon>
         </button>
 
-        <!-- SELECTOR DE ROLES RESTAURADO -->
-        <div class="ml-4" *ngIf="availableRoles.length > 0">
-            <mat-form-field appearance="outline" class="role-selector">
-                <mat-select
-                    [value]="selectedRole"
-                    (selectionChange)="onRoleChange($event.value)"
-                    placeholder="Seleccionar rol">
-                    <mat-option
-                        *ngFor="let role of availableRoles"
-                        [value]="role">
-                        {{ role | titlecase }}
-                    </mat-option>
-                </mat-select>
-            </mat-form-field>
-        </div>
+        <!-- ✅ SELECTOR DE ROLES CORREGIDO CON ASYNC PIPE E ICONOS FUSE -->
+        <ng-container *ngIf="(availableRoles$ | async) as availableRoles">
+            <div class="ml-4" *ngIf="availableRoles.length > 0">
+                <mat-form-field appearance="outline" class="role-selector">
+                    <mat-select
+                        [value]="selectedRole"
+                        (selectionChange)="onRoleChange($event.value)"
+                        placeholder="Seleccionar rol">
+                        <mat-option
+                            *ngFor="let role of availableRoles"
+                            [value]="role">
+                            <div class="flex items-center">
+                                <mat-icon [svgIcon]="getRoleIcon(role)" class="mr-2 text-current icon-size-4"></mat-icon>
+                                {{ role | titlecase }}
+                            </div>
+                        </mat-option>
+                    </mat-select>
+                </mat-form-field>
+            </div>
+        </ng-container>
 
         <!-- Components -->
         <div class="ml-auto flex items-center space-x-0.5 pl-2 sm:space-x-2">
