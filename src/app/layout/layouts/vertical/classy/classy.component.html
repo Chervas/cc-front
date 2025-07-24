@@ -8,10 +8,10 @@
     [name]="'mainNavigation'"
     [navigation]="navigation.default"
     [opened]="!isScreenSmall">
-    
+
     <!-- Navigation header hook -->
-   <ng-container fuseVerticalNavigationContentHeader>
-        <div class="flex flex-col w-full p-4 pl-6 space-y-4">
+    <ng-container fuseVerticalNavigationContentHeader>
+        <div class="flex items-center w-full p-4 pl-6 space-y-4">
             <div class="flex items-center justify-center">
                 <img class="w-8" src="assets/images/logo/logo.svg">
             </div>
@@ -19,62 +19,74 @@
                 <mat-form-field appearance="outline" class="w-full fuse-mat-dense clinic-selector">
                     <mat-label>Seleccionar Clínica</mat-label>
                     <mat-select [value]="getSelectedClinicId()" (selectionChange)="onClinicChange($event.value)">
-                        <mat-option value="all">Todas</mat-option>
-                          <ng-container *ngFor="let group of clinicGroups">
+                        <!-- LÓGICA JERÁRQUICA: Solo mostrar "Todas" si hay más de una clínica -->
+                        <mat-option *ngIf="shouldShowAllOption()" value="all">
+                            📋 Todas mis clínicas ({{ getTotalClinicCount() }})
+                        </mat-option>
+                        
+                        <ng-container *ngFor="let group of clinicGroups">
                             <mat-optgroup [label]="group.name">
-                                <mat-option *ngIf="group.name !== 'Sin Grupo'" [value]="'group:' + group.name" class="font-semibold">{{ group.name }} (todas)</mat-option>
+                                <!-- OPCIÓN DE GRUPO: Solo si hay más de una clínica en el grupo -->
+                                <mat-option 
+                                    *ngIf="shouldShowGroupOption(group.name)" 
+                                    [value]="'group:' + group.name" 
+                                    class="font-semibold">
+                                    👥 {{ group.name }} ({{ getClinicCountForGroup(group.name) }})
+                                </mat-option>
+                                
+                                <!-- CLÍNICAS INDIVIDUALES: Con iconos y indentación -->
                                 <mat-option *ngFor="let clinica of group.clinics" [value]="clinica.id">
-                                    <div class="flex items-center">
+                                    <div class="flex items-center" [class.ml-4]="shouldShowGroupOption(group.name)">
                                         <mat-icon [svgIcon]="'heroicons_outline:building-office'" class="mr-2 text-current icon-size-4"></mat-icon>
                                         {{ clinica.name }}
                                     </div>
                                 </mat-option>
+                                
+                                <!-- SEPARADOR VISUAL: Entre grupos -->
+                                <div *ngIf="group.name !== 'Sin Grupo'" class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                             </mat-optgroup>
                         </ng-container>
                     </mat-select>
                 </mat-form-field>
             </div>
         </div>
+
+        <!-- User Info -->
+        <div class="flex w-full items-center p-4" *ngIf="user">
+            <div class="relative h-24 w-24">
+                @if (user.avatar) {
+                    <img
+                        class="h-full w-full rounded-full"
+                        [src]="user.avatar"
+                        alt="User avatar">
+                }
+                @if (!user.avatar) {
+                    <div
+                        class="w-full h-full rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl font-bold">
+                        {{ getUserInitials() }}
+                    </div>
+                }
+            </div>
+            <div class="mt-6 flex w-full flex-col items-center justify-center">
+                <div
+                    class="w-full overflow-hidden text-ellipsis whitespace-nowrap text-center font-medium leading-normal">
+                    {{ user.nombre }} {{ user.apellidos }}
+                </div>
+                <div
+                    class="text-secondary mt-0.5 w-full overflow-hidden text-ellipsis whitespace-nowrap text-center text-md leading-normal">
+                    {{ user.email_usuario }}
+                </div>
+            </div>
+        </div>
     </ng-container>
 
-    
-    
-    <!-- User -->
-    <div class="flex w-full items-center p-4" *ngIf="user">
-        <div class="relative h-24 w-24">
-            @if (user.avatar) {
-                <img
-                    class="h-full w-full rounded-full"
-                    [src]="user.avatar"
-                    alt="User avatar">
-            }
-            @if (!user.avatar) {
-                <div 
-                    class="w-full h-full rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl font-bold">
-                    {{ getUserInitials() }}
-                </div>
-            }
-        </div>
-        <div class="mt-6 flex w-full flex-col items-center justify-center">
-            <div
-                class="w-full overflow-hidden text-ellipsis whitespace-nowrap text-center font-medium leading-normal">
-                {{ user.nombre }} {{ user.apellidos }}
-            </div>
-            <div
-                class="text-secondary mt-0.5 w-full overflow-hidden text-ellipsis whitespace-nowrap text-center text-md leading-normal">
-                {{ user.email_usuario }}
-            </div>
-        </div>
-    </div>
-    
-    <!-- Clinic Selector copied from thin layout -->
-   <!-- Navigation footer hook -->
-    
-        <ng-container fuseVerticalNavigationContentFooter>
+    <!-- Navigation footer hook -->
+    <ng-container fuseVerticalNavigationContentFooter>
         <div class="mb-4 mt-2 flex h-16 flex-0 items-center justify-center pl-2 pr-6 opacity-12">
             <img class="max-w-160" src="assets/images/logo/logo-text-on-dark.svg" />
         </div>
     </ng-container>
+
 </fuse-vertical-navigation>
 
 <!-- Wrapper -->
@@ -89,23 +101,23 @@
             (click)="toggleNavigation('mainNavigation')">
             <mat-icon [svgIcon]="'heroicons_outline:bars-3'"></mat-icon>
         </button>
-        
-        <!-- Role selector in header -->
+
+        <!-- SELECTOR DE ROLES RESTAURADO -->
         <div class="ml-4" *ngIf="availableRoles.length > 0">
             <mat-form-field appearance="outline" class="role-selector">
-                <mat-select 
-                    [value]="selectedRole" 
+                <mat-select
+                    [value]="selectedRole"
                     (selectionChange)="onRoleChange($event.value)"
                     placeholder="Seleccionar rol">
-                    <mat-option 
-                        *ngFor="let role of availableRoles" 
+                    <mat-option
+                        *ngFor="let role of availableRoles"
                         [value]="role">
                         {{ role | titlecase }}
                     </mat-option>
                 </mat-select>
             </mat-form-field>
         </div>
-        
+
         <!-- Components -->
         <div class="ml-auto flex items-center space-x-0.5 pl-2 sm:space-x-2">
             <languages></languages>
@@ -133,27 +145,8 @@
         }
     </div>
 
-    <!-- Footer -->
-    <div class="relative z-49 flex h-14 w-full flex-0 items-center justify-start border-t bg-card dark:bg-transparent px-4 print:hidden md:px-6">
-        <span class="font-medium text-secondary">Clínica Click &copy; {{currentYear}}</span>
-    </div>
-
 </div>
 
 <!-- Quick chat -->
-<quick-chat #quickChat="quickChat"></quick-chat>
-
-<style>
-.role-selector .mat-mdc-form-field {
-    width: 200px;
-}
-
-.role-selector .mat-mdc-form-field-subscript-wrapper {
-    display: none;
-}
-
-.clinic-selector .mat-mdc-form-field-subscript-wrapper {
-    display: none;
-}
-</style>
+<quick-chat #quickChat></quick-chat>
 
