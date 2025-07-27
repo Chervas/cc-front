@@ -7,8 +7,9 @@
             [mode]="drawerMode"
             [opened]="drawerOpened"
             #drawer>
+            <!-- ✅ CORRECCIÓN: Agregar padding correcto al header del drawer -->
             <!-- Header -->
-            <div class="m-8 mr-6 flex items-center justify-between sm:my-10">
+            <div class="flex flex-col sm:flex-row flex-0 items-center justify-between px-6 py-8 sm:px-10 sm:py-10">
                 <!-- Title -->
                 <div class="text-4xl font-extrabold leading-none tracking-tight">
                     Settings
@@ -61,14 +62,37 @@
 
         <!-- Drawer content -->
         <mat-drawer-content class="flex flex-col">
-            <!-- Main content area for selected panel -->
-            <div class="flex-auto overflow-y-auto">
-                @if (selectedPanel === 'connected-accounts') {
-                    <!-- Aquí es donde se carga el contenido del subcomponente -->
-                    <settings-connected-accounts></settings-connected-accounts>
-                }
-                <!-- Puedes añadir más @if para otros paneles si los creas -->
+            <!-- Main -->
+            <div class="flex-auto px-6 pb-12 pt-9 md:px-8 md:pb-12 lg:px-12">
+                <!-- Panel header -->
+                <div class="flex items-center">
+                    <!-- Drawer toggle -->
+                    <button
+                        class="-ml-2 lg:hidden"
+                        mat-icon-button
+                        (click)="drawer.toggle()">
+                        <mat-icon [svgIcon]="'heroicons_outline:bars-3'"></mat-icon>
+                    </button>
+                    <!-- ✅ CORRECCIÓN: Mostrar solo el título del panel activo, no duplicar -->
+                    <!-- Panel title -->
+                    <div class="ml-2 text-3xl font-bold leading-none tracking-tight lg:ml-0">
+                        {{ getPanelInfo(selectedPanel)?.title || 'Settings' }}
+                    </div>
+                </div>
+
+                <!-- Load settings panel -->
+                <div class="mt-8">
+                    @switch (selectedPanel) {
+                        @case ('connected-accounts') {
+                            <settings-connected-accounts></settings-connected-accounts>
+                        }
+                        @case ('jobs-monitoring') {
+                            <app-jobs-monitoring></app-jobs-monitoring>
+                        }
+                    }
+                </div>
             </div>
         </mat-drawer-content>
     </mat-drawer-container>
 </div>
+

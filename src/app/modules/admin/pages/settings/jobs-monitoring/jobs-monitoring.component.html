@@ -1,0 +1,521 @@
+<div class="flex flex-col w-full">
+  
+  <!-- Header del Dashboard -->
+  <div class="flex flex-col sm:flex-row flex-0 sm:items-center sm:justify-between p-6 sm:py-8 sm:px-10 border-b bg-card">
+    <div class="flex-1 min-w-0">
+      <!-- Título -->
+      <div class="flex flex-wrap items-center font-medium">
+        <div>
+          <a class="whitespace-nowrap text-primary-500">Settings</a>
+        </div>
+        <div class="flex items-center ml-1 whitespace-nowrap">
+          <mat-icon
+            class="icon-size-5 text-secondary"
+            [svgIcon]="'heroicons_mini:chevron-right'"></mat-icon>
+          <span class="ml-1 text-primary-500">Monitoreo de Jobs Cron</span>
+        </div>
+      </div>
+      <!-- Descripción -->
+      <div class="mt-2">
+        <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight leading-7 sm:leading-10 truncate">
+          Sistema de Jobs Cron
+        </h2>
+        <div class="font-medium tracking-tight text-secondary">
+          Monitoreo y gestión de tareas automatizadas de sincronización
+        </div>
+      </div>
+    </div>
+    
+    <!-- Acciones del header -->
+    <div class="flex shrink-0 items-center mt-6 sm:mt-0 sm:ml-4">
+      <!-- Estado del sistema -->
+      <div class="flex items-center mr-4" *ngIf="systemStatus">
+        <mat-icon 
+          class="icon-size-5 mr-2"
+          [ngClass]="{
+            'text-green-500': getSystemStatusSummary().status === 'healthy',
+            'text-amber-500': getSystemStatusSummary().status === 'warning',
+            'text-red-500': getSystemStatusSummary().status !== 'healthy' && getSystemStatusSummary().status !== 'warning'
+          }">
+          {{ getSystemStatusSummary().status === 'healthy' ? 'check_circle' : 
+             getSystemStatusSummary().status === 'warning' ? 'warning' : 'error' }}
+        </mat-icon>
+        <span class="text-sm font-medium">{{ getSystemStatusSummary().message }}</span>
+      </div>
+      
+      <!-- Botón de refrescar -->
+      <button
+        mat-icon-button
+        [disabled]="isLoading"
+        (click)="refreshSystemStatus()"
+        matTooltip="Refrescar estado">
+        <mat-icon 
+          [ngClass]="{'animate-spin': isLoading}"
+          [svgIcon]="'heroicons_outline:arrow-path'"></mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Contenido principal -->
+  <div class="flex-auto p-6 sm:p-10">
+    
+    <!-- Mensaje de error global -->
+    <div *ngIf="error" class="mb-6">
+      <div class="flex items-center p-4 bg-red-50 border border-red-200 rounded-lg">
+        <mat-icon class="icon-size-5 text-red-500 mr-3">error</mat-icon>
+        <div class="flex-1">
+          <p class="text-sm font-medium text-red-800">{{ error }}</p>
+        </div>
+        <button
+          mat-icon-button
+          (click)="clearError()"
+          class="text-red-500">
+          <mat-icon [svgIcon]="'heroicons_outline:x-mark'"></mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Verificación de permisos -->
+    <div *ngIf="!isUserAdmin()" class="mb-6">
+      <div class="flex items-center p-4 bg-amber-50 border border-amber-200 rounded-lg">
+        <mat-icon class="icon-size-5 text-amber-500 mr-3">lock</mat-icon>
+        <div class="flex-1">
+          <p class="text-sm font-medium text-amber-800">
+            Esta sección está disponible solo para administradores del sistema.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard principal (solo para admins) -->
+    <div *ngIf="isUserAdmin()">
+      
+      <!-- Tarjetas de estado -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        
+        <!-- Estado del sistema -->
+        <mat-card class="flex flex-col p-6 shadow hover:shadow-lg transition-shadow duration-150 ease-in-out">
+          <div class="flex items-center justify-between">
+            <div class="flex flex-col">
+              <div class="text-2xl font-bold leading-tight">
+                {{ systemStatus?.systemRunning ? 'Activo' : 'Inactivo' }}
+              </div>
+              <div class="text-sm font-medium text-secondary">Estado del Sistema</div>
+            </div>
+            <div class="flex items-center justify-center w-12 h-12 rounded-full"
+                 [ngClass]="{
+                   'bg-green-100': systemStatus?.systemRunning,
+                   'bg-red-100': !systemStatus?.systemRunning
+                 }">
+              <mat-icon 
+                [ngClass]="{
+                  'text-green-600': systemStatus?.systemRunning,
+                  'text-red-600': !systemStatus?.systemRunning
+                }"
+                [svgIcon]="systemStatus?.systemRunning ? 'heroicons_outline:check-circle' : 'heroicons_outline:x-circle'">
+              </mat-icon>
+            </div>
+          </div>
+        </mat-card>
+
+        <!-- Jobs activos -->
+        <mat-card class="flex flex-col p-6 shadow hover:shadow-lg transition-shadow duration-150 ease-in-out">
+          <div class="flex items-center justify-between">
+            <div class="flex flex-col">
+              <div class="text-2xl font-bold leading-tight">
+                {{ systemStatus?.jobsCount || 0 }}
+              </div>
+              <div class="text-sm font-medium text-secondary">Jobs Activos</div>
+            </div>
+            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100">
+              <mat-icon class="text-blue-600" [svgIcon]="'heroicons_outline:cog-6-tooth'"></mat-icon>
+            </div>
+          </div>
+        </mat-card>
+
+        <!-- Ejecuciones hoy -->
+        <mat-card class="flex flex-col p-6 shadow hover:shadow-lg transition-shadow duration-150 ease-in-out">
+          <div class="flex items-center justify-between">
+            <div class="flex flex-col">
+              <div class="text-2xl font-bold leading-tight">
+                {{ systemStatus?.todayStats?.totalExecutions || 0 }}
+              </div>
+              <div class="text-sm font-medium text-secondary">Ejecuciones Hoy</div>
+            </div>
+            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-purple-100">
+              <mat-icon class="text-purple-600" [svgIcon]="'heroicons_outline:play'"></mat-icon>
+            </div>
+          </div>
+        </mat-card>
+
+        <!-- Tasa de éxito -->
+        <mat-card class="flex flex-col p-6 shadow hover:shadow-lg transition-shadow duration-150 ease-in-out">
+          <div class="flex items-center justify-between">
+            <div class="flex flex-col">
+              <div class="text-2xl font-bold leading-tight">
+                {{ systemStatus?.todayStats?.totalExecutions > 0 ? 
+                    ((systemStatus.todayStats.successfulExecutions / systemStatus.todayStats.totalExecutions) * 100).toFixed(1) + '%' : 
+                    '100%' }}
+              </div>
+              <div class="text-sm font-medium text-secondary">Tasa de Éxito</div>
+            </div>
+            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-green-100">
+              <mat-icon class="text-green-600" [svgIcon]="'heroicons_outline:chart-bar'"></mat-icon>
+            </div>
+          </div>
+        </mat-card>
+      </div>
+
+      <!-- Controles del sistema -->
+      <mat-card class="mb-8">
+        <mat-card-header>
+          <mat-card-title>Control del Sistema</mat-card-title>
+          <mat-card-subtitle>Gestión de jobs cron y estado del sistema</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="pt-4">
+          <div class="flex flex-wrap gap-3">
+            <button
+              mat-raised-button
+              color="primary"
+              [disabled]="isLoading || systemStatus?.systemInitialized"
+              (click)="initializeJobs()">
+              <mat-icon [svgIcon]="'heroicons_outline:play'"></mat-icon>
+              <span class="ml-2">Inicializar Sistema</span>
+            </button>
+            
+            <button
+              mat-raised-button
+              color="accent"
+              [disabled]="isLoading || !systemStatus?.systemInitialized"
+              (click)="startJobs()">
+              <mat-icon [svgIcon]="'heroicons_outline:play'"></mat-icon>
+              <span class="ml-2">Iniciar Jobs</span>
+            </button>
+            
+            <button
+              mat-stroked-button
+              [disabled]="isLoading || !systemStatus?.systemRunning"
+              (click)="stopJobs()">
+              <mat-icon [svgIcon]="'heroicons_outline:stop'"></mat-icon>
+              <span class="ml-2">Detener Jobs</span>
+            </button>
+            
+            <button
+              mat-stroked-button
+              color="warn"
+              [disabled]="isLoading"
+              (click)="restartJobs()">
+              <mat-icon [svgIcon]="'heroicons_outline:arrow-path'"></mat-icon>
+              <span class="ml-2">Reiniciar Sistema</span>
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Jobs individuales -->
+      <mat-card class="mb-8" *ngIf="systemStatus?.jobs">
+        <mat-card-header>
+          <mat-card-title>Jobs Individuales</mat-card-title>
+          <mat-card-subtitle>Estado y control de cada job específico</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="pt-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div *ngFor="let job of systemStatus.jobs | keyvalue" 
+                 class="flex items-center justify-between p-4 border rounded-lg">
+              <div class="flex items-center">
+                <mat-icon 
+                  class="mr-3"
+                  [svgIcon]="'heroicons_outline:' + getJobTypeIcon(job.key)">
+                </mat-icon>
+                <div>
+                  <div class="font-medium">{{ job.key }}</div>
+                  <div class="text-sm text-secondary">{{ job.value.schedule }}</div>
+                </div>
+              </div>
+              <div class="flex items-center">
+                <mat-chip 
+                  [ngClass]="getJobStatusClass(job.value.status)"
+                  class="mr-2">
+                  {{ job.value.status }}
+                </mat-chip>
+                <button
+                  mat-icon-button
+                  [disabled]="isLoading"
+                  (click)="runJob(job.key)"
+                  matTooltip="Ejecutar manualmente">
+                  <mat-icon [svgIcon]="'heroicons_outline:play'"></mat-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Tabs con información detallada -->
+      <mat-card>
+        <mat-card-content class="p-0">
+          <mat-tab-group>
+            
+            <!-- Tab de Logs -->
+            <mat-tab label="Logs de Ejecución">
+              <div class="p-6">
+                
+                <!-- Filtros -->
+                <form [formGroup]="logsFilterForm" class="mb-6">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <mat-form-field>
+                      <mat-label>Estado</mat-label>
+                      <mat-select formControlName="status">
+                        <mat-option *ngFor="let option of statusOptions" [value]="option.value">
+                          {{ option.label }}
+                        </mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                    
+                    <mat-form-field>
+                      <mat-label>Tipo de Job</mat-label>
+                      <mat-select formControlName="jobType">
+                        <mat-option *ngFor="let option of jobTypeOptions" [value]="option.value">
+                          {{ option.label }}
+                        </mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                    
+                    <mat-form-field>
+                      <mat-label>Fecha Inicio</mat-label>
+                      <input matInput [matDatepicker]="startPicker" formControlName="startDate">
+                      <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+                      <mat-datepicker #startPicker></mat-datepicker>
+                    </mat-form-field>
+                    
+                    <mat-form-field>
+                      <mat-label>Fecha Fin</mat-label>
+                      <input matInput [matDatepicker]="endPicker" formControlName="endDate">
+                      <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+                      <mat-datepicker #endPicker></mat-datepicker>
+                    </mat-form-field>
+                  </div>
+                  
+                  <div class="flex justify-end">
+                    <button
+                      mat-stroked-button
+                      type="button"
+                      (click)="clearLogsFilters()">
+                      Limpiar Filtros
+                    </button>
+                  </div>
+                </form>
+
+                <!-- Tabla de logs -->
+                <div class="overflow-x-auto">
+                  <table mat-table [dataSource]="jobsLogs" class="w-full">
+                    
+                    <!-- Columna Tipo de Job -->
+                    <ng-container matColumnDef="jobType">
+                      <th mat-header-cell *matHeaderCellDef>Tipo de Job</th>
+                      <td mat-cell *matCellDef="let log">
+                        <div class="flex items-center">
+                          <mat-icon 
+                            class="mr-2"
+                            [svgIcon]="'heroicons_outline:' + getJobTypeIcon(log.jobType)">
+                          </mat-icon>
+                          {{ log.jobType }}
+                        </div>
+                      </td>
+                    </ng-container>
+
+                    <!-- Columna Estado -->
+                    <ng-container matColumnDef="status">
+                      <th mat-header-cell *matHeaderCellDef>Estado</th>
+                      <td mat-cell *matCellDef="let log">
+                        <mat-chip [ngClass]="getJobStatusClass(log.status)">
+                          {{ log.status }}
+                        </mat-chip>
+                      </td>
+                    </ng-container>
+
+                    <!-- Columna Fecha de Inicio -->
+                    <ng-container matColumnDef="startedAt">
+                      <th mat-header-cell *matHeaderCellDef>Iniciado</th>
+                      <td mat-cell *matCellDef="let log">
+                        {{ log.startedAt | date:'dd/MM/yyyy HH:mm:ss' }}
+                      </td>
+                    </ng-container>
+
+                    <!-- Columna Duración -->
+                    <ng-container matColumnDef="duration">
+                      <th mat-header-cell *matHeaderCellDef>Duración</th>
+                      <td mat-cell *matCellDef="let log">
+                        {{ formatDuration(log.startedAt, log.completedAt) }}
+                      </td>
+                    </ng-container>
+
+                    <!-- Columna Registros Procesados -->
+                    <ng-container matColumnDef="recordsProcessed">
+                      <th mat-header-cell *matHeaderCellDef>Registros</th>
+                      <td mat-cell *matCellDef="let log">
+                        {{ log.recordsProcessed }}
+                      </td>
+                    </ng-container>
+
+                    <!-- Columna Acciones -->
+                    <ng-container matColumnDef="actions">
+                      <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                      <td mat-cell *matCellDef="let log">
+                        <button
+                          mat-icon-button
+                          *ngIf="log.errorMessage"
+                          [matTooltip]="log.errorMessage"
+                          class="text-red-500">
+                          <mat-icon [svgIcon]="'heroicons_outline:exclamation-triangle'"></mat-icon>
+                        </button>
+                      </td>
+                    </ng-container>
+
+                    <tr mat-header-row *matHeaderRowDef="logsDisplayedColumns"></tr>
+                    <tr mat-row *matRowDef="let row; columns: logsDisplayedColumns;"></tr>
+                  </table>
+                </div>
+
+                <!-- Paginación -->
+                <mat-paginator
+                  [length]="logsTotalItems"
+                  [pageSize]="logsPageSize"
+                  [pageIndex]="logsCurrentPage"
+                  [pageSizeOptions]="[5, 10, 25, 50]"
+                  (page)="onLogsPageChange($event)"
+                  showFirstLastButtons>
+                </mat-paginator>
+              </div>
+            </mat-tab>
+
+            <!-- Tab de Estadísticas -->
+            <mat-tab label="Estadísticas">
+              <div class="p-6">
+                <div *ngIf="jobsStatistics" class="space-y-6">
+                  
+                  <!-- Resumen -->
+                  <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    <div class="text-center p-4 border rounded-lg">
+                      <div class="text-2xl font-bold">{{ jobsStatistics.summary.totalExecutions }}</div>
+                      <div class="text-sm text-secondary">Total Ejecuciones</div>
+                    </div>
+                    <div class="text-center p-4 border rounded-lg">
+                      <div class="text-2xl font-bold text-green-600">{{ jobsStatistics.summary.successfulExecutions }}</div>
+                      <div class="text-sm text-secondary">Exitosas</div>
+                    </div>
+                    <div class="text-center p-4 border rounded-lg">
+                      <div class="text-2xl font-bold text-red-600">{{ jobsStatistics.summary.failedExecutions }}</div>
+                      <div class="text-sm text-secondary">Fallidas</div>
+                    </div>
+                    <div class="text-center p-4 border rounded-lg">
+                      <div class="text-2xl font-bold">{{ jobsStatistics.summary.successRate }}</div>
+                      <div class="text-sm text-secondary">Tasa de Éxito</div>
+                    </div>
+                  </div>
+
+                  <!-- Estadísticas por tipo de job -->
+                  <div>
+                    <h3 class="text-lg font-medium mb-4">Estadísticas por Tipo de Job</h3>
+                    <div class="overflow-x-auto">
+                      <table mat-table [dataSource]="jobsStatistics.jobTypeStats" class="w-full">
+                        <ng-container matColumnDef="jobType">
+                          <th mat-header-cell *matHeaderCellDef>Tipo de Job</th>
+                          <td mat-cell *matCellDef="let stat">{{ stat.jobType }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="executions">
+                          <th mat-header-cell *matHeaderCellDef>Ejecuciones</th>
+                          <td mat-cell *matCellDef="let stat">{{ stat.executions }}</td>
+                        </ng-container>
+                        <ng-container matColumnDef="avgDuration">
+                          <th mat-header-cell *matHeaderCellDef>Duración Promedio</th>
+                          <td mat-cell *matCellDef="let stat">
+                            {{ stat.avgDurationSeconds ? stat.avgDurationSeconds + 's' : 'N/A' }}
+                          </td>
+                        </ng-container>
+                        <tr mat-header-row *matHeaderRowDef="['jobType', 'executions', 'avgDuration']"></tr>
+                        <tr mat-row *matRowDef="let row; columns: ['jobType', 'executions', 'avgDuration'];"></tr>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+                
+                <div *ngIf="!jobsStatistics" class="text-center py-8">
+                  <mat-spinner diameter="40"></mat-spinner>
+                  <p class="mt-4 text-secondary">Cargando estadísticas...</p>
+                </div>
+              </div>
+            </mat-tab>
+
+            <!-- Tab de Configuración -->
+            <mat-tab label="Configuración">
+              <div class="p-6">
+                <div *ngIf="jobsConfiguration" class="space-y-6">
+                  
+                  <!-- Horarios -->
+                  <div>
+                    <h3 class="text-lg font-medium mb-4">Horarios de Ejecución</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div *ngFor="let schedule of jobsConfiguration.configuration.schedules | keyvalue" 
+                           class="p-4 border rounded-lg">
+                        <div class="font-medium">{{ schedule.key }}</div>
+                        <div class="text-sm text-secondary">{{ schedule.value }}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Configuración general -->
+                  <div>
+                    <h3 class="text-lg font-medium mb-4">Configuración General</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div class="p-4 border rounded-lg">
+                        <div class="font-medium">Zona Horaria</div>
+                        <div class="text-sm text-secondary">{{ jobsConfiguration.configuration.timezone }}</div>
+                      </div>
+                      <div class="p-4 border rounded-lg">
+                        <div class="font-medium">Inicio Automático</div>
+                        <div class="text-sm text-secondary">
+                          {{ jobsConfiguration.configuration.autoStart ? 'Habilitado' : 'Deshabilitado' }}
+                        </div>
+                      </div>
+                      <div class="p-4 border rounded-lg">
+                        <div class="font-medium">Reintentos Máximos</div>
+                        <div class="text-sm text-secondary">{{ jobsConfiguration.configuration.retries.maxAttempts }}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Retención de datos -->
+                  <div>
+                    <h3 class="text-lg font-medium mb-4">Retención de Datos (días)</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div class="p-4 border rounded-lg">
+                        <div class="font-medium">Logs de Sincronización</div>
+                        <div class="text-sm text-secondary">{{ jobsConfiguration.configuration.dataRetention.syncLogs }} días</div>
+                      </div>
+                      <div class="p-4 border rounded-lg">
+                        <div class="font-medium">Validaciones de Token</div>
+                        <div class="text-sm text-secondary">{{ jobsConfiguration.configuration.dataRetention.tokenValidations }} días</div>
+                      </div>
+                      <div class="p-4 border rounded-lg">
+                        <div class="font-medium">Estadísticas Sociales</div>
+                        <div class="text-sm text-secondary">{{ jobsConfiguration.configuration.dataRetention.socialStats }} días</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div *ngIf="!jobsConfiguration" class="text-center py-8">
+                  <mat-spinner diameter="40"></mat-spinner>
+                  <p class="mt-4 text-secondary">Cargando configuración...</p>
+                </div>
+              </div>
+            </mat-tab>
+
+          </mat-tab-group>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>
+
