@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
-import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -14,9 +14,10 @@ import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Subject, takeUntil } from 'rxjs';
 import { HasRoleDirective } from 'app/modules/admin/apps/roles/shared/has-role.directive';
 import { JobsMonitoringService } from './jobs-monitoring.service';
+import { Subject, takeUntil } from 'rxjs';
+
 
 // Interfaces locales basadas en las respuestas reales de la API
 interface JobSystemStatus {
@@ -26,7 +27,6 @@ interface JobSystemStatus {
     jobs: {
         [key: string]: {
             schedule: string;
-            status: string;
             lastExecution: string | null;
             lastError: string | null;
         };
@@ -63,15 +63,6 @@ interface JobConfiguration {
         schedules: {
             [key: string]: string;
         };
-        timezone: string;
-        autoStart: boolean;
-        dataRetention: {
-            [key: string]: number;
-        };
-        retries: {
-            maxAttempts: number;
-            delayMs: number;
-        };
     };
     systemStatus: {
         initialized: boolean;
@@ -85,8 +76,7 @@ interface JobConfiguration {
     standalone: true,
     imports: [
         CommonModule,
-        ReactiveFormsModule,
-        FormsModule,
+        FormsModule, // ✅ CAMBIO: Agregar FormsModule en lugar de ReactiveFormsModule
         MatButtonModule,
         MatCardModule,
         MatChipsModule,
@@ -149,8 +139,6 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
             this.filteredJobsLogs.paginator = this.paginator;
         }
     }
-
-    // ===== MÉTODOS DE CARGA DE DATOS =====
 
     loadAllData(): void {
         this.loadSystemStatus();
@@ -314,10 +302,6 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
             });
     }
 
-    refreshSystemStatus(): void {
-        this.loadAllData();
-    }
-
     // ===== MÉTODOS DE FILTRADO =====
 
     applyFilters(): void {
@@ -352,13 +336,14 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
         }
 
         this.filteredJobsLogs.data = filteredData;
-        
+
         // Reiniciar paginación después de filtrar
         if (this.paginator) {
             this.paginator.firstPage();
         }
     }
 
+    // ✅ CAMBIO: Métodos para manejar cambios de filtros con ngModel
     onJobTypeFilterChange(): void {
         this.applyFilters();
     }
@@ -372,6 +357,15 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
     }
 
     onEndDateChange(): void {
+        this.applyFilters();
+    }
+
+    // ✅ CAMBIO: Nuevo método para limpiar filtros
+    clearLogsFilters(): void {
+        this.selectedJobType = '';
+        this.selectedStatus = '';
+        this.startDate = null;
+        this.endDate = null;
         this.applyFilters();
     }
 
@@ -397,8 +391,6 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
                 return 'bg-green-100 text-green-800';
             case 'failed':
                 return 'bg-red-100 text-red-800';
-            case 'running':
-                return 'bg-blue-100 text-blue-800';
             default:
                 return 'bg-gray-100 text-gray-800';
         }
@@ -422,13 +414,13 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
     getJobTypeTooltip(jobType: string): string {
         switch (jobType) {
             case 'health_check':
-                return 'Verifica el estado de salud del sistema, incluyendo conexión a base de datos, API de Meta y conexiones activas. Se ejecuta cada hora para monitorear el sistema.';
+                return 'Verifica el estado de salud del sistema, incluyendo conexión a base de datos, API de Meta y otros servicios críticos. Se ejecuta cada hora para detectar problemas temprano.';
             case 'automated_metrics_sync':
-                return 'Sincroniza automáticamente las métricas de redes sociales desde Facebook e Instagram. Se ejecuta diariamente a las 2:00 AM para recopilar datos de rendimiento.';
+                return 'Sincroniza automáticamente las métricas de redes sociales desde Facebook e Instagram. Se ejecuta diariamente para mantener los datos actualizados sin intervención manual.';
             case 'token_validation':
-                return 'Valida los tokens de acceso de Meta API para asegurar que siguen siendo válidos. Se ejecuta cada 6 horas para mantener las conexiones activas.';
+                return 'Valida los tokens de acceso de Meta API para asegurar que siguen siendo válidos. Se ejecuta cada 6 horas para renovar tokens próximos a expirar.';
             case 'data_cleanup':
-                return 'Limpia datos antiguos del sistema, incluyendo logs de sincronización y validaciones de tokens. Se ejecuta semanalmente los domingos a las 3:00 AM.';
+                return 'Limpia datos antiguos del sistema, incluyendo logs de sincronización y validaciones de tokens. Se ejecuta semanalmente para optimizar el rendimiento.';
             default:
                 return 'Job del sistema de automatización de tareas.';
         }
@@ -438,69 +430,19 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
         if (!log.errorMessage) {
             return '';
         }
-
-        // Si es un health_check, formatear el JSON
-        if (log.jobType === 'health_check') {
-            try {
-                const healthData = JSON.parse(log.errorMessage);
-                return `Estado del sistema:
-• Base de datos: ${healthData.database ? 'Conectada' : 'Desconectada'}
-• Meta API: ${healthData.metaApi ? 'Disponible' : 'No disponible'}
-• Conexiones activas: ${healthData.activeConnections || 0}
-• Tokens válidos: ${healthData.validTokens || 0}
-• Actividad reciente: ${healthData.recentActivity ? 'Sí' : 'No'}`;
-            } catch (e) {
-                return log.errorMessage;
-            }
-        }
-
-        // Para otros tipos de errores
-        if (log.errorMessage.includes('MetaConnection is associated')) {
-            return 'Error de configuración de base de datos: Problema con la asociación entre modelos MetaConnection y ClinicMetaAsset. Contacte al administrador del sistema.';
-        }
-
         return log.errorMessage;
     }
 
-    formatDuration(startedAt: string, completedAt: string | null): string {
-        if (!completedAt) {
-            return 'En progreso...';
-        }
-
-        const start = new Date(startedAt).getTime();
-        const end = new Date(completedAt).getTime();
-        const duration = end - start;
-
-        if (duration < 1000) {
-            return `${duration}ms`;
-        } else if (duration < 60000) {
-            return `${Math.round(duration / 1000)}s`;
-        } else {
-            return `${Math.round(duration / 60000)}m`;
-        }
-    }
-
-    // Método para formatear fechas en español
-    formatDate(dateString: string): string {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
+    refreshSystemStatus(): void {
+        this.loadAllData();
     }
 
     clearError(): void {
         this.error = null;
     }
 
-    // ===== MÉTODOS PRIVADOS =====
-
-    private setupAutoRefresh(): void {
-        // Refrescar cada 30 segundos
+    setupAutoRefresh(): void {
+        // Auto-refresh cada 30 segundos
         setInterval(() => {
             if (!this.isLoading) {
                 this.loadSystemStatus();
@@ -511,7 +453,7 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
 
     private showSuccessMessage(message: string): void {
         this.snackBar.open(message, 'Cerrar', {
-            duration: 5000,
+            duration: 3000,
             panelClass: ['success-snackbar']
         });
     }

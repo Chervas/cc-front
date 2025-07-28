@@ -6,6 +6,7 @@ import { LuxonDateAdapter } from '@angular/material-luxon-adapter';
 import { DateAdapter, MAT_DATE_FORMATS, MAT_DATE_LOCALE } from '@angular/material/core';
 import { authInterceptor } from './core/auth/interceptors/auth.interceptor';
 
+
 // 🔧 Importaciones de Fuse
 import { provideFuse } from '@fuse/fuse.provider';
 import { provideIcons } from 'app/core/icons/icons.provider'; // ✅ AGREGADO: Provider de iconos
@@ -173,5 +174,7 @@ export const appConfig: ApplicationConfig = {
             multi: true,
         },
     ],
+
+    
 };
 
