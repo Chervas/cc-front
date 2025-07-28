@@ -10,6 +10,7 @@ import { MatPaginatorModule } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { HasRoleDirective } from 'app/modules/admin/apps/roles/shared/has-role.directive';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -45,7 +46,8 @@ import {
     MatNativeDateModule,
     MatTabsModule,
     MatTooltipModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    HasRoleDirective
   ],
   templateUrl: './jobs-monitoring.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -399,7 +401,7 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
 
   /**
    * Verificar si el usuario es admin (hardcodeado para user ID 1)
-   */
+   
   isUserAdmin(): boolean {
     // Por ahora hardcodeamos para user ID 1
     // En el futuro se puede integrar con el sistema de roles
@@ -414,6 +416,7 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
     }
     return false;
   }
+   */
 
   /**
    * Mostrar mensaje de éxito

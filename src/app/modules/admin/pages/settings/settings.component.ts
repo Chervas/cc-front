@@ -15,6 +15,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { HttpClient } from '@angular/common/http';
 // ✅ ADICIÓN MÍNIMA: Importar el componente de jobs monitoring
 import { JobsMonitoringComponent } from './jobs-monitoring/jobs-monitoring.component';
+import { RoleService } from 'app/core/services/role.service';
 
 @Component({
     selector: 'settings',
@@ -33,7 +34,7 @@ import { JobsMonitoringComponent } from './jobs-monitoring/jobs-monitoring.compo
         SettingsConnectedAccountsComponent,
         MatSnackBarModule,
         // ✅ ADICIÓN MÍNIMA: Agregar el componente de jobs monitoring
-        JobsMonitoringComponent
+        JobsMonitoringComponent,
     ],
 })
 export class SettingsComponent implements OnInit, OnDestroy {
@@ -63,7 +64,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
         private _route: ActivatedRoute,
         private _router: Router,
         private _snackBar: MatSnackBar,
-        private _httpClient: HttpClient
+        private _httpClient: HttpClient,
+        private _roleService: RoleService
     ) {
         // ✅ CORRECCIÓN: Mover la verificación de admin a ngOnInit para asegurar que los datos estén cargados
         console.log('🔧 [Settings] Constructor ejecutado');
@@ -184,7 +186,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     private _checkAdminAndAddPanel(): void {
         console.log('🔍 [Settings] Verificando permisos de admin...');
         
-        const isAdmin = this.isUserAdmin();
+        const isAdmin = this._roleService.isAdmin
         console.log('🎯 [Settings] Resultado verificación admin:', isAdmin);
         
         if (isAdmin) {
@@ -269,69 +271,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         return item.id || index;
     }
 
-    /**
-     * ✅ CORRECCIÓN: Verificar si el usuario es admin con logging detallado
-     */
-    private isUserAdmin(): boolean {
-        console.log('🔍 [Settings] Iniciando verificación de permisos admin...');
-        
-        try {
-            // Verificar userData en localStorage
-            const userData = localStorage.getItem('userData');
-            console.log('📦 [Settings] userData en localStorage:', userData ? 'Existe' : 'No existe');
-            
-            if (userData) {
-                const user = JSON.parse(userData);
-                console.log('👤 [Settings] Datos de usuario parseados:', {
-                    id_usuario: user.id_usuario,
-                    isAdmin: user.isAdmin,
-                    cargo_usuario: user.cargo_usuario,
-                    nombre: user.nombre
-                });
-                
-                const isAdminById = user.id_usuario === 1;
-                const isAdminByFlag = user.isAdmin === true;
-                
-                console.log('🔍 [Settings] Verificaciones:', {
-                    'id_usuario === 1': isAdminById,
-                    'isAdmin === true': isAdminByFlag,
-                    'Resultado final': isAdminById || isAdminByFlag
-                });
-                
-                if (isAdminById || isAdminByFlag) {
-                    console.log('✅ [Settings] Usuario verificado como admin');
-                    return true;
-                }
-            }
-
-            // Fallback: verificar token JWT
-            console.log('🔄 [Settings] Verificando token JWT como fallback...');
-            const token = localStorage.getItem('accessToken');
-            if (token) {
-                try {
-                    const payload = JSON.parse(atob(token.split('.')[1]));
-                    console.log('🎫 [Settings] Payload del token:', {
-                        userId: payload.userId,
-                        email: payload.email
-                    });
-                    
-                    if (payload.userId === 1) {
-                        console.log('✅ [Settings] Usuario verificado como admin por token JWT');
-                        return true;
-                    }
-                } catch (tokenError) {
-                    console.error('❌ [Settings] Error parseando token JWT:', tokenError);
-                }
-            } else {
-                console.log('⚠️ [Settings] No hay token JWT disponible');
-            }
-        } catch (e) {
-            console.error('❌ [Settings] Error verificando permisos de admin:', e);
-        }
-        
-        console.log('❌ [Settings] Usuario NO es admin');
-        return false;
-    }
+    
 
     /**
      * Check screen size
