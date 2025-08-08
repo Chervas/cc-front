@@ -73,7 +73,7 @@ export class PanelesService {
       params = `?${queryParams.toString()}`;
     }
 
-    const url = `${environment.apiUrl}/metasync/metrics/${clinicaId}${params}`;
+    const url = `${environment.apiUrl}/paneles/metricas/redes-sociales?idClinica=${clinicaId}${params ? '&' + params.substring(1) : ''}`;
     
     return this._httpClient.get(url).pipe(
       tap((response: any) => {
