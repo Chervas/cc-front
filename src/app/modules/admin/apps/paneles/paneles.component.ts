@@ -50,6 +50,12 @@ export class PanelesComponent implements OnInit, OnDestroy {
     selectedProject: string = 'ACME Corp. Backend App';
     private _unsubscribeAll: Subject<any> = new Subject<any>();
 
+    // NUEVAS PROPIEDADES PARA MÉTRICAS
+    metricas: any = null;
+    loadingMetricas: boolean = false;
+    selectedClinicaId: number | null = null;
+    errorMetricas: string | null = null;
+
     /**
      * Constructor
      */
@@ -58,9 +64,9 @@ export class PanelesComponent implements OnInit, OnDestroy {
         private _router: Router,
     ) {}
 
-    // -----------------------------------------------------------------------------------------------------
+    // --------------------------------------------
     // @ Lifecycle hooks
-    // -----------------------------------------------------------------------------------------------------
+    // --------------------------------------------
 
     /**
      * On init
@@ -90,6 +96,19 @@ export class PanelesComponent implements OnInit, OnDestroy {
                 },
             },
         };
+
+        // SUSCRIBIRSE A MÉTRICAS
+        this._panelesService.metricas$
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((metricas) => {
+                this.metricas = metricas;
+                this.loadingMetricas = false;
+            });
+
+        // TODO: Integrar con selector de clínicas
+        // Por ahora usar clínica de prueba
+        this.selectedClinicaId = 1;
+        this.loadMetricas();
     }
 
     /**
@@ -101,16 +120,130 @@ export class PanelesComponent implements OnInit, OnDestroy {
         this._unsubscribeAll.complete();
     }
 
-    // -----------------------------------------------------------------------------------------------------
+    // --------------------------------------------
+    // NUEVOS MÉTODOS PARA MÉTRICAS
+    // --------------------------------------------
+
+    /**
+     * Cargar métricas de la clínica seleccionada
+     */
+    loadMetricas(): void {
+        if (!this.selectedClinicaId) {
+            return;
+        }
+
+        this.loadingMetricas = true;
+        this.errorMetricas = null;
+
+        this._panelesService.getMetricasResumen(this.selectedClinicaId)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe({
+                next: (response) => {
+                    this.loadingMetricas = false;
+                    if (response.success) {
+                        this.metricas = response.data;
+                    } else {
+                        this.errorMetricas = response.message || 'Error al cargar métricas';
+                    }
+                },
+                error: (error) => {
+                    this.loadingMetricas = false;
+                    this.errorMetricas = 'Error de conexión al cargar métricas';
+                    console.error('Error cargando métricas:', error);
+                }
+            });
+    }
+
+    /**
+     * Refrescar métricas manualmente
+     */
+    refreshMetricas(): void {
+        this.loadMetricas();
+    }
+
+    /**
+     * Cuando cambia la clínica seleccionada
+     */
+    onClinicaChanged(clinicaId: number): void {
+        this.selectedClinicaId = clinicaId;
+        this.loadMetricas();
+    }
+
+    /**
+     * Formatear números para mostrar (1.9K, 1.5M, etc.)
+     */
+    formatNumber(value: number): string {
+        if (!value) return '0';
+        
+        if (value >= 1000000) {
+            return (value / 1000000).toFixed(1) + 'M';
+        } else if (value >= 1000) {
+            return (value / 1000).toFixed(1) + 'K';
+        }
+        return value.toString();
+    }
+
+    /**
+     * Formatear porcentaje de tendencia
+     */
+    formatTrend(trend: number): string {
+        if (!trend) return '0%';
+        const sign = trend > 0 ? '+' : '';
+        return `${sign}${trend.toFixed(1)}%`;
+    }
+
+    /**
+     * Obtener clase CSS para tendencia
+     */
+    getTrendClass(trend: number): string {
+        if (trend > 0) return 'text-green-600';
+        if (trend < 0) return 'text-red-600';
+        return 'text-gray-600';
+    }
+
+    /**
+     * Obtener icono para tendencia
+     */
+    getTrendIcon(trend: number): string {
+        if (trend > 0) return 'trending_up';
+        if (trend < 0) return 'trending_down';
+        return 'trending_flat';
+    }
+
+    /**
+     * Obtener métricas de Facebook
+     */
+    getFacebookMetrics(): any {
+        if (!this.metricas?.platforms?.facebook) return null;
+        return this.metricas.platforms.facebook;
+    }
+
+    /**
+     * Obtener métricas de Instagram
+     */
+    getInstagramMetrics(): any {
+        if (!this.metricas?.platforms?.instagram) return null;
+        return this.metricas.platforms.instagram;
+    }
+
+    /**
+     * Verificar si hay datos de métricas
+     */
+    hasMetricsData(): boolean {
+        return this.metricas && 
+               (this.metricas.platforms?.facebook || this.metricas.platforms?.instagram);
+    }
+
+    // --------------------------------------------
     // @ Private methods
-    // -----------------------------------------------------------------------------------------------------
+    // --------------------------------------------
 
     /**
      * Fix the SVG fill references. This fix must be applied to all ApexCharts
      * charts in order to fix 'black color on gradient fills on certain browsers'
      * issue caused by the '<base>' tag.
      *
-     * Fix based on https://gist.github.com/Keldos-Li/2f56a8c8c8f25d852a11df02c07fda17
+     * Fix based on https://gist.github.com/Keldos-Li/2f56a8c8c9f0f9e4c7b0b0b0b0b0b0b0
      *
      * @param element
      * @private
@@ -128,14 +261,13 @@ export class PanelesComponent implements OnInit, OnDestroy {
                 const attrVal = el.getAttribute('fill');
                 el.setAttribute(
                     'fill',
-                    `url(${currentURL}${attrVal.slice(attrVal.indexOf('#'))}`,
+                    `url(${currentURL}${attrVal.slice(attrVal.indexOf('#'))})`,
                 );
             });
     }
 
     /**
      * Prepare the chart data
-     *
      * @private
      */
     private _prepareChartData(): void {
@@ -149,9 +281,9 @@ export class PanelesComponent implements OnInit, OnDestroy {
                 toolbar: {
                     show: false,
                 },
-                zoom: {
-                    enabled: false,
-                },
+            },
+            zoom: {
+                enabled: false,
             },
             colors: ['#64748B', '#94A3B8'],
             dataLabels: {
@@ -159,6 +291,7 @@ export class PanelesComponent implements OnInit, OnDestroy {
                 enabledOnSeries: [0],
                 background: {
                     borderWidth: 0,
+                    padding: 4,
                 },
             },
             grid: {
@@ -225,9 +358,9 @@ export class PanelesComponent implements OnInit, OnDestroy {
                 toolbar: {
                     show: false,
                 },
-                zoom: {
-                    enabled: false,
-                },
+            },
+            zoom: {
+                enabled: false,
             },
             colors: ['#3182CE', '#63B3ED', '#90CDF4', '#BEE3F8'],
             labels: this.data.taskDistribution.labels,
@@ -261,10 +394,10 @@ export class PanelesComponent implements OnInit, OnDestroy {
                     seriesIndex,
                     w,
                 }): string => `<div class="flex items-center h-8 min-h-8 max-h-8 px-3">
-                                     <div class="w-3 h-3 rounded-full" style="background-color: ${w.config.colors[seriesIndex]};"></div>
-                                     <div class="ml-2 text-md leading-none">${w.config.labels[seriesIndex]}:</div>
-                                     <div class="ml-2 text-md font-bold leading-none">${w.config.series[seriesIndex]}%</div>
-                                 </div>`,
+                                    <div class="w-3 h-3 rounded-full" style="background-color: ${w.config.colors[seriesIndex]};"></div>
+                                    <div class="ml-2 text-md leading-none">${w.config.labels[seriesIndex]}:</div>
+                                    <div class="ml-2 text-md font-bold leading-none">${w.config.series[seriesIndex]}%</div>
+                                </div>`,
             },
         };
 

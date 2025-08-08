@@ -1,7 +1,7 @@
 <div class="flex min-w-0 flex-auto flex-col">
     <!-- Header -->
     <div class="bg-card">
-        <div class="mx-auto flex w-full max-w-screen-xl flex-col px-6 sm:px-8">
+        <div class="flex min-w-0 flex-auto flex-col max-w-screen-xl flex-col px-6 sm:px-8">
             <div class="my-8 flex min-w-0 flex-auto flex-col sm:my-12 sm:flex-row sm:items-center">
                 <!-- Avatar and name -->
                 <div class="flex min-w-0 flex-auto items-center">
@@ -50,7 +50,6 @@
     <!-- Main -->
     <div class="flex-auto">
         <div class="mx-auto w-full max-w-screen-xl p-6 sm:p-8">
-            
             <!-- Información de clínica seleccionada -->
             <div class="mb-8">
                 <div class="flex items-center">
@@ -63,17 +62,17 @@
             </div>
 
             <!-- Pestañas principales -->
-            <mat-tab-group 
+            <mat-tab-group
                 class="fuse-mat-dense fuse-mat-rounded w-full"
                 [animationDuration]="'0ms'"
                 mat-stretch-tabs="false">
-                
+
                 <!-- Pestaña Resumen -->
                 <mat-tab label="Resumen">
                     <ng-template matTabContent>
                         <div class="grid gap-8 pt-8 sm:gap-16 sm:pt-16">
                             <div class="flex flex-col items-center justify-center p-16 text-center">
-                                <mat-icon 
+                                <mat-icon
                                     class="icon-size-16 text-hint mb-4"
                                     [svgIcon]="'heroicons_outline:chart-bar'"></mat-icon>
                                 <div class="text-2xl font-semibold tracking-tight">
@@ -98,15 +97,45 @@
                                 <div class="text-secondary">Evolución seguidores en tus redes</div>
                             </div>
 
+                            <!-- Loading State -->
+                            <div *ngIf="loadingMetricas" class="flex items-center justify-center p-16">
+                                <mat-icon class="animate-spin mr-4" [svgIcon]="'heroicons_outline:arrow-path'"></mat-icon>
+                                <span>Cargando métricas...</span>
+                            </div>
+
+                            <!-- Error State -->
+                            <div *ngIf="errorMetricas && !loadingMetricas" class="flex items-center justify-center p-16 text-red-600">
+                                <mat-icon class="mr-4" [svgIcon]="'heroicons_outline:exclamation-triangle'"></mat-icon>
+                                <span>{{ errorMetricas }}</span>
+                                <button mat-button (click)="refreshMetricas()" class="ml-4">
+                                    <mat-icon [svgIcon]="'heroicons_outline:arrow-path'"></mat-icon>
+                                    Reintentar
+                                </button>
+                            </div>
+
                             <!-- Cards de redes sociales principales -->
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div *ngIf="hasMetricsData() && !loadingMetricas" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 
+                                <!-- Facebook Card -->
+                                <div *ngIf="getFacebookMetrics()" class="bg-card shadow rounded-2xl p-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div>
+                                            <div class="text-lg font-semibold">Facebook</div>
+                                            <div class="text-2xl font-bold text-blue-600">{{ formatNumber(getFacebookMetrics().followers) }}</div>
+                                        </div>
+                                        <mat-icon class="text-blue-500 icon-size-8" [svgIcon]="'heroicons_solid:check'"></mat-icon>
+                                    </div>
+                                    <div class="h-32 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg flex items-center justify-center">
+                                        <span class="text-sm text-secondary">Gráfico de evolución</span>
+                                    </div>
+                                </div>
+
                                 <!-- Instagram Card -->
-                                <div class="bg-card shadow rounded-2xl p-6">
+                                <div *ngIf="getInstagramMetrics()" class="bg-card shadow rounded-2xl p-6">
                                     <div class="flex items-center justify-between mb-4">
                                         <div>
                                             <div class="text-lg font-semibold">Instagram</div>
-                                            <div class="text-2xl font-bold text-pink-500">+20%</div>
+                                            <div class="text-2xl font-bold text-pink-500">{{ formatNumber(getInstagramMetrics().followers) }}</div>
                                         </div>
                                         <mat-icon class="text-pink-500 icon-size-8" [svgIcon]="'heroicons_solid:camera'"></mat-icon>
                                     </div>
@@ -115,12 +144,12 @@
                                     </div>
                                 </div>
 
-                                <!-- TikTok Card -->
+                                <!-- TikTok Card (Placeholder) -->
                                 <div class="bg-card shadow rounded-2xl p-6">
                                     <div class="flex items-center justify-between mb-4">
                                         <div>
                                             <div class="text-lg font-semibold">TikTok</div>
-                                            <div class="text-2xl font-bold text-gray-800">+15%</div>
+                                            <div class="text-2xl font-bold text-gray-800">-</div>
                                         </div>
                                         <mat-icon class="text-gray-800 icon-size-8" [svgIcon]="'heroicons_solid:musical-note'"></mat-icon>
                                     </div>
@@ -128,151 +157,131 @@
                                         <span class="text-sm text-secondary">Gráfico de evolución</span>
                                     </div>
                                 </div>
-
-                                <!-- Facebook Card -->
-                                <div class="bg-card shadow rounded-2xl p-6">
-                                    <div class="flex items-center justify-between mb-4">
-                                        <div>
-                                            <div class="text-lg font-semibold">Facebook</div>
-                                            <div class="text-2xl font-bold text-blue-600">+8%</div>
-                                            <div class="text-xs text-secondary flex items-center">
-                                                <mat-icon class="icon-size-4 mr-1" [svgIcon]="'heroicons_solid:check'"></mat-icon>
-                                                This Year
-                                            </div>
-                                        </div>
-                                        <mat-icon class="text-blue-600 icon-size-8" [svgIcon]="'heroicons_solid:users'"></mat-icon>
-                                    </div>
-                                    <div class="h-32 bg-gradient-to-r from-blue-600/10 to-blue-400/10 rounded-lg flex items-center justify-center">
-                                        <span class="text-sm text-secondary">Gráfico de evolución</span>
-                                    </div>
-                                </div>
                             </div>
 
                             <!-- Sección de estadísticas detalladas -->
-                            <div>
-                                <div class="text-2xl font-semibold tracking-tight mb-2">Instagram</div>
-                                <div class="text-secondary mb-6">Estadísticas</div>
+                            <div *ngIf="hasMetricsData() && !loadingMetricas">
+                                <div class="text-2xl font-semibold tracking-tight mb-2">Estadísticas</div>
+                                <div class="text-secondary mb-6">Estadísticas detalladas de rendimiento</div>
                                 
                                 <!-- Grid de métricas -->
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                    <!-- Conversions -->
+                                    
+                                    <!-- Impresiones -->
                                     <div class="bg-card shadow rounded-2xl p-6">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="text-secondary text-sm">Conversions</span>
-                                            <span class="text-xs text-secondary">30 days</span>
+                                            <span class="text-secondary text-sm">Impresiones</span>
+                                            <span class="text-xs text-secondary">Últimos 7 días</span>
                                         </div>
-                                        <div class="text-3xl font-bold">4,123</div>
-                                        <div class="text-sm text-green-500">2% below target</div>
+                                        <div class="text-3xl font-bold">{{ formatNumber(getFacebookMetrics()?.impressions || 0) }}</div>
+                                        <div class="text-sm text-green-500">+2% respecto período anterior</div>
                                         <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
                                     </div>
 
-                                    <!-- Conversions 2 -->
+                                    <!-- Alcance -->
                                     <div class="bg-card shadow rounded-2xl p-6">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="text-secondary text-sm">Conversions</span>
-                                            <span class="text-xs text-secondary">30 days</span>
+                                            <span class="text-secondary text-sm">Alcance</span>
+                                            <span class="text-xs text-secondary">Últimos 7 días</span>
                                         </div>
-                                        <div class="text-3xl font-bold">4,123</div>
-                                        <div class="text-sm text-green-500">2% below target</div>
+                                        <div class="text-3xl font-bold">{{ formatNumber(getFacebookMetrics()?.reach || 0) }}</div>
+                                        <div class="text-sm text-green-500">+2% respecto período anterior</div>
                                         <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
                                     </div>
 
-                                    <!-- Conversions 3 -->
+                                    <!-- Visitas al Perfil -->
                                     <div class="bg-card shadow rounded-2xl p-6">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="text-secondary text-sm">Conversions</span>
-                                            <span class="text-xs text-secondary">30 days</span>
+                                            <span class="text-secondary text-sm">Visitas al Perfil</span>
+                                            <span class="text-xs text-secondary">Últimos 7 días</span>
                                         </div>
-                                        <div class="text-3xl font-bold">4,123</div>
-                                        <div class="text-sm text-green-500">2% below target</div>
-                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
-                                    </div>
-
-                                    <!-- Segunda fila -->
-                                    <div class="bg-card shadow rounded-2xl p-6">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="text-secondary text-sm">Conversions</span>
-                                            <span class="text-xs text-secondary">30 days</span>
-                                        </div>
-                                        <div class="text-3xl font-bold">4,123</div>
-                                        <div class="text-sm text-red-500">2% below target</div>
-                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
-                                    </div>
-
-                                    <div class="bg-card shadow rounded-2xl p-6">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="text-secondary text-sm">Conversions</span>
-                                            <span class="text-xs text-secondary">30 days</span>
-                                        </div>
-                                        <div class="text-3xl font-bold">4,123</div>
-                                        <div class="text-sm text-red-500">2% below target</div>
-                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
-                                    </div>
-
-                                    <div class="bg-card shadow rounded-2xl p-6">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="text-secondary text-sm">Conversions</span>
-                                            <span class="text-xs text-secondary">30 days</span>
-                                        </div>
-                                        <div class="text-3xl font-bold">4,123</div>
-                                        <div class="text-sm text-green-500">2% below target</div>
+                                        <div class="text-3xl font-bold">{{ formatNumber(getFacebookMetrics()?.profile_visits || 0) }}</div>
+                                        <div class="text-sm text-green-500">+2% respecto período anterior</div>
                                         <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
                                     </div>
                                 </div>
 
-                                <!-- Tabla de transacciones recientes -->
+                                <!-- Tabla comparativa de métricas -->
                                 <div class="bg-card shadow rounded-2xl p-6">
-                                    <div class="text-lg font-semibold mb-4">Recent transactions</div>
-                                    <div class="text-sm text-secondary mb-4">1 pending, 4 completed</div>
-                                    
+                                    <div class="text-lg font-semibold mb-4">Comparativa por Plataforma</div>
+                                    <div class="text-sm text-secondary mb-4">Rendimiento de las últimas 4 semanas</div>
+
                                     <div class="overflow-x-auto">
                                         <table class="w-full">
                                             <thead>
                                                 <tr class="border-b">
-                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Transaction ID</th>
-                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Date</th>
-                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Name</th>
-                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Amount</th>
-                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Status</th>
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Plataforma</th>
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Seguidores</th>
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Impresiones</th>
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Alcance</th>
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Engagement</th>
+                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Tendencia</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <tr class="border-b">
-                                                    <td class="py-3 text-sm">528651571NT</td>
-                                                    <td class="py-3 text-sm">Oct 08, 2019</td>
-                                                    <td class="py-3 text-sm">Morgan Page</td>
-                                                    <td class="py-3 text-sm">$1,358.75</td>
-                                                    <td class="py-3">
-                                                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">COMPLETED</span>
+                                                <!-- Facebook Row -->
+                                                <tr *ngIf="getFacebookMetrics()" class="border-b">
+                                                    <td class="py-3 text-sm">
+                                                        <div class="flex items-center">
+                                                            <mat-icon class="text-blue-600 mr-2" [svgIcon]="'heroicons_solid:check'"></mat-icon>
+                                                            Facebook
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-3 text-sm">{{ formatNumber(getFacebookMetrics().followers) }}</td>
+                                                    <td class="py-3 text-sm">{{ formatNumber(getFacebookMetrics().impressions) }}</td>
+                                                    <td class="py-3 text-sm">{{ formatNumber(getFacebookMetrics().reach) }}</td>
+                                                    <td class="py-3 text-sm">{{ getFacebookMetrics().engagement_rate || 0 }}%</td>
+                                                    <td class="py-3 text-sm">
+                                                        <div class="flex items-center">
+                                                            <mat-icon class="text-green-600 mr-1" [svgIcon]="'heroicons_solid:arrow-trending-up'"></mat-icon>
+                                                            <span class="text-green-600">+2.1%</span>
+                                                        </div>
                                                     </td>
                                                 </tr>
-                                                <tr class="border-b">
-                                                    <td class="py-3 text-sm">421436904YT</td>
-                                                    <td class="py-3 text-sm">Dec 18, 2019</td>
-                                                    <td class="py-3 text-sm">Nita Hebert</td>
-                                                    <td class="py-3 text-sm">-$1,042.82</td>
-                                                    <td class="py-3">
-                                                        <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">COMPLETED</span>
+                                                
+                                                <!-- Instagram Row -->
+                                                <tr *ngIf="getInstagramMetrics()" class="border-b">
+                                                    <td class="py-3 text-sm">
+                                                        <div class="flex items-center">
+                                                            <mat-icon class="text-pink-500 mr-2" [svgIcon]="'heroicons_solid:camera'"></mat-icon>
+                                                            Instagram
+                                                        </div>
                                                     </td>
-                                                </tr>
-                                                <tr class="border-b">
-                                                    <td class="py-3 text-sm">685377421YT</td>
-                                                    <td class="py-3 text-sm">Dec 25, 2019</td>
-                                                    <td class="py-3 text-sm">Marsha Chambers</td>
-                                                    <td class="py-3 text-sm">$1,828.16</td>
-                                                    <td class="py-3">
-                                                        <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">PENDING</span>
+                                                    <td class="py-3 text-sm">{{ formatNumber(getInstagramMetrics().followers) }}</td>
+                                                    <td class="py-3 text-sm">{{ formatNumber(getInstagramMetrics().impressions) }}</td>
+                                                    <td class="py-3 text-sm">{{ formatNumber(getInstagramMetrics().reach) }}</td>
+                                                    <td class="py-3 text-sm">{{ getInstagramMetrics().engagement_rate || 0 }}%</td>
+                                                    <td class="py-3 text-sm">
+                                                        <div class="flex items-center">
+                                                            <mat-icon class="text-green-600 mr-1" [svgIcon]="'heroicons_solid:arrow-trending-up'"></mat-icon>
+                                                            <span class="text-green-600">+1.8%</span>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             </tbody>
                                         </table>
                                     </div>
-                                    
+
+                                    <!-- Botón para ver más -->
                                     <button class="mt-4 text-sm text-primary font-medium">
-                                        See all transactions
+                                        Ver todas las métricas
                                     </button>
                                 </div>
                             </div>
+
+                            <!-- Empty State -->
+                            <div *ngIf="!hasMetricsData() && !loadingMetricas && !errorMetricas" class="flex flex-col items-center justify-center p-16 text-center">
+                                <mat-icon class="icon-size-16 text-hint mb-4" [svgIcon]="'heroicons_outline:chart-bar'"></mat-icon>
+                                <div class="text-2xl font-semibold tracking-tight">No hay datos disponibles</div>
+                                <div class="text-secondary mt-2">
+                                    Conecta tus redes sociales para ver las métricas aquí
+                                </div>
+                                <button mat-flat-button color="primary" class="mt-4" (click)="refreshMetricas()">
+                                    <mat-icon [svgIcon]="'heroicons_outline:arrow-path'"></mat-icon>
+                                    <span class="ml-2">Actualizar</span>
+                                </button>
+                            </div>
+
                         </div>
                     </ng-template>
                 </mat-tab>
@@ -282,7 +291,7 @@
                     <ng-template matTabContent>
                         <div class="grid gap-8 pt-8 sm:gap-16 sm:pt-16">
                             <div class="flex flex-col items-center justify-center p-16 text-center">
-                                <mat-icon 
+                                <mat-icon
                                     class="icon-size-16 text-hint mb-4"
                                     [svgIcon]="'heroicons_outline:globe-alt'"></mat-icon>
                                 <div class="text-2xl font-semibold tracking-tight">
@@ -301,7 +310,7 @@
                     <ng-template matTabContent>
                         <div class="grid gap-8 pt-8 sm:gap-16 sm:pt-16">
                             <div class="flex flex-col items-center justify-center p-16 text-center">
-                                <mat-icon 
+                                <mat-icon
                                     class="icon-size-16 text-hint mb-4"
                                     [svgIcon]="'heroicons_outline:megaphone'"></mat-icon>
                                 <div class="text-2xl font-semibold tracking-tight">
