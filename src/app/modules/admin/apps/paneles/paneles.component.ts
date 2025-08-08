@@ -282,9 +282,6 @@ export class PanelesComponent implements OnInit, OnDestroy {
                     show: false,
                 },
             },
-            zoom: {
-                enabled: false,
-            },
             colors: ['#64748B', '#94A3B8'],
             dataLabels: {
                 enabled: true,
@@ -358,9 +355,6 @@ export class PanelesComponent implements OnInit, OnDestroy {
                 toolbar: {
                     show: false,
                 },
-            },
-            zoom: {
-                enabled: false,
             },
             colors: ['#3182CE', '#63B3ED', '#90CDF4', '#BEE3F8'],
             labels: this.data.taskDistribution.labels,
