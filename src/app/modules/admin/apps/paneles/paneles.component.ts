@@ -135,7 +135,7 @@ export class PanelesComponent implements OnInit, OnDestroy {
         this.loadingMetricas = true;
         this.errorMetricas = null;
 
-        this._panelesService.getMetricasResumen(this.selectedClinicaId)
+        this._panelesService.getMetricasByClinica(this.selectedClinicaId)
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe({
                 next: (response) => {
