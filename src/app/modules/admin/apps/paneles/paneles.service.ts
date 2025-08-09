@@ -74,16 +74,19 @@ export class PanelesService {
     }
 
     const url = `${environment.apiUrl}/paneles/metricas/redes-sociales?idClinica=${clinicaId}${params ? '&' + params.substring(1) : ''}`;
-    
+
     return this._httpClient.get(url).pipe(
       tap((response: any) => {
-        if (response.success) {
-          this._metricas.next(response.data);
-        }
+        // Some endpoints may return the data wrapped in a `data` property
+        // while others may return the metric object directly. Normalize the
+        // response so the rest of the application can work with a unified
+        // structure without relying on a `success` flag.
+        const metricas = response?.data ?? response;
+        this._metricas.next(metricas);
       })
     );
   }
-
+  
   /**
    * Obtener métricas en tiempo real (para dashboard)
    */
@@ -202,4 +205,3 @@ export class PanelesService {
     };
   }
 }
-

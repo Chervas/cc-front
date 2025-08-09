@@ -139,12 +139,12 @@ export class PanelesComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe({
                 next: (response) => {
+                   // The service normalizes the response and also pushes the
+                    // metrics through its own observable, but we assign the
+                    // normalized data here as well to avoid any race
+                    // conditions.
                     this.loadingMetricas = false;
-                    if (response.success) {
-                        this.metricas = response.data;
-                    } else {
-                        this.errorMetricas = response.message || 'Error al cargar métricas';
-                    }
+                    this.metricas = response?.data ?? response;
                 },
                 error: (error) => {
                     this.loadingMetricas = false;
@@ -153,7 +153,7 @@ export class PanelesComponent implements OnInit, OnDestroy {
                 }
             });
     }
-
+    
     /**
      * Refrescar métricas manualmente
      */
@@ -169,7 +169,7 @@ export class PanelesComponent implements OnInit, OnDestroy {
         this.loadMetricas();
     }
 
-    /**
+ /**
      * Formatear números para mostrar (1.9K, 1.5M, etc.)
      */
     formatNumber(value: number): string {
@@ -191,8 +191,7 @@ export class PanelesComponent implements OnInit, OnDestroy {
         const sign = trend > 0 ? '+' : '';
         return `${sign}${trend.toFixed(1)}%`;
     }
-
-    /**
+/**
      * Obtener clase CSS para tendencia
      */
     getTrendClass(trend: number): string {
@@ -214,24 +213,21 @@ export class PanelesComponent implements OnInit, OnDestroy {
      * Obtener métricas de Facebook
      */
     getFacebookMetrics(): any {
-        if (!this.metricas?.platforms?.facebook) return null;
-        return this.metricas.platforms.facebook;
+        return this.metricas?.facebook ?? null;
     }
 
     /**
      * Obtener métricas de Instagram
      */
     getInstagramMetrics(): any {
-        if (!this.metricas?.platforms?.instagram) return null;
-        return this.metricas.platforms.instagram;
+        return this.metricas?.instagram ?? null;
     }
 
     /**
      * Verificar si hay datos de métricas
      */
     hasMetricsData(): boolean {
-        return this.metricas && 
-               (this.metricas.platforms?.facebook || this.metricas.platforms?.instagram);
+        return !!(this.metricas && (this.metricas.facebook || this.metricas.instagram));
     }
 
     // --------------------------------------------
@@ -562,4 +558,3 @@ export class PanelesComponent implements OnInit, OnDestroy {
         };
     }
 }
-

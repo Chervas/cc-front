@@ -114,14 +114,14 @@
                             </div>
 
                             <!-- Cards de redes sociales principales -->
-                            <div *ngIf="hasMetricsData() && !loadingMetricas" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div *ngIf="hasMetricsData() && !loadingMetricas" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 
                                 <!-- Facebook Card -->
                                 <div *ngIf="getFacebookMetrics()" class="bg-card shadow rounded-2xl p-6">
                                     <div class="flex items-center justify-between mb-4">
                                         <div>
                                             <div class="text-lg font-semibold">Facebook</div>
-                                            <div class="text-2xl font-bold text-blue-600">{{ formatNumber(getFacebookMetrics().followers) }}</div>
+                                            <div class="text-2xl font-bold text-blue-600">{{ formatNumber(getFacebookMetrics().seguidores) }}</div>
                                         </div>
                                         <mat-icon class="text-blue-500 icon-size-8" [svgIcon]="'heroicons_solid:check'"></mat-icon>
                                     </div>
@@ -135,7 +135,7 @@
                                     <div class="flex items-center justify-between mb-4">
                                         <div>
                                             <div class="text-lg font-semibold">Instagram</div>
-                                            <div class="text-2xl font-bold text-pink-500">{{ formatNumber(getInstagramMetrics().followers) }}</div>
+                                            <div class="text-2xl font-bold text-pink-500">{{ formatNumber(getInstagramMetrics().seguidores) }}</div>
                                         </div>
                                         <mat-icon class="text-pink-500 icon-size-8" [svgIcon]="'heroicons_solid:camera'"></mat-icon>
                                     </div>
@@ -173,7 +173,7 @@
                                             <span class="text-secondary text-sm">Impresiones</span>
                                             <span class="text-xs text-secondary">Últimos 7 días</span>
                                         </div>
-                                        <div class="text-3xl font-bold">{{ formatNumber(getFacebookMetrics()?.impressions || 0) }}</div>
+                                    <div class="text-3xl font-bold">{{ formatNumber(getFacebookMetrics()?.impresiones || 0) }}</div>
                                         <div class="text-sm text-green-500">+2% respecto período anterior</div>
                                         <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
                                     </div>
@@ -184,7 +184,7 @@
                                             <span class="text-secondary text-sm">Alcance</span>
                                             <span class="text-xs text-secondary">Últimos 7 días</span>
                                         </div>
-                                        <div class="text-3xl font-bold">{{ formatNumber(getFacebookMetrics()?.reach || 0) }}</div>
+                                    <div class="text-3xl font-bold">{{ formatNumber(getFacebookMetrics()?.alcance || 0) }}</div>
                                         <div class="text-sm text-green-500">+2% respecto período anterior</div>
                                         <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
                                     </div>
@@ -195,7 +195,7 @@
                                             <span class="text-secondary text-sm">Visitas al Perfil</span>
                                             <span class="text-xs text-secondary">Últimos 7 días</span>
                                         </div>
-                                        <div class="text-3xl font-bold">{{ formatNumber(getFacebookMetrics()?.profile_visits || 0) }}</div>
+                                    <div class="text-3xl font-bold">{{ formatNumber(getFacebookMetrics()?.visitas_perfil || 0) }}</div>
                                         <div class="text-sm text-green-500">+2% respecto período anterior</div>
                                         <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
                                     </div>
@@ -227,10 +227,10 @@
                                                             Facebook
                                                         </div>
                                                     </td>
-                                                    <td class="py-3 text-sm">{{ formatNumber(getFacebookMetrics().followers) }}</td>
-                                                    <td class="py-3 text-sm">{{ formatNumber(getFacebookMetrics().impressions) }}</td>
-                                                    <td class="py-3 text-sm">{{ formatNumber(getFacebookMetrics().reach) }}</td>
-                                                    <td class="py-3 text-sm">{{ getFacebookMetrics().engagement_rate || 0 }}%</td>
+                                                    <td class="py-3 text-sm">{{ formatNumber(getFacebookMetrics().seguidores) }}</td>
+                                                    <td class="py-3 text-sm">{{ formatNumber(getFacebookMetrics().impresiones) }}</td>
+                                                    <td class="py-3 text-sm">{{ formatNumber(getFacebookMetrics().alcance) }}</td>
+                                                    <td class="py-3 text-sm">{{ getFacebookMetrics().engagement || 0 }}%</td>
                                                     <td class="py-3 text-sm">
                                                         <div class="flex items-center">
                                                             <mat-icon class="text-green-600 mr-1" [svgIcon]="'heroicons_solid:arrow-trending-up'"></mat-icon>
@@ -247,10 +247,10 @@
                                                             Instagram
                                                         </div>
                                                     </td>
-                                                    <td class="py-3 text-sm">{{ formatNumber(getInstagramMetrics().followers) }}</td>
-                                                    <td class="py-3 text-sm">{{ formatNumber(getInstagramMetrics().impressions) }}</td>
-                                                    <td class="py-3 text-sm">{{ formatNumber(getInstagramMetrics().reach) }}</td>
-                                                    <td class="py-3 text-sm">{{ getInstagramMetrics().engagement_rate || 0 }}%</td>
+                                                    <td class="py-3 text-sm">{{ formatNumber(getInstagramMetrics().seguidores) }}</td>
+                                                    <td class="py-3 text-sm">{{ formatNumber(getInstagramMetrics().impresiones) }}</td>
+                                                    <td class="py-3 text-sm">{{ formatNumber(getInstagramMetrics().alcance) }}</td>
+                                                    <td class="py-3 text-sm">{{ getInstagramMetrics().engagement || 0 }}%</td>
                                                     <td class="py-3 text-sm">
                                                         <div class="flex items-center">
                                                             <mat-icon class="text-green-600 mr-1" [svgIcon]="'heroicons_solid:arrow-trending-up'"></mat-icon>
@@ -328,4 +328,3 @@
         </div>
     </div>
 </div>
-
