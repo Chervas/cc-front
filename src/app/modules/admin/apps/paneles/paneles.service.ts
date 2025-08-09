@@ -77,16 +77,20 @@ export class PanelesService {
 
     return this._httpClient.get(url).pipe(
       tap((response: any) => {
-        // Some endpoints may return the data wrapped in a `data` property
-        // while others may return the metric object directly. Normalize the
-        // response so the rest of the application can work with a unified
-        // structure without relying on a `success` flag.
-        const metricas = response?.data ?? response;
-        this._metricas.next(metricas);
-      })
+  console.log('📊 Respuesta del backend:', response);
+  
+  // Usar los datos tal como vienen del backend
+  const metricas = response?.data ?? response;
+  
+  console.log('📊 Métricas finales:', metricas);
+  this._metricas.next(metricas);
+})
+
+
+        
     );
   }
-  
+
   /**
    * Obtener métricas en tiempo real (para dashboard)
    */
