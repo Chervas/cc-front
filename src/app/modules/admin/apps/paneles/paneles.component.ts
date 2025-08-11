@@ -373,31 +373,31 @@ updateFacebookChart(): void {
     /**
      * Obtener métricas de Facebook
      */
-     getFacebookMetrics(): RedesSocialesMetricas | null {
-        const fb = this.metricas?.facebook;
-        return this._hasAnyMetric(fb, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance', 'clics']) ? fb : null;
-    }
+     getFacebookMetrics(): RedesSocialesMetricas['facebook'] | null {
+    const fb = this.metricas?.facebook;
+    return this._hasAnyMetric(fb, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance', 'clics']) ? fb : null;
+}
 
     /**
      * Obtener métricas de Instagram
      */
-    getInstagramMetrics(): RedesSocialesMetricas | null {
-        const ig = this.metricas?.instagram;
-        return this._hasAnyMetric(ig, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance']) ? ig : null;
-    }
+    getInstagramMetrics(): RedesSocialesMetricas['instagram'] | null {
+    const ig = this.metricas?.instagram;
+    return this._hasAnyMetric(ig, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance']) ? ig : null;
+}
 
     /**
      * Obtener métricas de TikTok
      */
-    getTikTokMetrics(): RedesSocialesMetricas | null {
-        return this.metricas?.tiktok ?? null;
-    }
+    getTikTokMetrics(): RedesSocialesMetricas['tiktok'] | null {
+    return this.metricas?.tiktok ?? null;
+    }   
 
     /**
      * Obtener métricas de LinkedIn
      */
-    getLinkedInMetrics(): RedesSocialesMetricas | null {
-        return this.metricas?.linkedin ?? null;
+    getLinkedInMetrics(): RedesSocialesMetricas['linkedin'] | null {
+    return this.metricas?.linkedin ?? null;
     }
 
     /**
