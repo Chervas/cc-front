@@ -325,28 +325,39 @@ updateFacebookChart(): void {
         followers.push(dailyFollowers);
     }
     
-    // Actualizar configuración del gráfico
+    // Actualizar configuración local
     this.chartSeguidoresFacebook = {
         ...this.chartSeguidoresFacebook,
         series: [
             {
                 name: 'Seguidores',
-                data: followers
-            }
+                data: followers,
+            },
         ],
         xaxis: {
             ...this.chartSeguidoresFacebook.xaxis,
-            categories: dates
-        }
+            categories: dates,
+        },
     };
+
+    // Forzar actualización del componente de ApexCharts si ya está inicializado
+    if (this.facebookChart) {
+        this.facebookChart.updateOptions(
+            {
+                series: [{ name: 'Seguidores', data: followers }],
+                xaxis: { categories: dates },
+            },
+            true,
+            true,
+        );
+    }
 
     this._cdr.detectChanges();
     console.log('🔄 Change detection forzada');
 
     console.log('🎯 chartSeguidoresFacebook actualizado:', this.chartSeguidoresFacebook);
-        console.log('🎯 series data:', this.chartSeguidoresFacebook.series);
+    console.log('🎯 series data:', this.chartSeguidoresFacebook.series);
 
-    
     console.log('📊 Gráfico Facebook actualizado con', followers.length, 'puntos de datos');
 }
 
