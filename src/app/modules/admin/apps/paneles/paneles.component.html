@@ -63,9 +63,10 @@
 
             <!-- Pestañas principales -->
             <mat-tab-group
-                class="fuse-mat-dense fuse-mat-rounded w-full"
-                [animationDuration]="'0ms'"
-                mat-stretch-tabs="false">
+    class="fuse-mat-dense fuse-mat-rounded w-full"
+    [animationDuration]="'0ms'"
+    mat-stretch-tabs="false"
+    (selectedTabChange)="onTabChange($event.index)">
 
                 <!-- Pestaña Resumen -->
                 <mat-tab label="Resumen">

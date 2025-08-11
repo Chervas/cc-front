@@ -46,6 +46,7 @@ export class PanelesComponent implements OnInit, OnDestroy {
     chartWeeklyExpenses: ApexOptions = {};
     chartMonthlyExpenses: ApexOptions = {};
     chartYearlyExpenses: ApexOptions = {};
+    isRedesSocialesTabActive: boolean = false;
     data: any;
     selectedProject: string = 'ACME Corp. Backend App';
     private _unsubscribeAll: Subject<any> = new Subject<any>();
@@ -108,7 +109,19 @@ export class PanelesComponent implements OnInit, OnDestroy {
         // TODO: Integrar con selector de clínicas
         // Por ahora usar clínica de prueba
         this.selectedClinicaId = 1;
-        this.loadMetricas();
+    }
+
+    /**
+     * Maneja el cambio de pestañas
+     */
+    onTabChange(index: number): void {
+        console.log('📊 Cambio de pestaña:', index);
+        this.isRedesSocialesTabActive = (index === 1);
+        
+        if (this.isRedesSocialesTabActive && !this.metricas) {
+            console.log('📊 Cargando métricas para pestaña Redes Sociales');
+            this.loadMetricas();
+        }
     }
 
     /**
