@@ -63,10 +63,10 @@
 
             <!-- Pestañas principales -->
             <mat-tab-group
-    class="fuse-mat-dense fuse-mat-rounded w-full"
-    [animationDuration]="'0ms'"
-    mat-stretch-tabs="false"
-    (selectedTabChange)="onTabChange($event.index)">
+                class="fuse-mat-dense fuse-mat-rounded w-full"
+                [animationDuration]="'0ms'"
+                mat-stretch-tabs="false"
+                (selectedTabChange)="onTabChange($event.index)">
 
                 <!-- Pestaña Resumen -->
                 <mat-tab label="Resumen">
@@ -112,6 +112,90 @@
                                     <mat-icon [svgIcon]="'heroicons_outline:arrow-path'"></mat-icon>
                                     Reintentar
                                 </button>
+                            </div>
+
+                            <!-- NUEVA SECCIÓN: Seguidores con gráficos -->
+                            <div *ngIf="hasMetricsData() && !loadingMetricas">
+                                <div class="text-2xl font-semibold tracking-tight mb-2">Evolución de Seguidores</div>
+                                <div class="text-secondary mb-6">Gráficos de evolución temporal de seguidores por plataforma</div>
+                                
+                                <!-- Grid de gráficos de seguidores -->
+                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                                    
+                                    <!-- Gráfico Facebook -->
+                                    <div class="flex flex-col bg-card rounded-2xl shadow p-6">
+                                        <div class="flex items-center justify-between mb-4">
+                                            <div class="flex flex-col">
+                                                <div class="text-lg font-medium text-secondary">Facebook</div>
+                                                <div class="text-3xl font-bold tracking-tight leading-none text-blue-600">
+                                                    {{ getFacebookMetrics()?.seguidores | number }}
+                                                </div>
+                                                <div class="flex items-center mt-1">
+                                                    <div class="text-sm text-green-600">+20%</div>
+                                                    <div class="text-sm text-secondary ml-1">Este año</div>
+                                                </div>
+                                            </div>
+                                            <mat-icon class="text-blue-500 icon-size-8" [svgIcon]="'heroicons_solid:check'"></mat-icon>
+                                        </div>
+                                        
+                                        <!-- Gráfico ApexCharts -->
+                                        <div class="flex flex-auto items-end mt-6 h-32">
+                                            <apx-chart
+                                                class="flex-auto w-full h-full"
+                                                [chart]="chartSeguidoresFacebook.chart"
+                                                [colors]="chartSeguidoresFacebook.colors"
+                                                [dataLabels]="chartSeguidoresFacebook.dataLabels"
+                                                [grid]="chartSeguidoresFacebook.grid"
+                                                [series]="chartSeguidoresFacebook.series"
+                                                [stroke]="chartSeguidoresFacebook.stroke"
+                                                [tooltip]="chartSeguidoresFacebook.tooltip"
+                                                [xaxis]="chartSeguidoresFacebook.xaxis"
+                                                [yaxis]="chartSeguidoresFacebook.yaxis">
+                                            </apx-chart>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Placeholder Instagram -->
+                                    <div class="flex flex-col bg-card rounded-2xl shadow p-6">
+                                        <div class="flex items-center justify-between mb-4">
+                                            <div class="flex flex-col">
+                                                <div class="text-lg font-medium text-secondary">Instagram</div>
+                                                <div class="text-3xl font-bold tracking-tight leading-none text-pink-500">
+                                                    {{ getInstagramMetrics()?.seguidores | number }}
+                                                </div>
+                                                <div class="flex items-center mt-1">
+                                                    <div class="text-sm text-green-600">+15%</div>
+                                                    <div class="text-sm text-secondary ml-1">Este año</div>
+                                                </div>
+                                            </div>
+                                            <mat-icon class="text-pink-500 icon-size-8" [svgIcon]="'heroicons_solid:camera'"></mat-icon>
+                                        </div>
+                                        <div class="flex flex-auto items-center justify-center mt-6 h-32 bg-gray-100 rounded">
+                                            <div class="text-sm text-secondary">Próximamente</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Placeholder TikTok -->
+                                    <div class="flex flex-col bg-card rounded-2xl shadow p-6">
+                                        <div class="flex items-center justify-between mb-4">
+                                            <div class="flex flex-col">
+                                                <div class="text-lg font-medium text-secondary">TikTok</div>
+                                                <div class="text-3xl font-bold tracking-tight leading-none text-gray-800">
+                                                    {{ metricas?.tiktok?.seguidores | number }}
+                                                </div>
+                                                <div class="flex items-center mt-1">
+                                                    <div class="text-sm text-green-600">+25%</div>
+                                                    <div class="text-sm text-secondary ml-1">Este año</div>
+                                                </div>
+                                            </div>
+                                            <mat-icon class="text-gray-800 icon-size-8" [svgIcon]="'heroicons_solid:musical-note'"></mat-icon>
+                                        </div>
+                                        <div class="flex flex-auto items-center justify-center mt-6 h-32 bg-gray-100 rounded">
+                                            <div class="text-sm text-secondary">Próximamente</div>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
                             </div>
 
                             <!-- Cards de redes sociales principales -->
@@ -231,156 +315,58 @@
                                         <div class="h-16 mt-4 bg-gradient-to-r from-blue-700/20 to-blue-500/20 rounded-lg"></div>
                                     </div>
 
-                                    <!-- COMENTADO: Métricas que no tenemos -->
-                                    <!-- 
-                                    <div class="bg-card shadow rounded-2xl p-6 opacity-50">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="text-secondary text-sm">Impresiones Facebook</span>
-                                            <span class="text-xs text-secondary">No disponible</span>
-                                        </div>
-                                        <div class="text-3xl font-bold text-gray-400">-</div>
-                                        <div class="text-sm text-gray-400">Próximamente</div>
-                                        <div class="h-16 mt-4 bg-gray-100 rounded-lg"></div>
-                                    </div>
-
-                                    <div class="bg-card shadow rounded-2xl p-6 opacity-50">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="text-secondary text-sm">Alcance</span>
-                                            <span class="text-xs text-secondary">No disponible</span>
-                                        </div>
-                                        <div class="text-3xl font-bold text-gray-400">-</div>
-                                        <div class="text-sm text-gray-400">Próximamente</div>
-                                        <div class="h-16 mt-4 bg-gray-100 rounded-lg"></div>
-                                    </div>
-
-                                    <div class="bg-card shadow rounded-2xl p-6 opacity-50">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <span class="text-secondary text-sm">Visitas al Perfil</span>
-                                            <span class="text-xs text-secondary">No disponible</span>
-                                        </div>
-                                        <div class="text-3xl font-bold text-gray-400">-</div>
-                                        <div class="text-sm text-gray-400">Próximamente</div>
-                                        <div class="h-16 mt-4 bg-gray-100 rounded-lg"></div>
-                                    </div>
-                                    -->
                                 </div>
+                            </div>
 
-                                <!-- Tabla comparativa de métricas - SOLO DATOS REALES -->
-                                <div class="bg-card shadow rounded-2xl p-6">
-                                    <div class="text-lg font-semibold mb-4">Comparativa por Plataforma</div>
-                                    <div class="text-sm text-secondary mb-4">Datos disponibles actualmente</div>
-
-                                    <div class="overflow-x-auto">
-                                        <table class="w-full">
-                                            <thead>
-                                                <tr class="border-b">
-                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Plataforma</th>
-                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Seguidores</th>
-                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Métrica Principal</th>
-                                                    <th class="text-left py-3 text-sm font-medium text-secondary">Valor</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <!-- Facebook Row - DATOS REALES -->
-                                                <tr *ngIf="getFacebookMetrics()" class="border-b">
-                                                    <td class="py-3 text-sm">
-                                                        <div class="flex items-center">
-                                                            <mat-icon class="text-blue-600 mr-2" [svgIcon]="'heroicons_solid:check'"></mat-icon>
-                                                            Facebook
-                                                        </div>
-                                                    </td>
-                                                    <td class="py-3 text-sm font-medium">{{ formatNumber(getFacebookMetrics().seguidores) }}</td>
-                                                    <td class="py-3 text-sm">Engagement</td>
-                                                    <td class="py-3 text-sm font-medium">{{ getFacebookMetrics().engagement }}%</td>
-                                                </tr>
-                                                
-                                                <!-- Instagram Row - DATOS REALES -->
-                                                <tr *ngIf="getInstagramMetrics()" class="border-b">
-                                                    <td class="py-3 text-sm">
-                                                        <div class="flex items-center">
-                                                            <mat-icon class="text-pink-500 mr-2" [svgIcon]="'heroicons_solid:camera'"></mat-icon>
-                                                            Instagram
-                                                        </div>
-                                                    </td>
-                                                    <td class="py-3 text-sm font-medium">{{ formatNumber(getInstagramMetrics().seguidores) }}</td>
-                                                    <td class="py-3 text-sm">Engagement</td>
-                                                    <td class="py-3 text-sm font-medium">{{ getInstagramMetrics().engagement }}%</td>
-                                                </tr>
-
-                                                <!-- TikTok Row - DATOS REALES -->
-                                                <tr *ngIf="metricas?.tiktok" class="border-b">
-                                                    <td class="py-3 text-sm">
-                                                        <div class="flex items-center">
-                                                            <mat-icon class="text-gray-800 mr-2" [svgIcon]="'heroicons_solid:musical-note'"></mat-icon>
-                                                            TikTok
-                                                        </div>
-                                                    </td>
-                                                    <td class="py-3 text-sm font-medium">{{ formatNumber(metricas.tiktok.seguidores) }}</td>
-                                                    <td class="py-3 text-sm">Visualizaciones</td>
-                                                    <td class="py-3 text-sm font-medium">{{ formatNumber(metricas.tiktok.visualizaciones) }}</td>
-                                                </tr>
-
-                                                <!-- LinkedIn Row - DATOS REALES -->
-                                                <tr *ngIf="metricas?.linkedin" class="border-b">
-                                                    <td class="py-3 text-sm">
-                                                        <div class="flex items-center">
-                                                            <mat-icon class="text-blue-700 mr-2" [svgIcon]="'heroicons_solid:briefcase'"></mat-icon>
-                                                            LinkedIn
-                                                        </div>
-                                                    </td>
-                                                    <td class="py-3 text-sm font-medium">{{ formatNumber(metricas.linkedin.seguidores) }}</td>
-                                                    <td class="py-3 text-sm">Impresiones</td>
-                                                    <td class="py-3 text-sm font-medium">{{ formatNumber(metricas.linkedin.impresiones) }}</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-
-                                <!-- Sección Doctoralia - DATOS REALES -->
-                                <div *ngIf="metricas?.doctoralia" class="bg-card shadow rounded-2xl p-6 mt-6">
-                                    <div class="text-lg font-semibold mb-4">Doctoralia</div>
-                                    <div class="text-sm text-secondary mb-4">Reputación online</div>
+                            <!-- Sección "Próximamente" para métricas no disponibles -->
+                            <div *ngIf="hasMetricsData() && !loadingMetricas">
+                                <div class="text-2xl font-semibold tracking-tight mb-2">Próximamente</div>
+                                <div class="text-secondary mb-6">Métricas en desarrollo</div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <!-- Valoración -->
-                                        <div class="text-center">
-                                            <div class="text-4xl font-bold text-yellow-500 mb-2">{{ metricas.doctoralia.valoracion }}</div>
-                                            <div class="text-sm text-secondary">Valoración promedio</div>
-                                            <div class="flex justify-center mt-2">
-                                                <mat-icon class="text-yellow-500" [svgIcon]="'heroicons_solid:star'"></mat-icon>
-                                                <mat-icon class="text-yellow-500" [svgIcon]="'heroicons_solid:star'"></mat-icon>
-                                                <mat-icon class="text-yellow-500" [svgIcon]="'heroicons_solid:star'"></mat-icon>
-                                                <mat-icon class="text-yellow-500" [svgIcon]="'heroicons_solid:star'"></mat-icon>
-                                                <mat-icon class="text-yellow-500" [svgIcon]="'heroicons_solid:star'"></mat-icon>
-                                            </div>
+                                    <!-- Citas desde redes sociales -->
+                                    <div class="bg-card shadow rounded-2xl p-6 opacity-50">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-secondary text-sm">Citas desde redes sociales</span>
+                                            <mat-icon class="text-gray-400" [svgIcon]="'heroicons_outline:calendar'"></mat-icon>
                                         </div>
-                                        
-                                        <!-- Reseñas -->
-                                        <div class="text-center">
-                                            <div class="text-4xl font-bold text-blue-600 mb-2">{{ metricas.doctoralia.resenas }}</div>
-                                            <div class="text-sm text-secondary">Total de reseñas</div>
+                                        <div class="text-3xl font-bold text-gray-400">-</div>
+                                        <div class="text-sm text-gray-400">En desarrollo</div>
+                                        <div class="h-16 mt-4 bg-gray-100 rounded-lg flex items-center justify-center">
+                                            <span class="text-xs text-gray-400">Próximamente</span>
                                         </div>
                                     </div>
+
+                                    <!-- Presupuestos aceptados -->
+                                    <div class="bg-card shadow rounded-2xl p-6 opacity-50">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-secondary text-sm">Presupuestos aceptados</span>
+                                            <mat-icon class="text-gray-400" [svgIcon]="'heroicons_outline:currency-euro'"></mat-icon>
+                                        </div>
+                                        <div class="text-3xl font-bold text-gray-400">-</div>
+                                        <div class="text-sm text-gray-400">En desarrollo</div>
+                                        <div class="h-16 mt-4 bg-gray-100 rounded-lg flex items-center justify-center">
+                                            <span class="text-xs text-gray-400">Próximamente</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- ROI de publicidad -->
+                                    <div class="bg-card shadow rounded-2xl p-6 opacity-50">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-secondary text-sm">ROI de publicidad</span>
+                                            <mat-icon class="text-gray-400" [svgIcon]="'heroicons_outline:chart-bar'"></mat-icon>
+                                        </div>
+                                        <div class="text-3xl font-bold text-gray-400">-</div>
+                                        <div class="text-sm text-gray-400">En desarrollo</div>
+                                        <div class="h-16 mt-4 bg-gray-100 rounded-lg flex items-center justify-center">
+                                            <span class="text-xs text-gray-400">Próximamente</span>
+                                        </div>
+                                    </div>
+
                                 </div>
                             </div>
 
-                            <!-- Estado sin datos -->
-                            <div *ngIf="!hasMetricsData() && !loadingMetricas && !errorMetricas" class="flex flex-col items-center justify-center p-16 text-center">
-                                <mat-icon
-                                    class="icon-size-16 text-hint mb-4"
-                                    [svgIcon]="'heroicons_outline:chart-bar'"></mat-icon>
-                                <div class="text-2xl font-semibold tracking-tight">
-                                    No hay datos disponibles
-                                </div>
-                                <div class="text-secondary mt-2 mb-4">
-                                    No se encontraron métricas para mostrar
-                                </div>
-                                <button mat-flat-button [color]="'primary'" (click)="refreshMetricas()">
-                                    <mat-icon [svgIcon]="'heroicons_outline:arrow-path'"></mat-icon>
-                                    <span class="ml-2">Cargar métricas</span>
-                                </button>
-                            </div>
                         </div>
                     </ng-template>
                 </mat-tab>
@@ -397,7 +383,7 @@
                                     Métricas Web
                                 </div>
                                 <div class="text-secondary mt-2">
-                                    Próximamente: Analytics de tu sitio web
+                                    Aquí aparecerán las métricas de tu sitio web
                                 </div>
                             </div>
                         </div>
@@ -416,12 +402,13 @@
                                     Métricas de Publicidad
                                 </div>
                                 <div class="text-secondary mt-2">
-                                    Próximamente: Google Ads, Meta Ads y más
+                                    Aquí aparecerán las métricas de tus campañas publicitarias
                                 </div>
                             </div>
                         </div>
                     </ng-template>
                 </mat-tab>
+
             </mat-tab-group>
         </div>
     </div>
