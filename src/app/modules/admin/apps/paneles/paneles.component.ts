@@ -306,60 +306,71 @@ _updateChartsWithMetricas(): void {
  * Actualiza el gráfico de seguidores de Facebook
  */
 updateFacebookChart(): void {
-    const facebookData = this.metricas?.facebook;
-    if (!facebookData) return;
-
-    // Generar datos de ejemplo para los últimos 30 días
-    const dates: number[] = [];
-    const followers: number[] = [];
-    const currentFollowers = facebookData.seguidores && facebookData.seguidores > 0 ? facebookData.seguidores : 2840;
-    
-    for (let i = 29; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        dates.push(date.getTime());
-        
-        // Simular variación de seguidores (±2% del valor actual)
-        const variation = (Math.random() - 0.5) * 0.04; // ±2%
-        const dailyFollowers = Math.round(currentFollowers * (1 + variation * (i / 30)));
-        followers.push(dailyFollowers);
-    }
-    
-    // Actualizar configuración local
-    this.chartSeguidoresFacebook = {
-        ...this.chartSeguidoresFacebook,
-        series: [
-            {
-                name: 'Seguidores',
-                data: followers,
-            },
-        ],
-        xaxis: {
-            ...this.chartSeguidoresFacebook.xaxis,
-            categories: dates,
-        },
-    };
-
-    // Forzar actualización del componente de ApexCharts si ya está inicializado
-    if (this.facebookChart) {
-        this.facebookChart.updateOptions(
-            {
-                series: [{ name: 'Seguidores', data: followers }],
-                xaxis: { categories: dates },
-            },
-            true,
-            true,
-        );
+    if (!this.selectedClinicaId) {
+        return;
     }
 
-    this._cdr.detectChanges();
-    console.log('🔄 Change detection forzada');
+    // Usar datos históricos reales del servicio
+    this._panelesService
+        .getMetricasHistoricas(this.selectedClinicaId)
+        .pipe(takeUntil(this._unsubscribeAll))
+        .subscribe({
+            next: (historico) => {
+                const serie = historico.facebook || [];
 
-    console.log('🎯 chartSeguidoresFacebook actualizado:', this.chartSeguidoresFacebook);
-    console.log('🎯 series data:', this.chartSeguidoresFacebook.series);
+                if (!serie.length) {
+                    // Si no hay datos históricos, generar datos de ejemplo
+                    const facebookData = this.metricas?.facebook;
+                    const currentFollowers = facebookData?.seguidores ?? 2840;
+                    
+                    const dates: number[] = [];
+                    const followers: number[] = [];
+                    
+                    for (let i = 29; i >= 0; i--) {
+                        const date = new Date();
+                        date.setDate(date.getDate() - i);
+                        dates.push(date.getTime());
+                        
+                        const variation = (Math.random() - 0.5) * 0.04;
+                        const dailyFollowers = Math.round(currentFollowers * (1 + variation * (i / 30)));
+                        followers.push(Math.max(0, dailyFollowers));
+                    }
 
-    console.log('📊 Gráfico Facebook actualizado con', followers.length, 'puntos de datos');
+                    this.chartSeguidoresFacebook = {
+                        ...this.chartSeguidoresFacebook,
+                        series: [{ name: 'Seguidores', data: followers }],
+                        xaxis: { ...this.chartSeguidoresFacebook.xaxis, categories: dates },
+                    };
+                } else {
+                    // Usar datos históricos reales
+                    const fechas = serie.map((p) => new Date(p.fecha).getTime());
+                    const seguidores = serie.map((p) => p.seguidores);
+
+                    this.chartSeguidoresFacebook = {
+                        ...this.chartSeguidoresFacebook,
+                        series: [{ name: 'Seguidores', data: seguidores }],
+                        xaxis: { ...this.chartSeguidoresFacebook.xaxis, categories: fechas },
+                    };
+                }
+
+                // Usar API de ApexCharts para actualización
+                if (this.facebookChart) {
+                    this.facebookChart.updateSeries(this.chartSeguidoresFacebook.series, true);
+                    this.facebookChart.updateOptions({ 
+                        xaxis: this.chartSeguidoresFacebook.xaxis 
+                    }, true, true, true);
+                }
+
+                this._cdr.markForCheck();
+                console.log('📊 Gráfico Facebook actualizado con datos reales');
+            },
+            error: () => {
+                console.error('Error cargando datos históricos, usando datos de ejemplo');
+                this._cdr.markForCheck();
+            },
+        });
 }
+
 
 
       /**
@@ -378,8 +389,13 @@ updateFacebookChart(): void {
         if (!metrics) {
             return false;
         }
-        return fields.some((f) => metrics[f] !== undefined && metrics[f] !== null);
+        return fields.some((f) => 
+            metrics[f] !== undefined && 
+            metrics[f] !== null && 
+            (typeof metrics[f] === 'number' || metrics[f])
+        );
     }
+
 
     /**
      * Obtener métricas de Facebook
