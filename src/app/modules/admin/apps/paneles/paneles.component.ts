@@ -374,13 +374,47 @@ updateFacebookChart(): void {
      * Verificar si hay datos de métricas
      */
     hasMetricsData(): boolean {
-        return !!(
-            this.metricas &&
+        if (!this.metricas) {
+            return false;
+        }
+
+        const hasFacebook = !!(
+            this.metricas.facebook &&
             (
-                this.metricas.facebook?.sincronizado === true ||
-                this.metricas.instagram?.sincronizado === true
+                this.metricas.facebook.seguidores !== undefined ||
+                this.metricas.facebook.impresiones !== undefined ||
+                this.metricas.facebook.engagement !== undefined ||
+                this.metricas.facebook.visualizaciones !== undefined
             )
         );
+
+        const hasInstagram = !!(
+            this.metricas.instagram &&
+            (
+                this.metricas.instagram.seguidores !== undefined ||
+                this.metricas.instagram.impresiones !== undefined ||
+                this.metricas.instagram.engagement !== undefined ||
+                this.metricas.instagram.visualizaciones !== undefined
+            )
+        );
+
+        const hasTikTok = !!(
+            this.metricas.tiktok &&
+            (
+                this.metricas.tiktok.seguidores !== undefined ||
+                this.metricas.tiktok.visualizaciones !== undefined
+            )
+        );
+
+        const hasLinkedIn = !!(
+            this.metricas.linkedin &&
+            (
+                this.metricas.linkedin.seguidores !== undefined ||
+                this.metricas.linkedin.impresiones !== undefined
+            )
+        );
+
+        return hasFacebook || hasInstagram || hasTikTok || hasLinkedIn;
     }
 
     // --------------------------------------------
