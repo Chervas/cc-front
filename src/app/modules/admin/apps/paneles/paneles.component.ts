@@ -220,12 +220,12 @@ export class PanelesComponent implements OnInit, OnDestroy {
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe({
                 next: (response) => {
-                // The service normalizes the response and also pushes the
+                    // The service normalizes the response and also pushes the
                     // metrics through its own observable, but we assign the
                     // normalized data here as well to avoid any race
                     // conditions.
                     this.loadingMetricas = false;
-                    this.metricas = response?.data ?? response;
+                    this.metricas = response;
                     this._cdr.markForCheck();
                     console.log('🔍 DIAGNÓSTICO - response completo:', response);
                     console.log('🔍 DIAGNÓSTICO - this.metricas:', this.metricas);
@@ -308,11 +308,11 @@ _updateChartsWithMetricas(): void {
 updateFacebookChart(): void {
     const facebookData = this.metricas?.facebook;
     if (!facebookData) return;
-    
+
     // Generar datos de ejemplo para los últimos 30 días
-    const dates = [];
-    const followers = [];
-    const currentFollowers = facebookData.seguidores ?? 2840;
+    const dates: number[] = [];
+    const followers: number[] = [];
+    const currentFollowers = facebookData.seguidores && facebookData.seguidores > 0 ? facebookData.seguidores : 2840;
     
     for (let i = 29; i >= 0; i--) {
         const date = new Date();
@@ -373,48 +373,30 @@ updateFacebookChart(): void {
     /**
      * Obtener métricas de Facebook
      */
-    getFacebookMetrics(): RedesSocialesMetricas['facebook'] | null {
+     getFacebookMetrics(): RedesSocialesMetricas | null {
         const fb = this.metricas?.facebook;
-        return this._hasAnyMetric(fb, [
-            'seguidores',
-            'alcance_mes',
-            'interacciones',
-            'crecimiento_seguidores',
-            'posts_mes',
-            'engagement_rate',
-        ])
-            ? fb
-            : null;
+        return this._hasAnyMetric(fb, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance', 'clics']) ? fb : null;
     }
 
     /**
      * Obtener métricas de Instagram
      */
-    getInstagramMetrics(): RedesSocialesMetricas['instagram'] | null {
+    getInstagramMetrics(): RedesSocialesMetricas | null {
         const ig = this.metricas?.instagram;
-        return this._hasAnyMetric(ig, [
-            'seguidores',
-            'alcance_mes',
-            'interacciones',
-            'crecimiento_seguidores',
-            'posts_mes',
-            'engagement_rate',
-        ])
-            ? ig
-            : null;
+        return this._hasAnyMetric(ig, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance']) ? ig : null;
     }
 
     /**
      * Obtener métricas de TikTok
      */
-    getTikTokMetrics(): RedesSocialesMetricas['tiktok'] | null {
+    getTikTokMetrics(): RedesSocialesMetricas | null {
         return this.metricas?.tiktok ?? null;
     }
 
     /**
      * Obtener métricas de LinkedIn
      */
-    getLinkedInMetrics(): RedesSocialesMetricas['linkedin'] | null {
+    getLinkedInMetrics(): RedesSocialesMetricas | null {
         return this.metricas?.linkedin ?? null;
     }
 
