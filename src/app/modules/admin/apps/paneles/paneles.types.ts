@@ -8,6 +8,7 @@ export interface PanelData {
     fecha_fin: string;
 }
 
+
 export interface ResumenMetricas {
     total_pacientes: number;
     citas_mes: number;

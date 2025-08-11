@@ -20,6 +20,15 @@ import { TranslocoModule } from '@ngneat/transloco';
 import { PanelesService } from './paneles.service';
 import { ApexOptions, NgApexchartsModule, ChartComponent } from 'ng-apexcharts';
 import { Subject, takeUntil } from 'rxjs';
+import { RedesSocialesMetricas } from './paneles.types';
+
+interface MetricasRedesSociales {
+    facebook?: RedesSocialesMetricas;
+    instagram?: RedesSocialesMetricas;
+    tiktok?: RedesSocialesMetricas;
+    linkedin?: RedesSocialesMetricas;
+}
+
 
 @Component({
     selector: 'paneles',
@@ -54,7 +63,7 @@ export class PanelesComponent implements OnInit, OnDestroy {
     private _unsubscribeAll: Subject<any> = new Subject<any>();
 
     // NUEVAS PROPIEDADES PARA MÉTRICAS
-    metricas: any = null;
+     metricas: MetricasRedesSociales | null = null;
     loadingMetricas: boolean = false;
     selectedClinicaId: number | null = null;
     errorMetricas: string | null = null;
@@ -169,6 +178,7 @@ export class PanelesComponent implements OnInit, OnDestroy {
             .subscribe((metricas) => {
                 this.metricas = metricas;
                 this.loadingMetricas = false;
+                this._cdr.markForCheck();
             });
 
         // TODO: Integrar con selector de clínicas
@@ -223,6 +233,7 @@ export class PanelesComponent implements OnInit, OnDestroy {
                     // conditions.
                     this.loadingMetricas = false;
                     this.metricas = response?.data ?? response;
+                    this._cdr.markForCheck();
                     console.log('🔍 DIAGNÓSTICO - response completo:', response);
                     console.log('🔍 DIAGNÓSTICO - this.metricas:', this.metricas);
                     console.log('🔍 DIAGNÓSTICO - this.metricas.facebook:', this.metricas?.facebook);
@@ -308,7 +319,7 @@ updateFacebookChart(): void {
     // Generar datos de ejemplo para los últimos 30 días
     const dates = [];
     const followers = [];
-    const currentFollowers = facebookData.seguidores || 2840;
+    const currentFollowers = facebookData.seguidores ?? 2840;
     
     for (let i = 29; i >= 0; i--) {
         const date = new Date();
@@ -347,7 +358,7 @@ updateFacebookChart(): void {
 }
 
 
-    /**
+      /**
      * Obtener icono para tendencia
      */
     getTrendIcon(trend: number): string {
@@ -357,64 +368,55 @@ updateFacebookChart(): void {
     }
 
     /**
+     * Check if the metric object contains any meaningful data
+     */
+    private _hasAnyMetric(metrics: any, fields: string[]): boolean {
+        if (!metrics) {
+            return false;
+        }
+        return fields.some((f) => metrics[f] !== undefined && metrics[f] !== null);
+    }
+
+    /**
      * Obtener métricas de Facebook
      */
-    getFacebookMetrics(): any {
-        return this.metricas?.facebook ?? null;
+     getFacebookMetrics(): RedesSocialesMetricas | null {
+        const fb = this.metricas?.facebook;
+        return this._hasAnyMetric(fb, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance', 'clics']) ? fb : null;
     }
 
     /**
      * Obtener métricas de Instagram
      */
-    getInstagramMetrics(): any {
-        return this.metricas?.instagram ?? null;
+    getInstagramMetrics(): RedesSocialesMetricas | null {
+        const ig = this.metricas?.instagram;
+        return this._hasAnyMetric(ig, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance']) ? ig : null;
+    }
+
+       /**
+     * Obtener métricas de TikTok
+     */
+    getTikTokMetrics(): RedesSocialesMetricas | null {
+        return this.metricas?.tiktok ?? null;
+    }
+
+    /**
+     * Obtener métricas de LinkedIn
+     */
+    getLinkedInMetrics(): RedesSocialesMetricas | null {
+        return this.metricas?.linkedin ?? null;
     }
 
     /**
      * Verificar si hay datos de métricas
      */
     hasMetricsData(): boolean {
-        if (!this.metricas) {
-            return false;
-        }
-
-        const hasFacebook = !!(
-            this.metricas.facebook &&
-            (
-                this.metricas.facebook.seguidores !== undefined ||
-                this.metricas.facebook.impresiones !== undefined ||
-                this.metricas.facebook.engagement !== undefined ||
-                this.metricas.facebook.visualizaciones !== undefined
-            )
+        return !!(
+            this.getFacebookMetrics() ||
+            this.getInstagramMetrics() ||
+            this.getTikTokMetrics() ||
+            this.getLinkedInMetrics()
         );
-
-        const hasInstagram = !!(
-            this.metricas.instagram &&
-            (
-                this.metricas.instagram.seguidores !== undefined ||
-                this.metricas.instagram.impresiones !== undefined ||
-                this.metricas.instagram.engagement !== undefined ||
-                this.metricas.instagram.visualizaciones !== undefined
-            )
-        );
-
-        const hasTikTok = !!(
-            this.metricas.tiktok &&
-            (
-                this.metricas.tiktok.seguidores !== undefined ||
-                this.metricas.tiktok.visualizaciones !== undefined
-            )
-        );
-
-        const hasLinkedIn = !!(
-            this.metricas.linkedin &&
-            (
-                this.metricas.linkedin.seguidores !== undefined ||
-                this.metricas.linkedin.impresiones !== undefined
-            )
-        );
-
-        return hasFacebook || hasInstagram || hasTikTok || hasLinkedIn;
     }
 
     // --------------------------------------------
