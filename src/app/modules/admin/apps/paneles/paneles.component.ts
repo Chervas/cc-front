@@ -22,13 +22,6 @@ import { ApexOptions, NgApexchartsModule, ChartComponent } from 'ng-apexcharts';
 import { Subject, takeUntil } from 'rxjs';
 import { RedesSocialesMetricas } from './paneles.types';
 
-interface MetricasRedesSociales {
-    facebook?: RedesSocialesMetricas;
-    instagram?: RedesSocialesMetricas;
-    tiktok?: RedesSocialesMetricas;
-    linkedin?: RedesSocialesMetricas;
-}
-
 
 @Component({
     selector: 'paneles',
@@ -63,7 +56,7 @@ export class PanelesComponent implements OnInit, OnDestroy {
     private _unsubscribeAll: Subject<any> = new Subject<any>();
 
     // NUEVAS PROPIEDADES PARA MÉTRICAS
-     metricas: MetricasRedesSociales | null = null;
+    metricas: Partial<RedesSocialesMetricas> | null = null;
     loadingMetricas: boolean = false;
     selectedClinicaId: number | null = null;
     errorMetricas: string | null = null;
@@ -313,7 +306,7 @@ _updateChartsWithMetricas(): void {
  * Actualiza el gráfico de seguidores de Facebook
  */
 updateFacebookChart(): void {
-    const facebookData = this.metricas.facebook;
+    const facebookData = this.metricas?.facebook;
     if (!facebookData) return;
     
     // Generar datos de ejemplo para los últimos 30 días
@@ -380,30 +373,48 @@ updateFacebookChart(): void {
     /**
      * Obtener métricas de Facebook
      */
-     getFacebookMetrics(): RedesSocialesMetricas | null {
+    getFacebookMetrics(): RedesSocialesMetricas['facebook'] | null {
         const fb = this.metricas?.facebook;
-        return this._hasAnyMetric(fb, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance', 'clics']) ? fb : null;
+        return this._hasAnyMetric(fb, [
+            'seguidores',
+            'alcance_mes',
+            'interacciones',
+            'crecimiento_seguidores',
+            'posts_mes',
+            'engagement_rate',
+        ])
+            ? fb
+            : null;
     }
 
     /**
      * Obtener métricas de Instagram
      */
-    getInstagramMetrics(): RedesSocialesMetricas | null {
+    getInstagramMetrics(): RedesSocialesMetricas['instagram'] | null {
         const ig = this.metricas?.instagram;
-        return this._hasAnyMetric(ig, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance']) ? ig : null;
+        return this._hasAnyMetric(ig, [
+            'seguidores',
+            'alcance_mes',
+            'interacciones',
+            'crecimiento_seguidores',
+            'posts_mes',
+            'engagement_rate',
+        ])
+            ? ig
+            : null;
     }
 
-       /**
+    /**
      * Obtener métricas de TikTok
      */
-    getTikTokMetrics(): RedesSocialesMetricas | null {
+    getTikTokMetrics(): RedesSocialesMetricas['tiktok'] | null {
         return this.metricas?.tiktok ?? null;
     }
 
     /**
      * Obtener métricas de LinkedIn
      */
-    getLinkedInMetrics(): RedesSocialesMetricas | null {
+    getLinkedInMetrics(): RedesSocialesMetricas['linkedin'] | null {
         return this.metricas?.linkedin ?? null;
     }
 
