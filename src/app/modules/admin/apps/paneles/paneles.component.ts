@@ -6,6 +6,7 @@ import {
     OnDestroy,
     OnInit,
     ViewEncapsulation,
+    ViewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -17,7 +18,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { Router } from '@angular/router';
 import { TranslocoModule } from '@ngneat/transloco';
 import { PanelesService } from './paneles.service';
-import { ApexOptions, NgApexchartsModule } from 'ng-apexcharts';
+import { ApexOptions, NgApexchartsModule, ChartComponent } from 'ng-apexcharts';
 import { Subject, takeUntil } from 'rxjs';
 
 @Component({
@@ -57,6 +58,8 @@ export class PanelesComponent implements OnInit, OnDestroy {
     loadingMetricas: boolean = false;
     selectedClinicaId: number | null = null;
     errorMetricas: string | null = null;
+
+    @ViewChild('facebookChart') facebookChart!: ChartComponent;
 
     // Configuración del gráfico de seguidores Facebook
     chartSeguidoresFacebook: ApexOptions = {
@@ -111,6 +114,9 @@ export class PanelesComponent implements OnInit, OnDestroy {
                     return this.formatNumber(value);
                 },
             },
+        },
+        noData: {
+            text: 'Sin datos'
         },
     };
 
@@ -222,7 +228,9 @@ export class PanelesComponent implements OnInit, OnDestroy {
                     console.log('🔍 DIAGNÓSTICO - this.metricas.facebook:', this.metricas?.facebook);
                     console.log('🔍 DIAGNÓSTICO - hasMetricsData():', this.hasMetricsData());
 
-                    this._updateChartsWithMetricas(); // ✅ AGREGAR ESTA LÍNEA
+                    setTimeout(() => {
+                        this._updateChartsWithMetricas();
+                    });
                 },
                 error: (error) => {
                     this.loadingMetricas = false;
@@ -366,7 +374,13 @@ updateFacebookChart(): void {
      * Verificar si hay datos de métricas
      */
     hasMetricsData(): boolean {
-        return !!(this.metricas && (this.metricas.facebook || this.metricas.instagram));
+        return !!(
+            this.metricas &&
+            (
+                this.metricas.facebook?.sincronizado === true ||
+                this.metricas.instagram?.sincronizado === true
+            )
+        );
     }
 
     // --------------------------------------------

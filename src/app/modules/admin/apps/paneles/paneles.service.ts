@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, tap, map } from 'rxjs';
 import { environment } from 'environments/environment';
 
 @Injectable({
@@ -119,6 +119,21 @@ export class PanelesService {
       clinicaId,
       startDate.toISOString().split('T')[0],
       endDate.toISOString().split('T')[0]
+    ).pipe(
+      map((response: any) => {
+        const metricas = response?.data ?? response;
+        const result: Record<string, { fecha: string; seguidores: number }[]> = {};
+
+        Object.keys(metricas || {}).forEach((red) => {
+          const historico = metricas[red]?.historico || [];
+          result[red] = historico.map((item: any) => ({
+            fecha: item.fecha,
+            seguidores: item.seguidores,
+          }));
+        });
+
+        return result;
+      })
     );
   }
 
