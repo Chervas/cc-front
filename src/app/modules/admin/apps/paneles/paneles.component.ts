@@ -1,6 +1,7 @@
 import { CurrencyPipe, NgClass } from '@angular/common';
 import {
     ChangeDetectionStrategy,
+    ChangeDetectorRef,
     Component,
     OnDestroy,
     OnInit,
@@ -120,6 +121,7 @@ export class PanelesComponent implements OnInit, OnDestroy {
     constructor(
         private _panelesService: PanelesService,
         private _router: Router,
+        private _cdr: ChangeDetectorRef 
     ) {}
 
     // --------------------------------------------
@@ -215,6 +217,11 @@ export class PanelesComponent implements OnInit, OnDestroy {
                     // conditions.
                     this.loadingMetricas = false;
                     this.metricas = response?.data ?? response;
+                    console.log('🔍 DIAGNÓSTICO - response completo:', response);
+                    console.log('🔍 DIAGNÓSTICO - this.metricas:', this.metricas);
+                    console.log('🔍 DIAGNÓSTICO - this.metricas.facebook:', this.metricas?.facebook);
+                    console.log('🔍 DIAGNÓSTICO - hasMetricsData():', this.hasMetricsData());
+
                     this._updateChartsWithMetricas(); // ✅ AGREGAR ESTA LÍNEA
                 },
                 error: (error) => {
@@ -320,6 +327,13 @@ updateFacebookChart(): void {
             categories: dates
         }
     };
+
+    this._cdr.detectChanges();
+    console.log('🔄 Change detection forzada');
+
+    console.log('🎯 chartSeguidoresFacebook actualizado:', this.chartSeguidoresFacebook);
+        console.log('🎯 series data:', this.chartSeguidoresFacebook.series);
+
     
     console.log('📊 Gráfico Facebook actualizado con', followers.length, 'puntos de datos');
 }
