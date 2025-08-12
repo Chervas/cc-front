@@ -4,6 +4,7 @@ import {
     Component,
     OnDestroy,
     OnInit,
+    AfterViewInit,
     ViewEncapsulation,
     ViewChild,
 } from '@angular/core';
@@ -43,7 +44,7 @@ import { RedesSocialesMetricas } from './paneles.types';
         CurrencyPipe,
     ],
 })
-export class PanelesComponent implements OnInit, OnDestroy {
+export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
     chartGithubIssues: ApexOptions = {};
     chartTaskDistribution: ApexOptions = {};
     chartBudgetDistribution: ApexOptions = {};
@@ -60,6 +61,13 @@ export class PanelesComponent implements OnInit, OnDestroy {
     loadingMetricas: boolean = false;
     selectedClinicaId: number | null = null;
     errorMetricas: string | null = null;
+
+    // Métricas procesadas por plataforma
+    facebookMetrics: RedesSocialesMetricas['facebook'] | null = null;
+    instagramMetrics: RedesSocialesMetricas['instagram'] | null = null;
+    tiktokMetrics: RedesSocialesMetricas['tiktok'] | null = null;
+    linkedinMetrics: RedesSocialesMetricas['linkedin'] | null = null;
+    hasMetricasData: boolean = false;
 
     @ViewChild('facebookChart') facebookChart!: ChartComponent;
 
@@ -171,12 +179,21 @@ export class PanelesComponent implements OnInit, OnDestroy {
             .subscribe((metricas) => {
                 this.metricas = metricas;
                 this.loadingMetricas = false;
+                this._computeMetricas();
                 this._cdr.markForCheck();
             });
 
         // TODO: Integrar con selector de clínicas
         // Por ahora usar clínica de prueba
         this.selectedClinicaId = 1;
+    }
+
+
+    /**
+     * After view init
+     */
+    ngAfterViewInit(): void {
+        this._updateChartsWithMetricas();
     }
 
     /**
@@ -226,28 +243,27 @@ export class PanelesComponent implements OnInit, OnDestroy {
                     // conditions.
                     this.loadingMetricas = false;
                     this.metricas = response;
+                    this._computeMetricas();
                     this._cdr.markForCheck();
                     console.log('🔍 DIAGNÓSTICO - response completo:', response);
                     console.log('🔍 DIAGNÓSTICO - this.metricas:', this.metricas);
-                    console.log('🔍 DIAGNÓSTICO - this.metricas.facebook:', this.metricas?.facebook);
-                    console.log('🔍 DIAGNÓSTICO - hasMetricsData():', this.hasMetricsData());
-                    console.log('🔍 DIAGNÓSTICO - getFacebookMetrics():', this.getFacebookMetrics());
-                    console.log('🔍 DIAGNÓSTICO - getInstagramMetrics():', this.getInstagramMetrics());
-                    console.log('🔍 DIAGNÓSTICO - _hasAnyMetric facebook:', this._hasAnyMetric(this.metricas?.facebook, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance', 'clics']));
+                    console.log('🔍 DIAGNÓSTICO - métricas procesadas:', {
+                        facebook: this.facebookMetrics,
+                        instagram: this.instagramMetrics,
+                        tiktok: this.tiktokMetrics,
+                        linkedin: this.linkedinMetrics,
+                    });
+                    console.log('🔍 DIAGNÓSTICO - hasMetricasData:', this.hasMetricasData);
                     console.log('🔍 DIAGNÓSTICO - loadingMetricas:', this.loadingMetricas);
                     console.log('🔍 DIAGNÓSTICO - errorMetricas:', this.errorMetricas);
-                    console.log('🔍 DIAGNÓSTICO - hasMetricsData() && !loadingMetricas:', this.hasMetricsData() && !this.loadingMetricas);
 
                     // Forzar detección de cambios después de cargar métricas
-                    setTimeout(() => {
-                        this._cdr.detectChanges();
-                        console.log('🔄 Change detection forzada después de cargar métricas');
-                    }, 100);
+                     this._cdr.detectChanges();
+                    console.log('🔄 Change detection forzada después de cargar métricas');
 
-
-                    setTimeout(() => {
+                    if (this.facebookChart) {
                         this._updateChartsWithMetricas();
-                    });
+                    }
                 },
                 error: (error) => {
                     this.loadingMetricas = false;
@@ -270,6 +286,22 @@ export class PanelesComponent implements OnInit, OnDestroy {
     onClinicaChanged(clinicaId: number): void {
         this.selectedClinicaId = clinicaId;
         this.loadMetricas();
+    }
+
+    /**
+     * Procesa las métricas recibidas y actualiza banderas de visualización
+     */
+    private _computeMetricas(): void {
+        const fb = this.metricas?.facebook;
+        this.facebookMetrics = this._hasAnyMetric(fb, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance', 'clics']) ? fb! : null;
+
+        const ig = this.metricas?.instagram;
+        this.instagramMetrics = this._hasAnyMetric(ig, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance']) ? ig! : null;
+
+        this.tiktokMetrics = this.metricas?.tiktok ?? null;
+        this.linkedinMetrics = this.metricas?.linkedin ?? null;
+
+        this.hasMetricasData = !!(this.facebookMetrics || this.instagramMetrics || this.tiktokMetrics || this.linkedinMetrics);
     }
 
  /**
@@ -403,48 +435,6 @@ setTimeout(() => {
 
     
 
-
-    /**
-     * Obtener métricas de Facebook
-     */
-     getFacebookMetrics(): RedesSocialesMetricas['facebook'] | null {
-    const fb = this.metricas?.facebook;
-    return this._hasAnyMetric(fb, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance', 'clics']) ? fb : null;
-}
-
-    /**
-     * Obtener métricas de Instagram
-     */
-    getInstagramMetrics(): RedesSocialesMetricas['instagram'] | null {
-    const ig = this.metricas?.instagram;
-    return this._hasAnyMetric(ig, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance']) ? ig : null;
-}
-
-    /**
-     * Obtener métricas de TikTok
-     */
-    getTikTokMetrics(): RedesSocialesMetricas['tiktok'] | null {
-    return this.metricas?.tiktok ?? null;
-    }   
-
-    /**
-     * Obtener métricas de LinkedIn
-     */
-    getLinkedInMetrics(): RedesSocialesMetricas['linkedin'] | null {
-    return this.metricas?.linkedin ?? null;
-    }
-
-    /**
-     * Verificar si hay datos de métricas
-     */
-    hasMetricsData(): boolean {
-        return !!(
-            this.getFacebookMetrics() ||
-            this.getInstagramMetrics() ||
-            this.getTikTokMetrics() ||
-            this.getLinkedInMetrics()
-        );
-    }
 
     // --------------------------------------------
     // @ Private methods
