@@ -1,4 +1,3 @@
-import { CurrencyPipe, NgClass } from '@angular/common';
 import {
     ChangeDetectionStrategy,
     ChangeDetectorRef,
@@ -8,6 +7,7 @@ import {
     ViewEncapsulation,
     ViewChild,
 } from '@angular/core';
+import { CurrencyPipe, NgClass } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatRippleModule } from '@angular/material/core';
@@ -234,6 +234,15 @@ export class PanelesComponent implements OnInit, OnDestroy {
                     console.log('🔍 DIAGNÓSTICO - getFacebookMetrics():', this.getFacebookMetrics());
                     console.log('🔍 DIAGNÓSTICO - getInstagramMetrics():', this.getInstagramMetrics());
                     console.log('🔍 DIAGNÓSTICO - _hasAnyMetric facebook:', this._hasAnyMetric(this.metricas?.facebook, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance', 'clics']));
+                    console.log('🔍 DIAGNÓSTICO - loadingMetricas:', this.loadingMetricas);
+                    console.log('🔍 DIAGNÓSTICO - errorMetricas:', this.errorMetricas);
+                    console.log('🔍 DIAGNÓSTICO - hasMetricsData() && !loadingMetricas:', this.hasMetricsData() && !this.loadingMetricas);
+
+                    // Forzar detección de cambios después de cargar métricas
+                    setTimeout(() => {
+                        this._cdr.detectChanges();
+                        console.log('🔄 Change detection forzada después de cargar métricas');
+                    }, 100);
 
 
                     setTimeout(() => {
@@ -353,6 +362,13 @@ updateFacebookChart(): void {
 
     this._cdr.markForCheck();
     console.log('📊 Gráfico Facebook actualizado con datos simulados');
+
+    // Forzar detección de cambios después de actualizar gráfico
+setTimeout(() => {
+    this._cdr.detectChanges();
+    console.log('🔄 Change detection forzada después de actualizar gráfico');
+}, 100);
+
 }
 
 
