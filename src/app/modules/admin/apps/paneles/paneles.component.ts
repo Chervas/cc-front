@@ -72,63 +72,8 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
     @ViewChild('facebookChart') facebookChart!: ChartComponent;
 
     // Configuración del gráfico de seguidores Facebook
-    chartSeguidoresFacebook: ApexOptions = {
-        chart: {
-            fontFamily: 'inherit',
-            foreColor: 'inherit',
-            height: '100%',
-            type: 'line',
-            toolbar: {
-                show: false,
-            },
-        },
-        colors: ['#1877F2'], // Color azul Facebook
-        dataLabels: {
-            enabled: false,
-        },
-        grid: {
-            borderColor: 'var(--fuse-border)',
-            strokeDashArray: 3,
-        },
-        series: [
-            {
-                name: 'Seguidores',
-                data: []
-            }
-        ],
-        stroke: {
-            width: 2,
-            curve: 'smooth',
-        },
-        tooltip: {
-            theme: 'dark',
-            y: {
-                formatter: (value) => {
-                    return this.formatNumber(value) + ' seguidores';
-                },
-            },
-        },
-        xaxis: {
-            type: 'datetime',
-            categories: [],
-            axisBorder: {
-                show: false,
-            },
-            axisTicks: {
-                show: false,
-            },
-        },
-        yaxis: {
-            labels: {
-                formatter: (value) => {
-                    return this.formatNumber(value);
-                },
-            },
-        },
-        noData: {
-            text: 'Sin datos'
-        },
-    };
+    chartSeguidoresFacebook: ApexOptions;
+
 
 
     /**
@@ -157,6 +102,66 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
 
                 // Prepare the chart data
                 this._prepareChartData();
+
+                // Inicializar configuración del gráfico de Facebook
+                this.chartSeguidoresFacebook = {
+                    chart: {
+                        fontFamily: 'inherit',
+                        foreColor: 'inherit',
+                        height: '100%',
+                        type: 'line',
+                        toolbar: {
+                            show: false,
+                        },
+                    },
+                    colors: ['#1877F2'],
+                    dataLabels: {
+                        enabled: false,
+                    },
+                    grid: {
+                        borderColor: 'var(--fuse-border)',
+                        strokeDashArray: 3,
+                    },
+                    series: [
+                        {
+                            name: 'Seguidores',
+                            data: []
+                        }
+                    ],
+                    stroke: {
+                        width: 2,
+                        curve: 'smooth',
+                    },
+                    tooltip: {
+                        theme: 'dark',
+                        y: {
+                            formatter: (value) => {
+                                return this.formatNumber(value) + ' seguidores';
+                            },
+                        },
+                    },
+                    xaxis: {
+                        type: 'datetime',
+                        categories: [],
+                        axisBorder: {
+                            show: false,
+                        },
+                        axisTicks: {
+                            show: false,
+                        },
+                    },
+                    yaxis: {
+                        labels: {
+                            formatter: (value) => {
+                                return this.formatNumber(value);
+                            },
+                        },
+                    },
+                    noData: {
+                        text: 'Sin datos'
+                    },
+                };
+
             });
 
         // Attach SVG fill fixer to all ApexCharts
