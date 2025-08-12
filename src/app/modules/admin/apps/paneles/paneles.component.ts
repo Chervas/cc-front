@@ -72,7 +72,7 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
     @ViewChild('facebookChart') facebookChart!: ChartComponent;
 
     // Configuración del gráfico de seguidores Facebook
-    chartSeguidoresFacebook: ApexOptions;
+    chartSeguidoresFacebook: ApexOptions = {};
 
 
 
@@ -191,6 +191,65 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
         // TODO: Integrar con selector de clínicas
         // Por ahora usar clínica de prueba
         this.selectedClinicaId = 1;
+
+        // Inicializar gráfico con datos mock como Fuse
+this.chartSeguidoresFacebook = {
+    chart: {
+        fontFamily: 'inherit',
+        foreColor: 'inherit',
+        height: '100%',
+        type: 'line',
+        toolbar: {
+            show: false,
+        },
+    },
+    colors: ['#1877F2'],
+    dataLabels: {
+        enabled: false,
+    },
+    grid: {
+        borderColor: 'var(--fuse-border)',
+        strokeDashArray: 3,
+    },
+    series: [
+        {
+            name: 'Seguidores',
+            data: [2800, 2820, 2790, 2850, 2880, 2900, 2920, 2940, 2960, 2980, 3000, 3020, 3040, 3060, 3080, 3100, 3120, 3140, 3160, 3180, 3200, 3220, 3240, 3260, 3280, 3300, 3320, 3340, 3360, 3380]
+        }
+    ],
+    stroke: {
+        width: 2,
+        curve: 'smooth',
+    },
+    tooltip: {
+        theme: 'dark',
+        y: {
+            formatter: (value) => {
+                return this.formatNumber(value) + ' seguidores';
+            },
+        },
+    },
+    xaxis: {
+        type: 'datetime',
+        categories: this._generateLast30Days(),
+        axisBorder: {
+            show: false,
+        },
+        axisTicks: {
+            show: false,
+        },
+    },
+    yaxis: {
+        labels: {
+            formatter: (value) => {
+                return this.formatNumber(value);
+            },
+        },
+    },
+    noData: {
+        text: 'Sin datos'
+    },
+};
     }
 
 
@@ -297,17 +356,39 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
      * Procesa las métricas recibidas y actualiza banderas de visualización
      */
     private _computeMetricas(): void {
-        const fb = this.metricas?.facebook;
-        this.facebookMetrics = this._hasAnyMetric(fb, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance', 'clics']) ? fb! : null;
+    // FORZAR Facebook como disponible para testing
+    
+// Usar solo datos mock para testing
+this.facebookMetrics = {
+    seguidores: 3380, 
+    alcance_mes: 15000,
+    interacciones: 450,
+    crecimiento_seguidores: 25,
+    posts_mes: 12,
+    engagement_rate: 3.8 
+};
+    
+    const ig = this.metricas?.instagram;
+    this.instagramMetrics = this._hasAnyMetric(ig, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance']) ? ig! : null;
 
-        const ig = this.metricas?.instagram;
-        this.instagramMetrics = this._hasAnyMetric(ig, ['seguidores', 'impresiones', 'engagement', 'visualizaciones', 'alcance']) ? ig! : null;
+    this.tiktokMetrics = this.metricas?.tiktok ?? null;
+    this.linkedinMetrics = this.metricas?.linkedin ?? null;
 
-        this.tiktokMetrics = this.metricas?.tiktok ?? null;
-        this.linkedinMetrics = this.metricas?.linkedin ?? null;
+    // FORZAR hasMetricasData como true para testing
+    this.hasMetricasData = true;
+}
 
-        this.hasMetricasData = !!(this.facebookMetrics || this.instagramMetrics || this.tiktokMetrics || this.linkedinMetrics);
+    /* MÉTODO HELPER PARA GENERAR FECHAS:*/
+
+private _generateLast30Days(): number[] {
+    const dates: number[] = [];
+    for (let i = 29; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        dates.push(date.getTime());
     }
+    return dates;
+}
 
  /**
      * Formatear números para mostrar (1.9K, 1.5M, etc.)
