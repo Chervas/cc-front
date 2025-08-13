@@ -298,7 +298,24 @@
                                         </div>
                                         <div class="text-3xl font-bold">{{ facebookMetrics?.engagement }}%</div>
                                         <div class="text-sm text-blue-500">{{ formatNumber(facebookMetrics?.seguidores || 0) }} seguidores</div>
-                                        <div class="h-16 mt-4 bg-gradient-to-r from-blue-500/20 to-blue-300/20 rounded-lg"></div>
+                                        <div class="flex flex-auto items-end mt-6">
+                                            <apx-chart
+                                                #facebookChart
+                                                class="flex-auto w-full"
+                                                [height]="200"
+                                                [chart]="chartSeguidoresFacebook.chart"
+                                                [colors]="chartSeguidoresFacebook.colors"
+                                                [dataLabels]="chartSeguidoresFacebook.dataLabels"
+                                                [grid]="chartSeguidoresFacebook.grid"
+                                                [series]="chartSeguidoresFacebook.series"
+                                                [stroke]="chartSeguidoresFacebook.stroke"
+                                                [tooltip]="chartSeguidoresFacebook.tooltip"
+                                                [xaxis]="chartSeguidoresFacebook.xaxis"
+                                                [yaxis]="chartSeguidoresFacebook.yaxis"
+                                                [noData]="chartSeguidoresFacebook.noData">
+                                            </apx-chart>
+                                        </div>
+
                                     </div>
 
                                     <!-- Visualizaciones TikTok - DATOS REALES -->
