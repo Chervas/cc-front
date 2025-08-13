@@ -94,17 +94,7 @@
                             <!-- Título de sección -->
                             <div>
                                                         <!-- NUEVA SECCIÓN: 3 Gráficas Superiores de Evolución -->
-                            <!-- DEBUG FUERA (que SÍ funciona) -->
-                            <div style="background: orange; color: white; padding: 10px; margin: 10px;">
-                                DEBUG TIMING: loadingMetricas = {{ loadingMetricas }} metricas = {{ metricas ? 'EXISTE' : 'NULL' }}
-                            </div>
-
-                                <div *ngIf="true">
-                                <!-- DEBUG DENTRO (para confirmar si el *ngIf funciona) -->
-                                <div style="background: green; color: white; padding: 20px; margin: 10px;">
-                                    ✅ BLOQUE RENDERIZADO - Las gráficas deberían estar aquí
-                                </div>
-                                
+                                <div *ngIf="!loadingMetricas">
                                 <!-- Título y selector de tiempo -->
                                 <div class="flex items-center justify-between mb-6">
                                     <div>
@@ -136,14 +126,8 @@
                                         </mat-button-toggle-group>
                                     </div>
                                 </div>
-                                <!-- DEBUG: INICIO BLOQUE GRAFICAS -->
-                                <div style="background: green; color: white; padding: 20px; margin: 20px;">
-                                    <h2>TEST: Las 3 gráficas deberían estar aquí</h2>
-                                    <p>hasMetricasData: {{ hasMetricasData }}</p>
-                                    <p>loadingMetricas: {{ loadingMetricas }}</p>
-                                </div>
                                 <!-- Grid de 3 gráficas superiores -->
-                                <div *ngIf="true" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
                                     
                                     <!-- Gráfica Instagram -->
                                     <div class="flex flex-col bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 text-white">
