@@ -91,34 +91,12 @@
                 <mat-tab label="Redes Sociales">
                     <ng-template matTabContent>
                         <div class="grid gap-8 pt-8 sm:gap-16 sm:pt-16">
-                            
                             <!-- Título de sección -->
                             <div>
-                                <div class="text-2xl font-semibold tracking-tight">Redes Sociales</div>
-                                <div class="text-secondary">Métricas de tus redes sociales</div>
-                            </div>
-
-                            
-
-                            <!-- Loading State -->
-                           <div *ngIf="loadingMetricas" class="flex items-center justify-center p-16">
-                                <mat-icon class="animate-spin mr-4" [svgIcon]="'heroicons_outline:arrow-path'"></mat-icon>
-                                <span>Cargando métricas...</span>
-                            </div>
-
-                            <!-- Error State -->
-                            <div *ngIf="errorMetricas" class="flex items-center justify-center p-16 text-red-600">                                <mat-icon class="mr-4" [svgIcon]="'heroicons_outline:exclamation-triangle'"></mat-icon>
-                                <span>{{ errorMetricas }}</span>
-                                <button mat-button (click)="refreshMetricas()" class="ml-4">
-                                    <mat-icon [svgIcon]="'heroicons_outline:arrow-path'"></mat-icon>
-                                    Reintentar
-                                </button>
-                            </div>
-
                                                         <!-- NUEVA SECCIÓN: 3 Gráficas Superiores de Evolución -->
                             <!-- DEBUG: {{ hasMetricasData ? 'DATOS OK' : 'SIN DATOS' }} - {{ loadingMetricas ? 'CARGANDO' : 'NO CARGA' }} -->
 
-                                <div *ngIf="hasMetricasData && !loadingMetricas">
+                                <div *ngIf="!loadingMetricas">
                                 <!-- Título y selector de tiempo -->
                                 <div class="flex items-center justify-between mb-6">
                                     <div>
@@ -356,6 +334,28 @@
                                     </div>
                                     
                                 </div>
+                            </div>
+
+                            
+                                <div class="text-2xl font-semibold tracking-tight">Redes Sociales</div>
+                                <div class="text-secondary">Métricas de tus redes sociales</div>
+                            </div>
+
+                            
+
+                            <!-- Loading State -->
+                           <div *ngIf="loadingMetricas" class="flex items-center justify-center p-16">
+                                <mat-icon class="animate-spin mr-4" [svgIcon]="'heroicons_outline:arrow-path'"></mat-icon>
+                                <span>Cargando métricas...</span>
+                            </div>
+
+                            <!-- Error State -->
+                            <div *ngIf="errorMetricas" class="flex items-center justify-center p-16 text-red-600">                                <mat-icon class="mr-4" [svgIcon]="'heroicons_outline:exclamation-triangle'"></mat-icon>
+                                <span>{{ errorMetricas }}</span>
+                                <button mat-button (click)="refreshMetricas()" class="ml-4">
+                                    <mat-icon [svgIcon]="'heroicons_outline:arrow-path'"></mat-icon>
+                                    Reintentar
+                                </button>
                             </div>
 
                             <!-- Cards de redes sociales principales -->
