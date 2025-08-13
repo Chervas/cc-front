@@ -69,10 +69,30 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
     linkedinMetrics: RedesSocialesMetricas['linkedin'] | null = null;
     hasMetricasData: boolean = false;
 
-    @ViewChild('facebookChart') facebookChart!: ChartComponent;
+        @ViewChild('facebookChart') facebookChart!: ChartComponent;
+    
+    // ViewChild para las 3 gráficas superiores
+    @ViewChild('instagramOverviewChart') instagramOverviewChart!: ChartComponent;
+    @ViewChild('tiktokOverviewChart') tiktokOverviewChart!: ChartComponent;
+    @ViewChild('facebookOverviewChart') facebookOverviewChart!: ChartComponent;
 
-    // Configuración del gráfico de seguidores Facebook
+    // Configuración del gráfico de seguidores Facebook (existente)
     chartSeguidoresFacebook: ApexOptions = {};
+    
+    // Configuraciones para las 3 gráficas superiores
+    chartInstagramOverview: ApexOptions = {};
+    chartTiktokOverview: ApexOptions = {};
+    chartFacebookOverview: ApexOptions = {};
+    
+    // Selector de tiempo para las gráficas superiores
+    selectedTimeRange: string = 'this-year';
+    
+    // Datos mock para porcentajes de crecimiento
+    growthPercentages = {
+        instagram: 20,
+        tiktok: 25,
+        facebook: 15
+    };
 
 
 
@@ -454,12 +474,17 @@ if (!this.metricas && !this.facebookMetrics) {
 }
 
     
-    console.log('📈 Actualizando gráficos con datos:', this.metricas);
+        console.log('📈 Actualizando gráficos con datos:', this.metricas);
     
-    // Actualizar gráfico de Facebook con datos reales
+    // Actualizar gráfico de Facebook con datos reales (existente)
     console.log('📈 Llamando a updateFacebookChart()');
     this.updateFacebookChart();
     console.log('📈 updateFacebookChart() completado');
+    
+    // Actualizar las 3 gráficas superiores con datos mock
+    console.log('📈 Llamando a updateOverviewCharts()');
+    this.updateOverviewCharts();
+    console.log('📈 updateOverviewCharts() completado');
 }
 
 
@@ -557,7 +582,292 @@ if (!this.metricas && !this.facebookMetrics) {
         }
     }
 
+    // --------------------------------------------
+    // @ Métodos para las 3 gráficas superiores
+    // --------------------------------------------
 
+    /**
+     * Cambio en el selector de tiempo
+     */
+    onTimeRangeChange(value: string): void {
+        console.log('📅 Cambio de rango de tiempo:', value);
+        this.selectedTimeRange = value;
+        
+        // Actualizar las 3 gráficas superiores
+        this.updateOverviewCharts();
+    }
+
+    /**
+     * Obtener porcentaje de crecimiento por plataforma
+     */
+    getGrowthPercentage(platform: string): string {
+        const percentage = this.growthPercentages[platform] || 0;
+        return percentage > 0 ? `+${percentage}` : `${percentage}`;
+    }
+
+    /**
+     * Obtener etiqueta del rango de tiempo seleccionado
+     */
+    getTimeRangeLabel(): string {
+        switch (this.selectedTimeRange) {
+            case 'last-year':
+                return 'El año pasado';
+            case 'this-year':
+                return 'Este año';
+            case 'all-time':
+                return 'Desde siempre';
+            default:
+                return 'Este año';
+        }
+    }
+
+    /**
+     * Actualizar las 3 gráficas superiores
+     */
+    updateOverviewCharts(): void {
+        console.log('📊 Actualizando gráficas superiores para:', this.selectedTimeRange);
+        
+        // Actualizar cada gráfica
+        this.updateInstagramOverviewChart();
+        this.updateTiktokOverviewChart();
+        this.updateFacebookOverviewChart();
+    }
+
+    /**
+     * Actualizar gráfica superior de Instagram
+     */
+    updateInstagramOverviewChart(): void {
+        console.log('📊 Actualizando gráfica Instagram Overview');
+        
+        const data = this.generateOverviewChartData('instagram');
+        
+        this.chartInstagramOverview = {
+            chart: {
+                type: 'line',
+                height: 128,
+                sparkline: { enabled: true },
+                toolbar: { show: false },
+                background: 'transparent'
+            },
+            colors: ['#EC4899'], // Rosa Instagram
+            stroke: {
+                width: 2,
+                curve: 'smooth'
+            },
+            series: [{
+                name: 'Seguidores',
+                data: data.values
+            }],
+            xaxis: {
+                categories: data.dates,
+                labels: { show: false },
+                axisBorder: { show: false },
+                axisTicks: { show: false }
+            },
+            yaxis: {
+                labels: { show: false }
+            },
+            grid: {
+                show: false
+            },
+            tooltip: {
+                enabled: true,
+                theme: 'dark',
+                x: { show: false },
+                y: {
+                    formatter: (value) => `${value.toLocaleString()} seguidores`
+                }
+            },
+            dataLabels: {
+                enabled: false
+            }
+        };
+
+        // Intentar actualizar con ViewChild
+        setTimeout(() => {
+            if (this.instagramOverviewChart) {
+                console.log('✅ Actualizando Instagram Overview con ViewChild');
+                this.instagramOverviewChart.updateSeries(this.chartInstagramOverview.series, true);
+            }
+        }, 200);
+    }
+
+    /**
+     * Actualizar gráfica superior de TikTok
+     */
+    updateTiktokOverviewChart(): void {
+        console.log('📊 Actualizando gráfica TikTok Overview');
+        
+        const data = this.generateOverviewChartData('tiktok');
+        
+        this.chartTiktokOverview = {
+            chart: {
+                type: 'line',
+                height: 128,
+                sparkline: { enabled: true },
+                toolbar: { show: false },
+                background: 'transparent'
+            },
+            colors: ['#06B6D4'], // Cyan TikTok
+            stroke: {
+                width: 2,
+                curve: 'smooth'
+            },
+            series: [{
+                name: 'Seguidores',
+                data: data.values
+            }],
+            xaxis: {
+                categories: data.dates,
+                labels: { show: false },
+                axisBorder: { show: false },
+                axisTicks: { show: false }
+            },
+            yaxis: {
+                labels: { show: false }
+            },
+            grid: {
+                show: false
+            },
+            tooltip: {
+                enabled: true,
+                theme: 'dark',
+                x: { show: false },
+                y: {
+                    formatter: (value) => `${value.toLocaleString()} seguidores`
+                }
+            },
+            dataLabels: {
+                enabled: false
+            }
+        };
+
+        // Intentar actualizar con ViewChild
+        setTimeout(() => {
+            if (this.tiktokOverviewChart) {
+                console.log('✅ Actualizando TikTok Overview con ViewChild');
+                this.tiktokOverviewChart.updateSeries(this.chartTiktokOverview.series, true);
+            }
+        }, 200);
+    }
+
+    /**
+     * Actualizar gráfica superior de Facebook
+     */
+    updateFacebookOverviewChart(): void {
+        console.log('📊 Actualizando gráfica Facebook Overview');
+        
+        const data = this.generateOverviewChartData('facebook');
+        
+        this.chartFacebookOverview = {
+            chart: {
+                type: 'line',
+                height: 128,
+                sparkline: { enabled: true },
+                toolbar: { show: false },
+                background: 'transparent'
+            },
+            colors: ['#3B82F6'], // Azul Facebook
+            stroke: {
+                width: 2,
+                curve: 'smooth'
+            },
+            series: [{
+                name: 'Seguidores',
+                data: data.values
+            }],
+            xaxis: {
+                categories: data.dates,
+                labels: { show: false },
+                axisBorder: { show: false },
+                axisTicks: { show: false }
+            },
+            yaxis: {
+                labels: { show: false }
+            },
+            grid: {
+                show: false
+            },
+            tooltip: {
+                enabled: true,
+                theme: 'dark',
+                x: { show: false },
+                y: {
+                    formatter: (value) => `${value.toLocaleString()} seguidores`
+                }
+            },
+            dataLabels: {
+                enabled: false
+            }
+        };
+
+        // Intentar actualizar con ViewChild
+        setTimeout(() => {
+            if (this.facebookOverviewChart) {
+                console.log('✅ Actualizando Facebook Overview con ViewChild');
+                this.facebookOverviewChart.updateSeries(this.chartFacebookOverview.series, true);
+            }
+        }, 200);
+    }
+
+    /**
+     * Generar datos mock para las gráficas superiores
+     */
+    generateOverviewChartData(platform: string): { dates: string[], values: number[] } {
+        const dates: string[] = [];
+        const values: number[] = [];
+        
+        // Determinar número de puntos según el rango de tiempo
+        let points = 12; // Meses para "this-year"
+        let baseValue = 1000;
+        
+        switch (platform) {
+            case 'instagram':
+                baseValue = 4200;
+                break;
+            case 'tiktok':
+                baseValue = 1800;
+                break;
+            case 'facebook':
+                baseValue = 2840;
+                break;
+        }
+        
+        switch (this.selectedTimeRange) {
+            case 'last-year':
+                points = 12;
+                baseValue = Math.round(baseValue * 0.8); // 20% menos el año pasado
+                break;
+            case 'this-year':
+                points = 12;
+                break;
+            case 'all-time':
+                points = 24; // 2 años
+                baseValue = Math.round(baseValue * 0.6); // Empezar más bajo
+                break;
+        }
+        
+        for (let i = 0; i < points; i++) {
+            // Generar fechas
+            const date = new Date();
+            if (this.selectedTimeRange === 'all-time') {
+                date.setMonth(date.getMonth() - (points - i));
+            } else {
+                date.setMonth(date.getMonth() - (points - i - 1));
+            }
+            dates.push(date.toLocaleDateString('es-ES', { month: 'short' }));
+            
+            // Generar valores con tendencia creciente y variación
+            const growth = (i / points) * (this.growthPercentages[platform] / 100);
+            const variation = (Math.random() - 0.5) * 0.1; // ±5% variación
+            const value = Math.round(baseValue * (1 + growth + variation));
+            values.push(Math.max(0, value));
+        }
+        
+        return { dates, values };
+    }
+
+   
 
 
       /**
