@@ -28,7 +28,7 @@ import { RedesSocialesMetricas } from './paneles.types';
     selector: 'paneles',
     templateUrl: './paneles.component.html',
     encapsulation: ViewEncapsulation.None,
-    changeDetection: ChangeDetectionStrategy.OnPush,
+    changeDetection: ChangeDetectionStrategy.Default,
     standalone: true,
     imports: [
         TranslocoModule,
@@ -322,12 +322,20 @@ this.chartSeguidoresFacebook = {
                     console.log('🔍 DIAGNÓSTICO - errorMetricas:', this.errorMetricas);
 
                     // Forzar detección de cambios después de cargar métricas
-                     this._cdr.detectChanges();
-                    console.log('🔄 Change detection forzada después de cargar métricas');
+this._cdr.detectChanges();
+console.log('🔄 Change detection forzada después de cargar métricas');
 
-                    if (this.facebookChart) {
-                        this._updateChartsWithMetricas();
-                    }
+// Ejecutar siempre, no depender del ViewChild
+this._updateChartsWithMetricas();
+
+// También intentar después de un delay para el ViewChild
+setTimeout(() => {
+    if (this.facebookChart) {
+        console.log('🔄 Reintentando actualización con ViewChild disponible');
+        this.updateFacebookChart();
+    }
+}, 200);
+
                 },
                 error: (error) => {
                     this.loadingMetricas = false;
@@ -425,29 +433,50 @@ private _generateLast30Days(): number[] {
  * Actualiza gráficos con métricas reales
  */
 _updateChartsWithMetricas(): void {
-    if (!this.metricas) return;
+    console.log('📈 _updateChartsWithMetricas() ejecutado');
+    console.log('📈 this.metricas:', this.metricas);
+    console.log('📈 this.facebookMetrics:', this.facebookMetrics);
+    
+    // Verificar si hay datos mock o métricas reales
+if (!this.metricas && !this.facebookMetrics) {
+    console.log('❌ No hay métricas ni datos mock, saliendo de _updateChartsWithMetricas');
+    return;
+}
+
     
     console.log('📈 Actualizando gráficos con datos:', this.metricas);
     
     // Actualizar gráfico de Facebook con datos reales
+    console.log('📈 Llamando a updateFacebookChart()');
     this.updateFacebookChart();
+    console.log('📈 updateFacebookChart() completado');
 }
+
+
 
 /**
  * Actualiza el gráfico de seguidores de Facebook
  */
 updateFacebookChart(): void {
+    console.log('📊 updateFacebookChart() ejecutado');
+    console.log('📊 this.selectedClinicaId:', this.selectedClinicaId);
+    console.log('📊 this.facebookMetrics:', this.facebookMetrics);
+    
     if (!this.selectedClinicaId) {
+        console.log('❌ No hay selectedClinicaId, saliendo');
         return;
     }
 
-    // NO llamar a getMetricasHistoricas() que sobrescribe this.metricas
-    // En su lugar, generar datos de ejemplo basados en las métricas actuales
-    const facebookData = this.metricas?.facebook;
-    if (!facebookData) return;
-
-    const currentFollowers = facebookData.seguidores ?? 2840;
+    // Usar facebookMetrics que contiene los datos mock
+    if (!this.facebookMetrics) {
+        console.log('❌ No hay facebookMetrics, saliendo');
+        return;
+    }
     
+    console.log('✅ Generando gráfico con datos mock');
+    const currentFollowers = this.facebookMetrics.seguidores ?? 2840;
+    console.log('📊 currentFollowers:', currentFollowers);
+
     // Generar datos de ejemplo para los últimos 30 días
     const dates: number[] = [];
     const followers: number[] = [];
@@ -463,6 +492,9 @@ updateFacebookChart(): void {
         followers.push(Math.max(0, dailyFollowers));
     }
 
+    console.log('📊 Datos generados - dates:', dates.length, 'followers:', followers.length);
+    console.log('📊 Primeros 5 seguidores:', followers.slice(0, 5));
+
     // Actualizar configuración del gráfico
     this.chartSeguidoresFacebook = {
         ...this.chartSeguidoresFacebook,
@@ -470,24 +502,31 @@ updateFacebookChart(): void {
         xaxis: { ...this.chartSeguidoresFacebook.xaxis, categories: dates },
     };
 
+    console.log('📊 chartSeguidoresFacebook actualizado:', this.chartSeguidoresFacebook);
+    console.log('📊 this.facebookChart ViewChild:', this.facebookChart);
+
     // Usar API de ApexCharts para actualización
     if (this.facebookChart) {
+        console.log('✅ Actualizando gráfico con API de ApexCharts');
         this.facebookChart.updateSeries(this.chartSeguidoresFacebook.series, true);
         this.facebookChart.updateOptions({ 
             xaxis: this.chartSeguidoresFacebook.xaxis 
         }, true, true, true);
+        console.log('✅ API de ApexCharts ejecutada');
+    } else {
+        console.log('❌ facebookChart ViewChild no disponible');
     }
 
     this._cdr.markForCheck();
     console.log('📊 Gráfico Facebook actualizado con datos simulados');
 
     // Forzar detección de cambios después de actualizar gráfico
-setTimeout(() => {
-    this._cdr.detectChanges();
-    console.log('🔄 Change detection forzada después de actualizar gráfico');
-}, 100);
-
+    setTimeout(() => {
+        this._cdr.detectChanges();
+        console.log('🔄 Change detection forzada después de actualizar gráfico');
+    }, 100);
 }
+
 
 
 

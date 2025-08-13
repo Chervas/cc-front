@@ -98,15 +98,16 @@
                                 <div class="text-secondary">Métricas de tus redes sociales</div>
                             </div>
 
+                            
+
                             <!-- Loading State -->
-                            <div *ngIf="loadingMetricas" class="flex items-center justify-center p-16">
+                           <div *ngIf="loadingMetricas" class="flex items-center justify-center p-16">
                                 <mat-icon class="animate-spin mr-4" [svgIcon]="'heroicons_outline:arrow-path'"></mat-icon>
                                 <span>Cargando métricas...</span>
                             </div>
 
                             <!-- Error State -->
-                            <div *ngIf="errorMetricas && !loadingMetricas" class="flex items-center justify-center p-16 text-red-600">
-                                <mat-icon class="mr-4" [svgIcon]="'heroicons_outline:exclamation-triangle'"></mat-icon>
+                            <div *ngIf="errorMetricas" class="flex items-center justify-center p-16 text-red-600">                                <mat-icon class="mr-4" [svgIcon]="'heroicons_outline:exclamation-triangle'"></mat-icon>
                                 <span>{{ errorMetricas }}</span>
                                 <button mat-button (click)="refreshMetricas()" class="ml-4">
                                     <mat-icon [svgIcon]="'heroicons_outline:arrow-path'"></mat-icon>
@@ -115,7 +116,7 @@
                             </div>
 
                             <!-- NUEVA SECCIÓN: Seguidores con gráficos -->
-                            <div *ngIf="hasMetricasData && !loadingMetricas">
+                           <div *ngIf="hasMetricasData && !loadingMetricas">
                                 <div class="text-2xl font-semibold tracking-tight mb-2">Evolución de Seguidores</div>
                                 <div class="text-secondary mb-6">Gráficos de evolución temporal de seguidores por plataforma</div>
                                 
@@ -123,7 +124,7 @@
                                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                                     
                                     <!-- Gráfico Facebook -->
-                                    <div *ngIf="facebookMetrics" class="flex flex-col bg-card rounded-2xl shadow p-6">
+                                   <div *ngIf="facebookMetrics; else noFacebookData" class="flex flex-col bg-card rounded-2xl shadow p-6">
                                         <div class="flex items-center justify-between mb-4">
                                             <div class="flex flex-col">
                                                 <div class="text-lg font-medium text-secondary">Facebook</div>
@@ -156,9 +157,14 @@
                                             </apx-chart>
                                         </div>
                                     </div>
-                                    
+                                    <ng-template #noFacebookData>
+    <div class="p-4 bg-red-100 text-red-800">
+        DEBUG: facebookMetrics no disponible - {{ facebookMetrics | json }}
+    </div>
+</ng-template>
+
                                     <!-- Placeholder Instagram -->
-                                    <div *ngIf="instagramMetrics" class="flex flex-col bg-card rounded-2xl shadow p-6">
+                                    <div  class="flex flex-col bg-card rounded-2xl shadow p-6">
                                         <div class="flex items-center justify-between mb-4">
                                             <div class="flex flex-col">
                                                 <div class="text-lg font-medium text-secondary">Instagram</div>
@@ -178,7 +184,7 @@
                                     </div>
                                     
                                     <!-- Placeholder TikTok -->
-                                    <div *ngIf="tiktokMetrics" class="flex flex-col bg-card rounded-2xl shadow p-6">
+                                    <div class="flex flex-col bg-card rounded-2xl shadow p-6">
                                         <div class="flex items-center justify-between mb-4">
                                             <div class="flex flex-col">
                                                 <div class="text-lg font-medium text-secondary">TikTok</div>
@@ -201,10 +207,10 @@
                             </div>
 
                             <!-- Cards de redes sociales principales -->
-                            <div *ngIf="hasMetricasData && !loadingMetricas" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                            <div  class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                                 
                                 <!-- Facebook Card - DATOS REALES -->
-                                <div *ngIf="facebookMetrics" class="bg-card shadow rounded-2xl p-6">
+                                <div  class="bg-card shadow rounded-2xl p-6">
                                     <div class="flex items-center justify-between mb-4">
                                         <div>
                                             <div class="text-lg font-semibold">Facebook</div>
@@ -222,7 +228,7 @@
                                 </div>
 
                                 <!-- Instagram Card - DATOS REALES -->
-                                <div *ngIf="instagramMetrics" class="bg-card shadow rounded-2xl p-6">
+                                <div class="bg-card shadow rounded-2xl p-6">
                                     <div class="flex items-center justify-between mb-4">
                                         <div>
                                             <div class="text-lg font-semibold">Instagram</div>
@@ -240,7 +246,7 @@
                                 </div>
 
                                 <!-- TikTok Card - DATOS REALES -->
-                                <div *ngIf="tiktokMetrics" class="bg-card shadow rounded-2xl p-6">
+                                <div  class="bg-card shadow rounded-2xl p-6">
                                     <div class="flex items-center justify-between mb-4">
                                         <div>
                                             <div class="text-lg font-semibold">TikTok</div>
@@ -258,7 +264,7 @@
                                 </div>
 
                                 <!-- LinkedIn Card - DATOS REALES -->
-                                <div *ngIf="linkedinMetrics" class="bg-card shadow rounded-2xl p-6">
+                                <div  class="bg-card shadow rounded-2xl p-6">
                                     <div class="flex items-center justify-between mb-4">
                                         <div>
                                             <div class="text-lg font-semibold">LinkedIn</div>
@@ -277,7 +283,7 @@
                             </div>
 
                             <!-- Sección de estadísticas detalladas -->
-                            <div *ngIf="hasMetricasData && !loadingMetricas">
+                            <div >
                                 <div class="text-2xl font-semibold tracking-tight mb-2">Estadísticas Detalladas</div>
                                 <div class="text-secondary mb-6">Métricas disponibles por plataforma</div>
                                 
@@ -285,7 +291,7 @@
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                                     
                                     <!-- Engagement Facebook - DATOS REALES -->
-                                    <div *ngIf="facebookMetrics" class="bg-card shadow rounded-2xl p-6">
+                                    <div class="bg-card shadow rounded-2xl p-6">
                                         <div class="flex items-center justify-between mb-2">
                                             <span class="text-secondary text-sm">Engagement Facebook</span>
                                             <mat-icon class="text-blue-500" [svgIcon]="'heroicons_solid:check'"></mat-icon>
@@ -296,7 +302,7 @@
                                     </div>
 
                                     <!-- Visualizaciones TikTok - DATOS REALES -->
-                                    <div *ngIf="tiktokMetrics" class="bg-card shadow rounded-2xl p-6">
+                                    <div class="bg-card shadow rounded-2xl p-6">
                                         <div class="flex items-center justify-between mb-2">
                                             <span class="text-secondary text-sm">Visualizaciones TikTok</span>
                                             <mat-icon class="text-gray-800" [svgIcon]="'heroicons_solid:musical-note'"></mat-icon>
@@ -307,7 +313,7 @@
                                     </div>
 
                                     <!-- Impresiones LinkedIn - DATOS REALES -->
-                                    <div *ngIf="linkedinMetrics" class="bg-card shadow rounded-2xl p-6">
+                                    <div class="bg-card shadow rounded-2xl p-6">
                                         <div class="flex items-center justify-between mb-2">
                                             <span class="text-secondary text-sm">Impresiones LinkedIn</span>
                                             <mat-icon class="text-blue-700" [svgIcon]="'heroicons_solid:briefcase'"></mat-icon>
@@ -321,7 +327,7 @@
                             </div>
 
                             <!-- Sección "Próximamente" para métricas no disponibles -->
-                            <div *ngIf="hasMetricasData && !loadingMetricas">
+                            <div>
                                 <div class="text-2xl font-semibold tracking-tight mb-2">Próximamente</div>
                                 <div class="text-secondary mb-6">Métricas en desarrollo</div>
                                 
