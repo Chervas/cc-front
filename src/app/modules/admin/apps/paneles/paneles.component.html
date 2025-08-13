@@ -116,7 +116,9 @@
                             </div>
 
                                                         <!-- NUEVA SECCIÓN: 3 Gráficas Superiores de Evolución -->
-                            <div *ngIf="hasMetricasData && !loadingMetricas">
+                            <!-- DEBUG: {{ hasMetricasData ? 'DATOS OK' : 'SIN DATOS' }} - {{ loadingMetricas ? 'CARGANDO' : 'NO CARGA' }} -->
+
+                                <div *ngIf="hasMetricasData && !loadingMetricas">
                                 <!-- Título y selector de tiempo -->
                                 <div class="flex items-center justify-between mb-6">
                                     <div>
@@ -148,9 +150,14 @@
                                         </mat-button-toggle-group>
                                     </div>
                                 </div>
-
+                                <!-- DEBUG: INICIO BLOQUE GRAFICAS -->
+                                <div style="background: green; color: white; padding: 20px; margin: 20px;">
+                                    <h2>TEST: Las 3 gráficas deberían estar aquí</h2>
+                                    <p>hasMetricasData: {{ hasMetricasData }}</p>
+                                    <p>loadingMetricas: {{ loadingMetricas }}</p>
+                                </div>
                                 <!-- Grid de 3 gráficas superiores -->
-                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+                                <div *ngIf="true" class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
                                     
                                     <!-- Gráfica Instagram -->
                                     <div class="flex flex-col bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 text-white">
