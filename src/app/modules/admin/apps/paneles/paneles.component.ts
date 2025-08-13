@@ -22,6 +22,7 @@ import { PanelesService } from './paneles.service';
 import { ApexOptions, NgApexchartsModule, ChartComponent } from 'ng-apexcharts';
 import { Subject, takeUntil } from 'rxjs';
 import { RedesSocialesMetricas } from './paneles.types';
+import { CommonModule } from '@angular/common';
 
 
 @Component({
@@ -42,6 +43,7 @@ import { RedesSocialesMetricas } from './paneles.types';
         MatTableModule,
         NgClass,
         CurrencyPipe,
+        CommonModule
     ],
 })
 export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
