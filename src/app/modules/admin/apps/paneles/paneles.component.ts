@@ -285,20 +285,21 @@ this.chartSeguidoresFacebook = {
     /**
      * Maneja el cambio de pestañas
      */
-    onTabChange(index: number): void {
+   onTabChange(index: number): void {
     console.log('📊 Cambio de pestaña:', index);
     this.isRedesSocialesTabActive = (index === 1);
     
     if (this.isRedesSocialesTabActive) {
-        if (!this.metricas) {
-            console.log('📊 Cargando métricas para pestaña Redes Sociales');
-            this.loadMetricas();
-        } else {
-            console.log('📊 Métricas ya disponibles, actualizando gráficos...');
-            setTimeout(() => {
+        // Usar Promise para ejecutar después del ciclo actual
+        Promise.resolve().then(() => {
+            console.log('📊 Tab materializado, cargando métricas...');
+            if (!this.metricas) {
+                this.loadMetricas();
+            } else {
+                console.log('📊 Métricas ya disponibles, actualizando gráficos...');
                 this._updateChartsWithMetricas();
-            }, 100);
-        }
+            }
+        });
     }
 }
 
