@@ -644,7 +644,8 @@ if (!this.metricas && !this.facebookMetrics) {
 
         // Usar API de ApexCharts para actualización
         // SOLUCIÓN MEJORADA: Intentar múltiples veces hasta que el ViewChild esté disponible
-        this._tryUpdateChart(0);
+        this._tryUpdateChart(this.facebookChart, this.chartSeguidoresFacebook);  // ✅ CORRECTO
+
 
 
         this._cdr.markForCheck();
@@ -660,28 +661,36 @@ if (!this.metricas && !this.facebookMetrics) {
     /**
      * Intenta actualizar el gráfico con reintentos hasta que el ViewChild esté disponible
      */
-    private _tryUpdateChart(chartRef: any, chartOptions: ApexOptions, maxRetries: number = 10): void {
+   private _tryUpdateChart(chartRef: any, chartOptions: ApexOptions, maxRetries: number = 10): void {
     let attempts = 0;
     
     const updateChart = () => {
         attempts++;
         
-        if (chartRef && chartRef.chart) {
+        // Verificación más robusta
+        if (chartRef && chartRef.chart && typeof chartRef.chart.updateOptions === 'function') {
             console.log(`✅ ViewChild disponible en intento ${attempts}, actualizando gráfico`);
             
-            // Usar updateOptions en lugar de updateSeries para mayor compatibilidad
-            chartRef.updateOptions(chartOptions, true);
+            try {
+                chartRef.chart.updateOptions(chartOptions, true);
+                console.log('✅ API de ApexCharts ejecutada correctamente');
+            } catch (error) {
+                console.error('❌ Error al ejecutar updateOptions:', error);
+            }
             
         } else if (attempts < maxRetries) {
             console.log(`⏳ ViewChild no disponible, reintentando en 100ms (intento ${attempts}/${maxRetries})`);
+            console.log(`🔍 Estado: chartRef=${!!chartRef}, chart=${!!chartRef?.chart}, updateOptions=${typeof chartRef?.chart?.updateOptions}`);
             setTimeout(updateChart, 100);
         } else {
             console.error(`❌ ViewChild no disponible después de ${maxRetries} intentos`);
+            console.log(`🔍 Estado final: chartRef=${!!chartRef}, chart=${!!chartRef?.chart}`);
         }
     };
     
     updateChart();
 }
+
 
     // --------------------------------------------
     // @ Métodos para las 3 gráficas superiores
