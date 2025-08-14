@@ -102,6 +102,11 @@
                                             class="space-x-1 border-none"
                                             [value]="selectedTimeRange"
                                             (change)="onTimeRangeChange($event.value)">
+											 <mat-button-toggle
+                                                class="overflow-hidden rounded-full border-none px-3 font-medium"
+                                                value="all-time">
+                                                Desde siempre
+                                            </mat-button-toggle>
                                             <mat-button-toggle
                                                 class="overflow-hidden rounded-full border-none px-3 font-medium"
                                                 value="last-year">
@@ -112,11 +117,7 @@
                                                 value="this-year">
                                                 Este año
                                             </mat-button-toggle>
-                                            <mat-button-toggle
-                                                class="overflow-hidden rounded-full border-none px-3 font-medium"
-                                                value="all-time">
-                                                Desde siempre
-                                            </mat-button-toggle>
+                                           
                                         </mat-button-toggle-group>
                                     </div>
                                 </div>

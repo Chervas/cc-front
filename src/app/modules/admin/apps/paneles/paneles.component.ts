@@ -85,31 +85,39 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
     // Basado en el patrón de Fuse Analytics
 chartInstagramOverview: ApexOptions = {
     chart: {
-        type: 'area',
-        height: 320,
+        animations: {
+            speed: 400,
+            animateGradually: {
+                enabled: false,
+            },
+        },
         fontFamily: 'inherit',
         foreColor: 'inherit',
-        animations: {
-            enabled: true,
-            speed: 400
-        },
+        width: '100%',
+        height: '100%',
+        type: 'area',
         toolbar: {
-            show: false
+            show: false,
         },
         zoom: {
-            enabled: false
-        }
+            enabled: false,
+        },
     },
-    colors: ['#E91E63'],
+    colors: ['#1A1B23'],
     dataLabels: {
-        enabled: false
+        enabled: false,
     },
     fill: {
+         colors: ['#1A1B23'],
         type: 'gradient',
         gradient: {
-            shade: 'dark',
-            opacityFrom: 0.7,
-            opacityTo: 0.3
+        shade: 'dark',
+        type: 'vertical',
+        shadeIntensity: 0.5,
+        gradientToColors: ['#8B5FBF'], // Mismo color púrpura
+        inverseColors: false,
+        opacityFrom: 0.8,
+        opacityTo: 0.1
         }
     },
     grid: {
@@ -119,72 +127,111 @@ chartInstagramOverview: ApexOptions = {
             top: 10,
             bottom: -40,
             left: 0,
-            right: 0
-        }
+            right: 0,
+        },
+        position: 'back',
+        xaxis: {
+            lines: {
+                show: true,
+            },
+        },
     },
     series: [{
         name: 'Seguidores Instagram',
         data: []
     }],
     stroke: {
-        curve: 'smooth',
-        width: 2
+        width: 2,
+        curve: 'smooth'
     },
     tooltip: {
-        theme: 'dark',
-        x: {
-            format: 'dd MMM yyyy'
-        }
+    followCursor: true,
+    theme: 'dark',
+    x: {
+        format: 'dd/MM/yyyy', // ✅ Formato europeo DD/MM/YYYY
     },
+    y: {
+        formatter: (value: number): string => `${value}`,
+    },
+},
     xaxis: {
-        type: 'datetime',
-        categories: [],
         axisBorder: {
-            show: false
+            show: false,
         },
         axisTicks: {
-            show: false
+            show: false,
+        },
+        crosshairs: {
+            stroke: {
+                color: '#475569',
+                dashArray: 0,
+                width: 2,
+            },
         },
         labels: {
+            offsetY: -20,
             style: {
-                colors: '#CBD5E1'
-            }
-        }
+                colors: '#CBD5E1',
+            },
+        },
+        tickAmount: 20,
+        tooltip: {
+            enabled: false,
+        },
+        type: 'datetime',
     },
     yaxis: {
-        show: false
-    }
+        axisTicks: {
+            show: false,
+        },
+        axisBorder: {
+            show: false,
+        },
+        min: (min): number => min - 750,
+        max: (max): number => max + 250,
+        tickAmount: 5,
+        show: false,
+    },
 };
+
 
 
 chartTiktokOverview: ApexOptions = {
-     chart: {
-        type: 'area',
-        height: 320,
+    chart: {
+        animations: {
+            speed: 400,
+            animateGradually: {
+                enabled: false,
+            },
+        },
         fontFamily: 'inherit',
         foreColor: 'inherit',
-        animations: {
-            enabled: true,
-            speed: 400
-        },
+        width: '100%',
+        height: '100%',
+        type: 'area',
         toolbar: {
-            show: false
+            show: false,
         },
         zoom: {
-            enabled: false
-        }
+            enabled: false,
+        },
     },
-    colors: ['#E91E63'],
+    colors: ['#1A1B23'],
     dataLabels: {
-        enabled: false
+        enabled: false,
     },
     fill: {
-        type: 'gradient',
-        gradient: {
-            shade: 'dark',
-            opacityFrom: 0.7,
-            opacityTo: 0.3
-        }
+         colors: ['#1A1B23'],
+            type: 'gradient',
+            gradient: {
+        shade: 'dark',
+        type: 'vertical',
+        shadeIntensity: 0.5,
+        gradientToColors: ['#8B5FBF'], // Mismo color púrpura
+        inverseColors: false,
+        opacityFrom: 0.8,
+        opacityTo: 0.1
+    }
     },
     grid: {
         show: true,
@@ -193,71 +240,110 @@ chartTiktokOverview: ApexOptions = {
             top: 10,
             bottom: -40,
             left: 0,
-            right: 0
-        }
+            right: 0,
+        },
+        position: 'back',
+        xaxis: {
+            lines: {
+                show: true,
+            },
+        },
     },
     series: [{
-        name: 'Seguidores Instagram',
+        name: 'Seguidores TikTok',
         data: []
     }],
     stroke: {
-        curve: 'smooth',
-        width: 2
+        width: 2,
+        curve: 'smooth'
     },
     tooltip: {
-        theme: 'dark',
-        x: {
-            format: 'dd MMM yyyy'
-        }
+    followCursor: true,
+    theme: 'dark',
+    x: {
+        format: 'dd/MM/yyyy', // ✅ Formato europeo DD/MM/YYYY
     },
+    y: {
+        formatter: (value: number): string => `${value}`,
+    },
+},
     xaxis: {
-        type: 'datetime',
-        categories: [],
         axisBorder: {
-            show: false
+            show: false,
         },
         axisTicks: {
-            show: false
+            show: false,
+        },
+        crosshairs: {
+            stroke: {
+                color: '#475569',
+                dashArray: 0,
+                width: 2,
+            },
         },
         labels: {
+            offsetY: -20,
             style: {
-                colors: '#CBD5E1'
-            }
-        }
+                colors: '#CBD5E1',
+            },
+        },
+        tickAmount: 20,
+        tooltip: {
+            enabled: false,
+        },
+        type: 'datetime',
     },
     yaxis: {
-        show: false
-    }
+        axisTicks: {
+            show: false,
+        },
+        axisBorder: {
+            show: false,
+        },
+        min: (min): number => min - 750,
+        max: (max): number => max + 250,
+        tickAmount: 5,
+        show: false,
+    },
 };
 
+
 chartFacebookOverview: ApexOptions = {
-     chart: {
-        type: 'area',
-        height: 320,
+    chart: {
+        animations: {
+            speed: 400,
+            animateGradually: {
+                enabled: false,
+            },
+        },
         fontFamily: 'inherit',
         foreColor: 'inherit',
-        animations: {
-            enabled: true,
-            speed: 400
-        },
+        width: '100%',
+        height: '100%',
+        type: 'area',
         toolbar: {
-            show: false
+            show: false,
         },
         zoom: {
-            enabled: false
-        }
+            enabled: false,
+        },
     },
-    colors: ['#E91E63'],
+    colors: ['#6366F1'], // Color azul de Fuse
     dataLabels: {
-        enabled: false
+        enabled: false,
     },
     fill: {
+        colors: ['#1A1B23'],
         type: 'gradient',
         gradient: {
             shade: 'dark',
-            opacityFrom: 0.7,
-            opacityTo: 0.3
-        }
+            type: 'vertical',
+            shadeIntensity: 0.5,
+            gradientToColors: ['#6366F1'], // Mismo color azul
+            inverseColors: false,
+            opacityFrom: 0.8,
+            opacityTo: 0.1
+        },
     },
     grid: {
         show: true,
@@ -266,42 +352,73 @@ chartFacebookOverview: ApexOptions = {
             top: 10,
             bottom: -40,
             left: 0,
-            right: 0
-        }
+            right: 0,
+        },
+        position: 'back',
+        xaxis: {
+            lines: {
+                show: true,
+            },
+        },
     },
     series: [{
-        name: 'Seguidores Instagram',
+        name: 'Seguidores Facebook',
         data: []
     }],
     stroke: {
-        curve: 'smooth',
-        width: 2
+        width: 2,
+        curve: 'smooth'
     },
     tooltip: {
-        theme: 'dark',
-        x: {
-            format: 'dd MMM yyyy'
-        }
+    followCursor: true,
+    theme: 'dark',
+    x: {
+        format: 'dd/MM/yyyy', // ✅ Formato europeo DD/MM/YYYY
     },
+    y: {
+        formatter: (value: number): string => `${value}`,
+    },
+},
     xaxis: {
-        type: 'datetime',
-        categories: [],
         axisBorder: {
-            show: false
+            show: false,
         },
         axisTicks: {
-            show: false
+            show: false,
+        },
+        crosshairs: {
+            stroke: {
+                color: '#475569',
+                dashArray: 0,
+                width: 2,
+            },
         },
         labels: {
+            offsetY: -20,
             style: {
-                colors: '#CBD5E1'
-            }
-        }
+                colors: '#CBD5E1',
+            },
+        },
+        tickAmount: 20,
+        tooltip: {
+            enabled: false,
+        },
+        type: 'datetime',
     },
     yaxis: {
-        show: false
-    }
+        axisTicks: {
+            show: false,
+        },
+        axisBorder: {
+            show: false,
+        },
+        min: (min): number => min - 750,
+        max: (max): number => max + 250,
+        tickAmount: 5,
+        show: false,
+    },
 };
+
     
     // Selector de tiempo para las gráficas superiores
     selectedTimeRange: string = 'this-year';
@@ -899,7 +1016,11 @@ updateInstagramOverviewChart(): void {
         series: [{
             name: 'Seguidores Instagram',
             data: data.followers
-        }]
+        }],
+        xaxis: { 
+        ...this.chartInstagramOverview.xaxis, 
+        categories: data.dates 
+        }
     };
     
   
@@ -915,7 +1036,11 @@ updateTiktokOverviewChart(): void {
         series: [{
             name: 'Seguidores TikTok',
             data: data.followers
-        }]
+        }],
+        xaxis: { 
+        ...this.chartTiktokOverview.xaxis, 
+        categories: data.dates 
+        }
     };
 }
 
@@ -930,7 +1055,11 @@ updateFacebookOverviewChart(): void {
         series: [{
             name: 'Seguidores Facebook',
             data: data.followers
-        }]
+        }],
+        xaxis: { 
+        ...this.chartFacebookOverview.xaxis, 
+        categories: data.dates 
+        }
     };
 }
     /**
