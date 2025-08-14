@@ -134,7 +134,8 @@ chartInstagramOverview: ApexOptions = {
         data: []
     }],
     stroke: {
-        width: 2, // ✅ Sin curve: 'smooth'
+        width: 2, 
+        curve: 'smooth'
     },
     tooltip: {
         followCursor: true,
@@ -235,7 +236,8 @@ chartTiktokOverview: ApexOptions = {
         data: []
     }],
     stroke: {
-        width: 2, // ✅ Sin curve: 'smooth'
+        width: 2, 
+        curve: 'smooth'
     },
     tooltip: {
         followCursor: true,
@@ -336,7 +338,8 @@ chartFacebookOverview: ApexOptions = {
         data: []
     }],
     stroke: {
-        width: 2, // ✅ Sin curve: 'smooth'
+        width: 2, 
+        curve: 'smooth'
     },
     tooltip: {
         followCursor: true,
@@ -490,22 +493,24 @@ chartFacebookOverview: ApexOptions = {
                         text: 'Sin datos'
                     },
                 };
+                // Attach SVG fill fixer to all ApexCharts
+                window['Apex'] = {
+                    chart: {
+                        events: {
+                            mounted: (chart: any, options?: any): void => {
+                                this._fixSvgFill(chart.el);
+                            },
+                            updated: (chart: any, options?: any): void => {
+                                this._fixSvgFill(chart.el);
+                            },
+                        },
+                    },
+                };
 
             });
 
-        // Attach SVG fill fixer to all ApexCharts
-        window['Apex'] = {
-            chart: {
-                events: {
-                    mounted: (chart: any, options?: any): void => {
-                        this._fixSvgFill(chart.el);
-                    },
-                    updated: (chart: any, options?: any): void => {
-                        this._fixSvgFill(chart.el);
-                    },
-                },
-            },
-        };
+       
+        
 
         // SUSCRIBIRSE A MÉTRICAS
         this._panelesService.metricas$
@@ -625,6 +630,33 @@ this.chartSeguidoresFacebook = {
     // --------------------------------------------
     // NUEVOS MÉTODOS PARA MÉTRICAS
     // --------------------------------------------
+ /**
+     * Fix the SVG fill references. This fix must be applied to all ApexCharts
+     * charts in order to fix 'black color on gradient fills on certain browsers'
+     * issue caused by the '<base>' tag.
+     *
+     * Fix based on https://gist.github.com/Kamshak/c84cdc175209d1a30f711abd6a81d472
+     *
+     * @param element
+     * @private
+     */
+    private _fixSvgFill(element: Element): void {
+        // Current URL
+        const currentURL = this._router.url;
+
+        // 1. Find all elements with 'fill' attribute within the element
+        // 2. Filter out the ones that doesn't have cross reference so we only left with the ones that use the 'url(#id)' syntax
+        // 3. Insert the 'currentURL' at the front of the 'fill' attribute value
+        Array.from(element.querySelectorAll('*[fill]'))
+            .filter((el) => el.getAttribute('fill').indexOf('url(') !== -1)
+            .forEach((el) => {
+                const attrVal = el.getAttribute('fill');
+                el.setAttribute(
+                    'fill',
+                    `url(${currentURL}${attrVal.slice(attrVal.indexOf('#'))}`
+                );
+            });
+    }
 
 
     /**
@@ -1128,34 +1160,6 @@ updateFacebookOverviewChart(): void {
     // --------------------------------------------
     // @ Private methods
     // --------------------------------------------
-
-    /**
-     * Fix the SVG fill references. This fix must be applied to all ApexCharts
-     * charts in order to fix 'black color on gradient fills on certain browsers'
-     * issue caused by the '<base>' tag.
-     *
-     * Fix based on https://gist.github.com/Keldos-Li/2f56a8c8c9f0f9e4c7b0b0b0b0b0b0b0
-     *
-     * @param element
-     * @private
-     */
-    private _fixSvgFill(element: Element): void {
-        // Current URL
-        const currentURL = this._router.url;
-
-        // 1. Find all elements with 'fill' attribute within the element
-        // 2. Filter out the ones that doesn't have cross reference so we don't touch the ones that are supposed to be solid
-        // 3. Insert the 'currentURL' at the front of the 'fill' attribute value
-        Array.from(element.querySelectorAll('*[fill]'))
-            .filter((el) => el.getAttribute('fill').indexOf('url(') !== -1)
-            .forEach((el) => {
-                const attrVal = el.getAttribute('fill');
-                el.setAttribute(
-                    'fill',
-                    `url(${currentURL}${attrVal.slice(attrVal.indexOf('#'))})`,
-                );
-            });
-    }
 
     /**
      * Prepare the chart data
