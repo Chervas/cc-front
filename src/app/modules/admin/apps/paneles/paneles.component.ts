@@ -86,22 +86,44 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
 chartInstagramOverview: ApexOptions = {
     chart: {
         type: 'area',
-        height: 128,
-        sparkline: {
-            enabled: true
+        height: 320,
+        fontFamily: 'inherit',
+        foreColor: 'inherit',
+        animations: {
+            enabled: true,
+            speed: 400
+        },
+        toolbar: {
+            show: false
+        },
+        zoom: {
+            enabled: false
         }
     },
-    colors: ['#E91E63'], // Rosa Instagram
+    colors: ['#E91E63'],
+    dataLabels: {
+        enabled: false
+    },
     fill: {
         type: 'gradient',
         gradient: {
             shade: 'dark',
-            opacityFrom: 1,
+            opacityFrom: 0.7,
             opacityTo: 0.3
         }
     },
+    grid: {
+        show: true,
+        borderColor: '#334155',
+        padding: {
+            top: 10,
+            bottom: -40,
+            left: 0,
+            right: 0
+        }
+    },
     series: [{
-        name: 'Seguidores',
+        name: 'Seguidores Instagram',
         data: []
     }],
     stroke: {
@@ -109,33 +131,73 @@ chartInstagramOverview: ApexOptions = {
         width: 2
     },
     tooltip: {
-        enabled: true,
-        theme: 'dark'
+        theme: 'dark',
+        x: {
+            format: 'dd MMM yyyy'
+        }
     },
     xaxis: {
-        type: 'datetime'
+        type: 'datetime',
+        categories: [],
+        axisBorder: {
+            show: false
+        },
+        axisTicks: {
+            show: false
+        },
+        labels: {
+            style: {
+                colors: '#CBD5E1'
+            }
+        }
+    },
+    yaxis: {
+        show: false
     }
 };
 
+
 chartTiktokOverview: ApexOptions = {
-    chart: {
+     chart: {
         type: 'area',
-        height: 128,
-        sparkline: {
-            enabled: true
+        height: 320,
+        fontFamily: 'inherit',
+        foreColor: 'inherit',
+        animations: {
+            enabled: true,
+            speed: 400
+        },
+        toolbar: {
+            show: false
+        },
+        zoom: {
+            enabled: false
         }
     },
-    colors: ['#00BCD4'], // Cyan TikTok
+    colors: ['#E91E63'],
+    dataLabels: {
+        enabled: false
+    },
     fill: {
         type: 'gradient',
         gradient: {
             shade: 'dark',
-            opacityFrom: 1,
+            opacityFrom: 0.7,
             opacityTo: 0.3
         }
     },
+    grid: {
+        show: true,
+        borderColor: '#334155',
+        padding: {
+            top: 10,
+            bottom: -40,
+            left: 0,
+            right: 0
+        }
+    },
     series: [{
-        name: 'Seguidores',
+        name: 'Seguidores Instagram',
         data: []
     }],
     stroke: {
@@ -143,33 +205,72 @@ chartTiktokOverview: ApexOptions = {
         width: 2
     },
     tooltip: {
-        enabled: true,
-        theme: 'dark'
+        theme: 'dark',
+        x: {
+            format: 'dd MMM yyyy'
+        }
     },
     xaxis: {
-        type: 'datetime'
+        type: 'datetime',
+        categories: [],
+        axisBorder: {
+            show: false
+        },
+        axisTicks: {
+            show: false
+        },
+        labels: {
+            style: {
+                colors: '#CBD5E1'
+            }
+        }
+    },
+    yaxis: {
+        show: false
     }
 };
 
 chartFacebookOverview: ApexOptions = {
-    chart: {
+     chart: {
         type: 'area',
-        height: 128,
-        sparkline: {
-            enabled: true
+        height: 320,
+        fontFamily: 'inherit',
+        foreColor: 'inherit',
+        animations: {
+            enabled: true,
+            speed: 400
+        },
+        toolbar: {
+            show: false
+        },
+        zoom: {
+            enabled: false
         }
     },
-    colors: ['#1877F2'], // Azul Facebook
+    colors: ['#E91E63'],
+    dataLabels: {
+        enabled: false
+    },
     fill: {
         type: 'gradient',
         gradient: {
             shade: 'dark',
-            opacityFrom: 1,
+            opacityFrom: 0.7,
             opacityTo: 0.3
         }
     },
+    grid: {
+        show: true,
+        borderColor: '#334155',
+        padding: {
+            top: 10,
+            bottom: -40,
+            left: 0,
+            right: 0
+        }
+    },
     series: [{
-        name: 'Seguidores',
+        name: 'Seguidores Instagram',
         data: []
     }],
     stroke: {
@@ -177,11 +278,28 @@ chartFacebookOverview: ApexOptions = {
         width: 2
     },
     tooltip: {
-        enabled: true,
-        theme: 'dark'
+        theme: 'dark',
+        x: {
+            format: 'dd MMM yyyy'
+        }
     },
     xaxis: {
-        type: 'datetime'
+        type: 'datetime',
+        categories: [],
+        axisBorder: {
+            show: false
+        },
+        axisTicks: {
+            show: false
+        },
+        labels: {
+            style: {
+                colors: '#CBD5E1'
+            }
+        }
+    },
+    yaxis: {
+        show: false
     }
 };
     
@@ -418,6 +536,58 @@ this.chartSeguidoresFacebook = {
     // NUEVOS MÉTODOS PARA MÉTRICAS
     // --------------------------------------------
 
+
+    /**
+ * Genera datos mock para las gráficas superiores
+ */
+private _generateMockData(timeRange: string, baseValue: number): { dates: number[], followers: number[] } {
+    const now = new Date();
+    const dates: number[] = [];
+    const followers: number[] = [];
+    
+    let days: number;
+    let startDate: Date;
+    
+    // Determinar el rango de días según el selector
+    switch (timeRange) {
+        case 'last-year':
+            days = 365;
+            startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+            break;
+        case 'this-year':
+            days = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / (1000 * 60 * 60 * 24));
+            startDate = new Date(now.getFullYear(), 0, 1);
+            break;
+        case 'all-time':
+            days = 730; // 2 años
+            startDate = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
+            break;
+        default:
+            days = 30;
+            startDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+    }
+    
+    // Generar datos con tendencia de crecimiento realista
+    const growthRate = 0.001; // 0.1% de crecimiento promedio por día
+    const volatility = 0.05; // 5% de volatilidad
+    
+    for (let i = 0; i < days; i++) {
+        const date = new Date(startDate.getTime() + (i * 24 * 60 * 60 * 1000));
+        
+        // Usar timestamp para ApexCharts (evita errores NaN)
+        dates.push(date.getTime());
+        
+        // Calcular valor con tendencia y volatilidad
+        const trend = baseValue * (1 + (growthRate * i));
+        const randomVariation = (Math.random() - 0.5) * volatility * trend;
+        const value = Math.round(trend + randomVariation);
+        
+        followers.push(Math.max(0, value)); // Evitar valores negativos
+    }
+    
+    return { dates, followers };
+}
+
     /**
      * Cargar métricas de la clínica seleccionada
      */
@@ -642,10 +812,6 @@ if (!this.metricas && !this.facebookMetrics) {
         console.log('📊 chartSeguidoresFacebook actualizado:', this.chartSeguidoresFacebook);
         console.log('📊 this.facebookChart ViewChild:', this.facebookChart);
 
-        // Usar API de ApexCharts para actualización
-        // SOLUCIÓN MEJORADA: Intentar múltiples veces hasta que el ViewChild esté disponible
-        this._tryUpdateChart(this.facebookChart, this.chartSeguidoresFacebook);  // ✅ CORRECTO
-
 
 
         this._cdr.markForCheck();
@@ -661,35 +827,7 @@ if (!this.metricas && !this.facebookMetrics) {
     /**
      * Intenta actualizar el gráfico con reintentos hasta que el ViewChild esté disponible
      */
-   private _tryUpdateChart(chartRef: any, chartOptions: ApexOptions, maxRetries: number = 10): void {
-    let attempts = 0;
-    
-    const updateChart = () => {
-        attempts++;
-        
-        // Verificación más robusta
-        if (chartRef && chartRef.chart && typeof chartRef.chart.updateOptions === 'function') {
-            console.log(`✅ ViewChild disponible en intento ${attempts}, actualizando gráfico`);
-            
-            try {
-                chartRef.chart.updateOptions(chartOptions, true);
-                console.log('✅ API de ApexCharts ejecutada correctamente');
-            } catch (error) {
-                console.error('❌ Error al ejecutar updateOptions:', error);
-            }
-            
-        } else if (attempts < maxRetries) {
-            console.log(`⏳ ViewChild no disponible, reintentando en 100ms (intento ${attempts}/${maxRetries})`);
-            console.log(`🔍 Estado: chartRef=${!!chartRef}, chart=${!!chartRef?.chart}, updateOptions=${typeof chartRef?.chart?.updateOptions}`);
-            setTimeout(updateChart, 100);
-        } else {
-            console.error(`❌ ViewChild no disponible después de ${maxRetries} intentos`);
-            console.log(`🔍 Estado final: chartRef=${!!chartRef}, chart=${!!chartRef?.chart}`);
-        }
-    };
-    
-    updateChart();
-}
+   
 
 
     // --------------------------------------------
@@ -734,7 +872,7 @@ if (!this.metricas && !this.facebookMetrics) {
     /**
      * Actualizar las 3 gráficas superiores
      */
-    updateOverviewCharts(): void {
+   updateOverviewCharts(): void {
     console.log('📈 updateOverviewCharts() ejecutado');
     
     // Actualizar las 3 gráficas superiores
@@ -744,118 +882,57 @@ if (!this.metricas && !this.facebookMetrics) {
     
     console.log('📈 updateOverviewCharts() completado');
 }
-/**
- * Genera datos mock para las gráficas superiores
- */
-private _generateMockData(timeRange: string, baseValue: number): { dates: string[], followers: number[] } {
-    const now = new Date();
-    const dates: string[] = [];
-    const followers: number[] = [];
-    
-    let days: number;
-    let startDate: Date;
-    
-    // Determinar el rango de días según el selector
-    switch (timeRange) {
-        case 'last-year':
-            days = 365;
-            startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-            break;
-        case 'this-year':
-            days = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 1).getTime()) / (1000 * 60 * 60 * 24));
-            startDate = new Date(now.getFullYear(), 0, 1);
-            break;
-        case 'all-time':
-            days = 730; // 2 años
-            startDate = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
-            break;
-        default:
-            days = 30;
-            startDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-    }
-    
-    // Generar datos con tendencia de crecimiento realista
-    const growthRate = 0.001; // 0.1% de crecimiento promedio por día
-    const volatility = 0.05; // 5% de volatilidad
-    
-    for (let i = 0; i < days; i++) {
-        const date = new Date(startDate.getTime() + (i * 24 * 60 * 60 * 1000));
-        
-        // Formato de fecha para ApexCharts
-        dates.push(date.toISOString().split('T')[0]);
-        
-        // Calcular valor con tendencia y volatilidad
-        const trend = baseValue * (1 + (growthRate * i));
-        const randomVariation = (Math.random() - 0.5) * volatility * trend;
-        const value = Math.round(trend + randomVariation);
-        
-        followers.push(Math.max(0, value)); // Evitar valores negativos
-    }
-    
-    return { dates, followers };
-}
+
 
     /**
      * Actualizar gráfica superior de Instagram
      */
-    updateInstagramOverviewChart(): void {
-    if (!this.metricas?.instagram) return;
+updateInstagramOverviewChart(): void {
+    console.log('📊 Actualizando gráfica Instagram Overview');
     
-    const data = this._generateMockData(this.selectedTimeRange, 1500); // Instagram base
+    // Generar datos mock siempre (no depender de metricas.instagram)
+    const data = this._generateMockData(this.selectedTimeRange, 1500);
     
+    // Actualizar la configuración - Angular se encarga del resto
     this.chartInstagramOverview = {
         ...this.chartInstagramOverview,
         series: [{
             name: 'Seguidores Instagram',
             data: data.followers
-        }],
-        xaxis: {
-            ...this.chartInstagramOverview.xaxis,
-            categories: data.dates
-        }
+        }]
     };
     
-    this._tryUpdateChart(this.instagramOverviewChart, this.chartInstagramOverview);
+  
 }
 
 updateTiktokOverviewChart(): void {
-    const data = this._generateMockData(this.selectedTimeRange, 800); // TikTok base
+    console.log('📊 Actualizando gráfica TikTok Overview');
+    
+    const data = this._generateMockData(this.selectedTimeRange, 800);
     
     this.chartTiktokOverview = {
         ...this.chartTiktokOverview,
         series: [{
             name: 'Seguidores TikTok',
             data: data.followers
-        }],
-        xaxis: {
-            ...this.chartTiktokOverview.xaxis,
-            categories: data.dates
-        }
+        }]
     };
-    
-    this._tryUpdateChart(this.tiktokOverviewChart, this.chartTiktokOverview);
 }
 
 updateFacebookOverviewChart(): void {
-    if (!this.metricas?.facebook) return;
+    console.log('📊 Actualizando gráfica Facebook Overview');
     
-    const data = this._generateMockData(this.selectedTimeRange, this.metricas.facebook.seguidores);
+    const baseValue = this.metricas?.facebook?.seguidores || 3380;
+    const data = this._generateMockData(this.selectedTimeRange, baseValue);
     
     this.chartFacebookOverview = {
         ...this.chartFacebookOverview,
         series: [{
             name: 'Seguidores Facebook',
             data: data.followers
-        }],
-        xaxis: {
-            ...this.chartFacebookOverview.xaxis,
-            categories: data.dates
-        }
+        }]
     };
-    
-    this._tryUpdateChart(this.facebookOverviewChart, this.chartFacebookOverview);
 }
-
     /**
      * Generar datos mock para las gráficas superiores
      */

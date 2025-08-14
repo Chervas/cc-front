@@ -91,142 +91,131 @@
 						<div>
 							<!-- NUEVA SECCIÓN: 3 Gráficas Superiores de Evolución -->
 							<div *ngIf="!loadingMetricas">
-								<!-- Título y selector de tiempo -->
-								<div class="flex items-center justify-between mb-6">
-									<div>
-										<div class="text-2xl font-semibold tracking-tight">Seguidores</div>
-										<div class="text-secondary">Evolución seguidores en tus redes</div>
-									</div>
-									<!-- Selector de tiempo -->
-									<div class="ml-2">
-										<mat-button-toggle-group
-										class="hidden space-x-1 border-none sm:inline-flex"
-										[value]="selectedTimeRange"
-										(change)="onTimeRangeChange($event.value)"
-										#timeRangeSelector="matButtonToggleGroup">
-										<mat-button-toggle
-											class="overflow-hidden rounded-full border-none px-3 py-1 font-medium text-sm"
-											value="last-year">
-											El año pasado
-										</mat-button-toggle>
-										<mat-button-toggle
-											class="overflow-hidden rounded-full border-none px-3 py-1 font-medium text-sm"
-											value="this-year">
-											Este año
-										</mat-button-toggle>
-										<mat-button-toggle
-											class="overflow-hidden rounded-full border-none px-3 py-1 font-medium text-sm"
-											value="all-time">
-											Desde siempre
-										</mat-button-toggle>
-										</mat-button-toggle-group>
-									</div>
-								</div>
+								<!-- Selector de tiempo global -->
+                                <div class="flex items-center justify-between mb-6">
+                                    <div>
+                                        <div class="text-2xl font-semibold tracking-tight">Seguidores</div>
+                                        <div class="text-secondary">Evolución seguidores en tus redes</div>
+                                    </div>
+                                    <div class="ml-2">
+                                        <mat-button-toggle-group
+                                            class="space-x-1 border-none"
+                                            [value]="selectedTimeRange"
+                                            (change)="onTimeRangeChange($event.value)">
+                                            <mat-button-toggle
+                                                class="overflow-hidden rounded-full border-none px-3 font-medium"
+                                                value="last-year">
+                                                El año pasado
+                                            </mat-button-toggle>
+                                            <mat-button-toggle
+                                                class="overflow-hidden rounded-full border-none px-3 font-medium"
+                                                value="this-year">
+                                                Este año
+                                            </mat-button-toggle>
+                                            <mat-button-toggle
+                                                class="overflow-hidden rounded-full border-none px-3 font-medium"
+                                                value="all-time">
+                                                Desde siempre
+                                            </mat-button-toggle>
+                                        </mat-button-toggle-group>
+                                    </div>
+                                </div>
+
+                                
 								<!-- Grid de 3 gráficas superiores -->
-								<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
-									<!-- Gráfica Instagram -->
-									<div class="flex flex-col bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 text-white">
-										<div class="flex items-center justify-between mb-4">
-											<div class="flex flex-col">
-												<div class="text-lg font-medium text-slate-300">Instagram</div>
-												<div class="text-2xl font-bold text-pink-400">{{ getGrowthPercentage('instagram') }}%</div>
-												<div class="flex items-center mt-1">
-													<div class="text-sm text-slate-400">{{ getTimeRangeLabel() }}</div>
-												</div>
-											</div>
-											<div class="flex items-center space-x-2">
-												<div class="text-xs text-slate-400">Last Year</div>
-												<div class="text-xs text-white font-medium">This Year</div>
-												<mat-icon class="text-white icon-size-4" [svgIcon]="'heroicons_solid:check'"></mat-icon>
-											</div>
-										</div>
-										<!-- Gráfico ApexCharts Instagram -->
-										<div class="flex flex-auto items-end mt-4 h-32">
-											<apx-chart
-											#instagramOverviewChart
-											class="flex-auto w-full h-full"
-											[height]="128"
-											[chart]="chartInstagramOverview.chart"
-											[colors]="chartInstagramOverview.colors"
-											[dataLabels]="chartInstagramOverview.dataLabels"
-											[grid]="chartInstagramOverview.grid"
-											[series]="chartInstagramOverview.series"
-											[stroke]="chartInstagramOverview.stroke"
-											[tooltip]="chartInstagramOverview.tooltip"
-											[xaxis]="chartInstagramOverview.xaxis"
-											[yaxis]="chartInstagramOverview.yaxis">
-											</apx-chart>
-										</div>
-									</div>
-									<!-- Gráfica TikTok -->
-									<div class="flex flex-col bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 text-white">
-										<div class="flex items-center justify-between mb-4">
-											<div class="flex flex-col">
-												<div class="text-lg font-medium text-slate-300">TikTok</div>
-												<div class="text-2xl font-bold text-cyan-400">{{ getGrowthPercentage('tiktok') }}%</div>
-												<div class="flex items-center mt-1">
-													<div class="text-sm text-slate-400">{{ getTimeRangeLabel() }}</div>
-												</div>
-											</div>
-											<div class="flex items-center space-x-2">
-												<div class="text-xs text-slate-400">Last Year</div>
-												<div class="text-xs text-white font-medium">This Year</div>
-												<mat-icon class="text-white icon-size-4" [svgIcon]="'heroicons_solid:check'"></mat-icon>
-											</div>
-										</div>
-										<!-- Gráfico ApexCharts TikTok -->
-										<div class="flex flex-auto items-end mt-4 h-32">
-											<apx-chart
-											#tiktokOverviewChart
-											class="flex-auto w-full h-full"
-											[height]="128"
-											[chart]="chartTiktokOverview.chart"
-											[colors]="chartTiktokOverview.colors"
-											[dataLabels]="chartTiktokOverview.dataLabels"
-											[grid]="chartTiktokOverview.grid"
-											[series]="chartTiktokOverview.series"
-											[stroke]="chartTiktokOverview.stroke"
-											[tooltip]="chartTiktokOverview.tooltip"
-											[xaxis]="chartTiktokOverview.xaxis"
-											[yaxis]="chartTiktokOverview.yaxis">
-											</apx-chart>
-										</div>
-									</div>
-									<!-- Gráfica Facebook -->
-									<div class="flex flex-col bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 text-white">
-										<div class="flex items-center justify-between mb-4">
-											<div class="flex flex-col">
-												<div class="text-lg font-medium text-slate-300">Facebook</div>
-												<div class="text-2xl font-bold text-blue-400">{{ getGrowthPercentage('facebook') }}%</div>
-												<div class="flex items-center mt-1">
-													<div class="text-sm text-slate-400">{{ getTimeRangeLabel() }}</div>
-												</div>
-											</div>
-											<div class="flex items-center space-x-2">
-												<div class="text-xs text-slate-400">Last Year</div>
-												<div class="text-xs text-white font-medium">This Year</div>
-												<mat-icon class="text-white icon-size-4" [svgIcon]="'heroicons_solid:check'"></mat-icon>
-											</div>
-										</div>
-										<!-- Gráfico ApexCharts Facebook -->
-										<div class="flex flex-auto items-end mt-4 h-32">
-											<apx-chart
-											#facebookOverviewChart
-											class="flex-auto w-full h-full"
-											[height]="128"
-											[chart]="chartFacebookOverview.chart"
-											[colors]="chartFacebookOverview.colors"
-											[dataLabels]="chartFacebookOverview.dataLabels"
-											[grid]="chartFacebookOverview.grid"
-											[series]="chartFacebookOverview.series"
-											[stroke]="chartFacebookOverview.stroke"
-											[tooltip]="chartFacebookOverview.tooltip"
-											[xaxis]="chartFacebookOverview.xaxis"
-											[yaxis]="chartFacebookOverview.yaxis">
-											</apx-chart>
-										</div>
-									</div>
-								</div>
+                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+                                    
+                                    <!-- Gráfica Instagram -->
+                                    <div class="bg-card dark flex flex-auto flex-col overflow-hidden rounded-2xl shadow">
+                                        <div class="ml-6 mr-6 mt-6 flex items-center justify-between">
+                                            <div class="flex flex-col">
+                                                <div class="text-xl font-semibold leading-7 tracking-tight text-pink-400">
+                                                    Instagram
+                                                </div>
+                                                <div class="text-secondary font-medium">
+                                                    {{ getGrowthPercentage('instagram') }}% crecimiento
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex h-80 flex-auto flex-col">
+                                            <apx-chart
+                                                #instagramOverviewChart
+                                                class="h-full w-full flex-auto"
+                                                [chart]="chartInstagramOverview.chart"
+                                                [colors]="chartInstagramOverview.colors"
+                                                [dataLabels]="chartInstagramOverview.dataLabels"
+                                                [fill]="chartInstagramOverview.fill"
+                                                [grid]="chartInstagramOverview.grid"
+                                                [series]="chartInstagramOverview.series"
+                                                [stroke]="chartInstagramOverview.stroke"
+                                                [tooltip]="chartInstagramOverview.tooltip"
+                                                [xaxis]="chartInstagramOverview.xaxis"
+                                                [yaxis]="chartInstagramOverview.yaxis">
+                                            </apx-chart>
+                                        </div>
+                                    </div>
+
+                                    <!-- Gráfica TikTok -->
+                                    <div class="bg-card dark flex flex-auto flex-col overflow-hidden rounded-2xl shadow">
+                                        <div class="ml-6 mr-6 mt-6 flex items-center justify-between">
+                                            <div class="flex flex-col">
+                                                <div class="text-xl font-semibold leading-7 tracking-tight text-cyan-400">
+                                                    TikTok
+                                                </div>
+                                                <div class="text-secondary font-medium">
+                                                    {{ getGrowthPercentage('tiktok') }}% crecimiento
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex h-80 flex-auto flex-col">
+                                            <apx-chart
+                                                #tiktokOverviewChart
+                                                class="h-full w-full flex-auto"
+                                                [chart]="chartTiktokOverview.chart"
+                                                [colors]="chartTiktokOverview.colors"
+                                                [dataLabels]="chartTiktokOverview.dataLabels"
+                                                [fill]="chartTiktokOverview.fill"
+                                                [grid]="chartTiktokOverview.grid"
+                                                [series]="chartTiktokOverview.series"
+                                                [stroke]="chartTiktokOverview.stroke"
+                                                [tooltip]="chartTiktokOverview.tooltip"
+                                                [xaxis]="chartTiktokOverview.xaxis"
+                                                [yaxis]="chartTiktokOverview.yaxis">
+                                            </apx-chart>
+                                        </div>
+                                    </div>
+
+                                    <!-- Gráfica Facebook -->
+                                    <div class="bg-card dark flex flex-auto flex-col overflow-hidden rounded-2xl shadow">
+                                        <div class="ml-6 mr-6 mt-6 flex items-center justify-between">
+                                            <div class="flex flex-col">
+                                                <div class="text-xl font-semibold leading-7 tracking-tight text-blue-400">
+                                                    Facebook
+                                                </div>
+                                                <div class="text-secondary font-medium">
+                                                    {{ getGrowthPercentage('facebook') }}% crecimiento
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex h-80 flex-auto flex-col">
+                                            <apx-chart
+                                                #facebookOverviewChart
+                                                class="h-full w-full flex-auto"
+                                                [chart]="chartFacebookOverview.chart"
+                                                [colors]="chartFacebookOverview.colors"
+                                                [dataLabels]="chartFacebookOverview.dataLabels"
+                                                [fill]="chartFacebookOverview.fill"
+                                                [grid]="chartFacebookOverview.grid"
+                                                [series]="chartFacebookOverview.series"
+                                                [stroke]="chartFacebookOverview.stroke"
+                                                [tooltip]="chartFacebookOverview.tooltip"
+                                                [xaxis]="chartFacebookOverview.xaxis"
+                                                [yaxis]="chartFacebookOverview.yaxis">
+                                            </apx-chart>
+                                        </div>
+                                    </div>
+                                </div>
+
 							</div>
 						</div>
 						<!-- Loading State -->
