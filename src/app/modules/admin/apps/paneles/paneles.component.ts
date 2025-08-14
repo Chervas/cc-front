@@ -82,7 +82,10 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
     chartSeguidoresFacebook: ApexOptions = {};
     
     // Configuraciones para las 3 gráficas superiores
-    // Basado en el patrón de Fuse Analytics
+   // 🎨 CONFIGURACIÓN EXACTA BASADA EN EL CÓDIGO FUENTE DE FUSE ANALYTICS
+// Copiada directamente del repositorio oficial de Fuse
+
+// 📱 INSTAGRAM - Configuración exacta de Fuse Visitors
 chartInstagramOverview: ApexOptions = {
     chart: {
         animations: {
@@ -103,29 +106,19 @@ chartInstagramOverview: ApexOptions = {
             enabled: false,
         },
     },
-    colors: ['#1A1B23'],
+    colors: ['#818CF8'], // Color exacto de Fuse
     dataLabels: {
         enabled: false,
     },
     fill: {
-         colors: ['#1A1B23'],
-        type: 'gradient',
-        gradient: {
-        shade: 'dark',
-        type: 'vertical',
-        shadeIntensity: 0.5,
-        gradientToColors: ['#8B5FBF'], // Mismo color púrpura
-        inverseColors: false,
-        opacityFrom: 0.8,
-        opacityTo: 0.1
-        }
+        colors: ['#312E81'], // ✅ CLAVE: Solo color, sin type: 'gradient'
     },
     grid: {
         show: true,
-        borderColor: '#334155',
+        borderColor: '#334155', // Color exacto de Fuse
         padding: {
             top: 10,
-            bottom: -40,
+            bottom: -40, // ✅ CLAVE: Padding negativo para que llegue al borde
             left: 0,
             right: 0,
         },
@@ -141,19 +134,18 @@ chartInstagramOverview: ApexOptions = {
         data: []
     }],
     stroke: {
-        width: 2,
-        curve: 'smooth'
+        width: 2, // ✅ Sin curve: 'smooth'
     },
     tooltip: {
-    followCursor: true,
-    theme: 'dark',
-    x: {
-        format: 'dd/MM/yyyy', // ✅ Formato europeo DD/MM/YYYY
+        followCursor: true,
+        theme: 'dark',
+        x: {
+            format: 'MMM dd, yyyy', // ✅ Formato exacto de Fuse
+        },
+        y: {
+            formatter: (value: number): string => `${value}`,
+        },
     },
-    y: {
-        formatter: (value: number): string => `${value}`,
-    },
-},
     xaxis: {
         axisBorder: {
             show: false,
@@ -169,12 +161,12 @@ chartInstagramOverview: ApexOptions = {
             },
         },
         labels: {
-            offsetY: -20,
+            offsetY: -20, // ✅ CLAVE: Offset exacto de Fuse
             style: {
-                colors: '#CBD5E1',
+                colors: '#CBD5E1', // ✅ Color exacto de Fuse
             },
         },
-        tickAmount: 20,
+        tickAmount: 20, // ✅ CLAVE: Cantidad exacta de Fuse
         tooltip: {
             enabled: false,
         },
@@ -194,8 +186,7 @@ chartInstagramOverview: ApexOptions = {
     },
 };
 
-
-
+// 🎵 TIKTOK - Configuración exacta de Fuse Visitors
 chartTiktokOverview: ApexOptions = {
     chart: {
         animations: {
@@ -216,29 +207,19 @@ chartTiktokOverview: ApexOptions = {
             enabled: false,
         },
     },
-    colors: ['#1A1B23'],
+    colors: ['#818CF8'], // Color exacto de Fuse
     dataLabels: {
         enabled: false,
     },
     fill: {
-         colors: ['#1A1B23'],
-            type: 'gradient',
-            gradient: {
-        shade: 'dark',
-        type: 'vertical',
-        shadeIntensity: 0.5,
-        gradientToColors: ['#8B5FBF'], // Mismo color púrpura
-        inverseColors: false,
-        opacityFrom: 0.8,
-        opacityTo: 0.1
-    }
+        colors: ['#312E81'], // ✅ CLAVE: Solo color, sin type: 'gradient'
     },
     grid: {
         show: true,
-        borderColor: '#334155',
+        borderColor: '#334155', // Color exacto de Fuse
         padding: {
             top: 10,
-            bottom: -40,
+            bottom: -40, // ✅ CLAVE: Padding negativo para que llegue al borde
             left: 0,
             right: 0,
         },
@@ -254,19 +235,18 @@ chartTiktokOverview: ApexOptions = {
         data: []
     }],
     stroke: {
-        width: 2,
-        curve: 'smooth'
+        width: 2, // ✅ Sin curve: 'smooth'
     },
     tooltip: {
-    followCursor: true,
-    theme: 'dark',
-    x: {
-        format: 'dd/MM/yyyy', // ✅ Formato europeo DD/MM/YYYY
+        followCursor: true,
+        theme: 'dark',
+        x: {
+            format: 'MMM dd, yyyy', // ✅ Formato exacto de Fuse
+        },
+        y: {
+            formatter: (value: number): string => `${value}`,
+        },
     },
-    y: {
-        formatter: (value: number): string => `${value}`,
-    },
-},
     xaxis: {
         axisBorder: {
             show: false,
@@ -282,12 +262,12 @@ chartTiktokOverview: ApexOptions = {
             },
         },
         labels: {
-            offsetY: -20,
+            offsetY: -20, // ✅ CLAVE: Offset exacto de Fuse
             style: {
-                colors: '#CBD5E1',
+                colors: '#CBD5E1', // ✅ Color exacto de Fuse
             },
         },
-        tickAmount: 20,
+        tickAmount: 20, // ✅ CLAVE: Cantidad exacta de Fuse
         tooltip: {
             enabled: false,
         },
@@ -307,7 +287,7 @@ chartTiktokOverview: ApexOptions = {
     },
 };
 
-
+// 📘 FACEBOOK - Configuración exacta de Fuse Visitors
 chartFacebookOverview: ApexOptions = {
     chart: {
         animations: {
@@ -328,29 +308,19 @@ chartFacebookOverview: ApexOptions = {
             enabled: false,
         },
     },
-    colors: ['#6366F1'], // Color azul de Fuse
+    colors: ['#818CF8'], // Color exacto de Fuse
     dataLabels: {
         enabled: false,
     },
     fill: {
-        colors: ['#1A1B23'],
-        type: 'gradient',
-        gradient: {
-            shade: 'dark',
-            type: 'vertical',
-            shadeIntensity: 0.5,
-            gradientToColors: ['#6366F1'], // Mismo color azul
-            inverseColors: false,
-            opacityFrom: 0.8,
-            opacityTo: 0.1
-        },
+        colors: ['#312E81'], // ✅ CLAVE: Solo color, sin type: 'gradient'
     },
     grid: {
         show: true,
-        borderColor: '#334155',
+        borderColor: '#334155', // Color exacto de Fuse
         padding: {
             top: 10,
-            bottom: -40,
+            bottom: -40, // ✅ CLAVE: Padding negativo para que llegue al borde
             left: 0,
             right: 0,
         },
@@ -366,19 +336,18 @@ chartFacebookOverview: ApexOptions = {
         data: []
     }],
     stroke: {
-        width: 2,
-        curve: 'smooth'
+        width: 2, // ✅ Sin curve: 'smooth'
     },
     tooltip: {
-    followCursor: true,
-    theme: 'dark',
-    x: {
-        format: 'dd/MM/yyyy', // ✅ Formato europeo DD/MM/YYYY
+        followCursor: true,
+        theme: 'dark',
+        x: {
+            format: 'MMM dd, yyyy', // ✅ Formato exacto de Fuse
+        },
+        y: {
+            formatter: (value: number): string => `${value}`,
+        },
     },
-    y: {
-        formatter: (value: number): string => `${value}`,
-    },
-},
     xaxis: {
         axisBorder: {
             show: false,
@@ -394,12 +363,12 @@ chartFacebookOverview: ApexOptions = {
             },
         },
         labels: {
-            offsetY: -20,
+            offsetY: -20, // ✅ CLAVE: Offset exacto de Fuse
             style: {
-                colors: '#CBD5E1',
+                colors: '#CBD5E1', // ✅ Color exacto de Fuse
             },
         },
-        tickAmount: 20,
+        tickAmount: 20, // ✅ CLAVE: Cantidad exacta de Fuse
         tooltip: {
             enabled: false,
         },
@@ -418,6 +387,10 @@ chartFacebookOverview: ApexOptions = {
         show: false,
     },
 };
+
+
+
+
 
     
     // Selector de tiempo para las gráficas superiores
