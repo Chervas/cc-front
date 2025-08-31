@@ -21,6 +21,8 @@ import { TranslocoModule } from '@ngneat/transloco';
 import { PanelesService } from './paneles.service';
 import { ApexOptions, NgApexchartsModule, ChartComponent } from 'ng-apexcharts';
 import { Subject, takeUntil } from 'rxjs';
+import { ClinicFilterService } from 'app/core/services/clinic-filter-service';
+import { RoleService, UsuarioClinicaResponse } from 'app/core/services/role.service';
 import { RedesSocialesMetricas } from './paneles.types';
 import { CommonModule } from '@angular/common';
 
@@ -62,6 +64,8 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
     metricas: Partial<RedesSocialesMetricas> | null = null;
     loadingMetricas: boolean = false;
     selectedClinicaId: number | null = null;
+    selectedClinicaFilter: string | number | null = null;
+    selectedClinicaDisplay: string = 'Todas';
     errorMetricas: string | null = null;
 
     // Métricas procesadas por plataforma
@@ -445,7 +449,9 @@ defaultLocale: 'es',
     constructor(
         private _panelesService: PanelesService,
         private _router: Router,
-        private _cdr: ChangeDetectorRef 
+        private _cdr: ChangeDetectorRef,
+        private _clinicFilter: ClinicFilterService,
+        private _roleService: RoleService,
     ) {}
 
     // --------------------------------------------
@@ -553,8 +559,72 @@ defaultLocale: 'es',
                 this._cdr.markForCheck();
             });
 
-        // TODO: Integrar con selector de clínicas
-        // Por ahora usar clínica de prueba
+        // Integración con selector de clínicas (Classy):
+        // 1) Mostrar nombre de clínica seleccionada si aplica
+        // Mantener lista de clínicas para mapear IDs -> nombre
+        let allClinicas: UsuarioClinicaResponse[] = [];
+        this._roleService.clinicas$
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((cs) => { allClinicas = cs || []; });
+
+        // Determinar el display en base al filtro global (más robusto que selectedClinica$)
+        this._clinicFilter.selectedClinicId$
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((filter) => {
+                if (!filter || filter === 'all') {
+                    this.selectedClinicaDisplay = 'Todas';
+                } else if (filter.includes(',')) {
+                    const count = filter.split(',').length;
+                    const groupName = this._clinicFilter.getCurrentSelectedGroupName();
+                    this.selectedClinicaDisplay = groupName ? `${groupName} (Grupo • ${count})` : `Grupo de clínicas (${count})`;
+                } else {
+                    const id = parseInt(filter, 10);
+                    const c = allClinicas.find(x => x.id === id);
+                    this.selectedClinicaDisplay = c?.name || 'Clínica';
+                }
+                this._cdr.markForCheck();
+            });
+
+        // 2) Cargar métricas al cambiar el filtro
+        this._clinicFilter.selectedClinicId$
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((filter) => {
+                if (!filter) {
+                    this.selectedClinicaId = null;
+                    this.selectedClinicaFilter = null;
+                    this.clearCharts();
+                    return;
+                }
+                if (filter === 'all') {
+                    // Agregar todas las clínicas accesibles
+                    const ids = allClinicas.map(c => c.id).filter(Boolean);
+                    if (ids.length > 0) {
+                        this.selectedClinicaFilter = ids.join(',');
+                        this.selectedClinicaId = ids[0];
+                        this.loadMetricas();
+                    } else {
+                        this.clearCharts();
+                    }
+                } else {
+                    // Tomar la primera clínica si se selecciona grupo (IDs CSV) o única clínica
+                    const firstId = parseInt(filter.split(',')[0], 10);
+                    if (!isNaN(firstId)) {
+                        this.selectedClinicaId = firstId;
+                        this.selectedClinicaFilter = filter;
+                        this.loadMetricas();
+                    }
+                }
+            });
+
+        // Inicializar desde el estado actual (si existe)
+        const initFilter = this._clinicFilter.getCurrentClinicFilter();
+        if (initFilter) {
+            const firstId = parseInt(initFilter.split(',')[0], 10);
+            if (!isNaN(firstId)) {
+                this.selectedClinicaId = firstId;
+                this.loadMetricas();
+            }
+        }
         this.selectedClinicaId = 1;
 
         // Inicializar gráfico con datos mock como Fuse
@@ -754,7 +824,7 @@ private _generateMockData(timeRange: string, baseValue: number): { dates: number
         this.datosCargados = false;
 
 
-        this._panelesService.getMetricasByClinica(this.selectedClinicaId)
+        this._panelesService.getMetricasByClinica(this.selectedClinicaFilter ?? this.selectedClinicaId!)
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe({
                 next: (response) => {
@@ -808,6 +878,20 @@ setTimeout(() => {
      */
     refreshMetricas(): void {
         this.loadMetricas();
+    }
+
+    /**
+     * Limpiar charts/datos cuando no hay clínica seleccionada
+     */
+    clearCharts(): void {
+        this.metricas = null;
+        this.facebookMetrics = null;
+        this.instagramMetrics = null;
+        this.tiktokMetrics = null;
+        this.linkedinMetrics = null;
+        this.hasMetricasData = false;
+        this.datosCargados = false;
+        this._cdr.markForCheck();
     }
 
     /**

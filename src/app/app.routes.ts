@@ -74,6 +74,11 @@ export const appRoutes: Route[] = [
                     { path: 'ventas', loadChildren: () => import('./modules/admin/apps/ventas/ventas.routes') }
                 ]
             },
+            // Alias directos más amigables
+            { path: 'panel-principal', loadChildren: () => import('./modules/admin/apps/paneles/paneles.routes') },
+            { path: 'paneles', loadChildren: () => import('./modules/admin/apps/paneles/paneles.routes') },
+            { path: 'usuarios', loadChildren: () => import('./modules/admin/apps/contacts/contacts.routes') },
+            { path: 'clinicas', loadChildren: () => import('./modules/admin/apps/clinicas/clinicas.routes') },
 
             // Rutas dentro del grupo "pages"
             {
@@ -82,6 +87,9 @@ export const appRoutes: Route[] = [
                     { path: 'settings', loadChildren: () => import('./modules/admin/pages/settings/settings.routes') }
                 ]
             },
+            // Alias directo para ajustes
+            { path: 'ajustes', loadChildren: () => import('./modules/admin/pages/settings/settings.routes') },
+            { path: 'settings', loadChildren: () => import('./modules/admin/pages/settings/settings.routes') },
 
             // Ruta de pacientes (fuera del grupo "apps")
             {
@@ -109,4 +117,3 @@ export const appRoutes: Route[] = [
         ]
     }
 ];
-

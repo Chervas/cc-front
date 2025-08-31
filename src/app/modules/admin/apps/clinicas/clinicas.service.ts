@@ -41,8 +41,12 @@ export class ClinicasService {
     /**
      * Get clinicas
      */
-    getClinicas(): Observable<Clinica[]> {
-        return this._httpClient.get<Clinica[]>(`${environment.apiUrl}/clinicas`).pipe(
+    getClinicas(filter?: string | null): Observable<Clinica[]> {
+        const params: any = {};
+        if (filter && filter !== 'all') {
+            params.clinica_id = filter;
+        }
+        return this._httpClient.get<Clinica[]>(`${environment.apiUrl}/clinicas`, { params }).pipe(
             tap((clinicas) => {
                 this._clinicas.next(clinicas);
             }),
@@ -202,5 +206,4 @@ export class ClinicasService {
     }
 
 }
-
 

@@ -386,7 +386,9 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
             // Show all clinics
             this.selectedClinicOption = 'all';
             this.selectedGroupName = null;
-            this.clinicFilterService.setSelectedClinicId(null);
+            // Señal explícita de "todas" para que las vistas carguen todo
+            this.clinicFilterService.setSelectedClinicId('all');
+            this.clinicFilterService.setSelectedGroupName(null);
         } else if (typeof value === 'string' && value.startsWith('group:')) {
             // Group selected (including "Sin Grupo")
             const groupName = value.replace('group:', '');
@@ -398,6 +400,14 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
             if (group && group.clinics.length > 0) {
                 console.log(`🏥 [ClassyLayout] Seleccionado grupo "${groupName}" con ${group.clinics.length} clínicas`);
                 this.clinicFilterService.setFilteredClinics(group.clinics);
+                this.clinicFilterService.setSelectedGroupName(groupName);
+                // Propagar IDs como CSV para vistas que aceptan multi-clínica
+                const csvIds = group.clinics.map(c => c.id).join(',');
+                this.clinicFilterService.setSelectedClinicId(csvIds);
+            } else {
+                // Grupo sin clínicas: limpiar selección
+                this.clinicFilterService.setSelectedGroupName(null);
+                this.clinicFilterService.setSelectedClinicId(null);
             }
         } else {
             // Individual clinic selected
@@ -409,6 +419,7 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
                 this.selectedGroupName = null;
                 console.log(`🏥 [ClassyLayout] Seleccionada clínica individual: ${clinic.name}`);
                 this.clinicFilterService.setSelectedClinicId(clinicId.toString());
+                this.clinicFilterService.setSelectedGroupName(null);
             }
         }
     }
@@ -450,4 +461,3 @@ export class ClassyLayoutComponent implements OnInit, OnDestroy
         return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
     }
 }
-

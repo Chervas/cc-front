@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, tap, map } from 'rxjs';
+import { BehaviorSubject, Observable, tap, map, forkJoin } from 'rxjs';
 import { environment } from 'environments/environment';
 
 @Injectable({
@@ -63,7 +63,7 @@ export class PanelesService {
   /**
    * Obtener métricas de redes sociales por clínica
    */
-  getMetricasByClinica(clinicaId: number, startDate?: string, endDate?: string): Observable<any> {
+  getMetricasByClinica(clinicaId: number | string, startDate?: string, endDate?: string): Observable<any> {
     // Construir parámetros de consulta
     let params = '';
     if (startDate || endDate) {
@@ -73,21 +73,60 @@ export class PanelesService {
       params = `?${queryParams.toString()}`;
     }
 
-    const url = `${environment.apiUrl}/paneles/metricas/redes-sociales?idClinica=${clinicaId}${params ? '&' + params.substring(1) : ''}`;
+    // Si clinicaId es CSV, realizar múltiples peticiones y agregar
+    if (typeof clinicaId === 'string' && clinicaId.includes(',')) {
+      const ids = clinicaId.split(',').map(id => id.trim()).filter(Boolean);
+      const requests = ids.map(id => {
+        const url = `${environment.apiUrl}/paneles/metricas/redes-sociales?idClinica=${id}${params ? '&' + params.substring(1) : ''}`;
+        return this._httpClient.get(url);
+      });
 
+      return forkJoin(requests).pipe(
+        map((responses: any[]) => {
+          // Intentar agregar estructuras típicas { data: { resumen, platforms, ... } }
+          const acc: any = { group: true, clinicasIncluidas: ids, agregado: {} };
+          const unwrap = (r: any) => (r?.data ?? r);
+          const unwrapped = responses.map(unwrap);
+          if (unwrapped.length === 0) return acc;
+
+          // Tomar base del primero y sumar numéricos conocidos
+          const base = JSON.parse(JSON.stringify(unwrapped[0]));
+          // Agregar resumen
+          if (base.resumen) {
+            ['totalImpressions','totalReach','totalProfileVisits','totalFollowers'].forEach(k => {
+              base.resumen[k] = unwrapped.reduce((s, u) => s + (u.resumen?.[k] || 0), 0);
+            });
+          }
+          // Agregar por plataforma si existen
+          if (base.platforms) {
+            Object.keys(base.platforms).forEach(p => {
+              if (!base.platforms[p]?.metricas) return;
+              const keys = Object.keys(base.platforms[p].metricas);
+              keys.forEach(k => {
+                base.platforms[p].metricas[k] = unwrapped.reduce((s, u) => s + (u.platforms?.[p]?.metricas?.[k] || 0), 0);
+              });
+            });
+          }
+          acc.agregado = base;
+          return acc;
+        }),
+        tap((agg: any) => {
+          console.log('📊 Métricas agregadas (grupo):', agg);
+          const metricas = agg?.agregado || agg;
+          this._metricas.next(metricas);
+        })
+      );
+    }
+
+    // Caso normal: clínica única
+    const url = `${environment.apiUrl}/paneles/metricas/redes-sociales?idClinica=${clinicaId}${params ? '&' + params.substring(1) : ''}`;
     return this._httpClient.get(url).pipe(
       tap((response: any) => {
-  console.log('📊 Respuesta del backend:', response);
-  
-  // Usar los datos tal como vienen del backend
-  const metricas = response?.data ?? response;
-  
-  console.log('📊 Métricas finales:', metricas);
-  this._metricas.next(metricas);
-})
-
-
-        
+        console.log('📊 Respuesta del backend:', response);
+        const metricas = response?.data ?? response;
+        console.log('📊 Métricas finales:', metricas);
+        this._metricas.next(metricas);
+      })
     );
   }
 

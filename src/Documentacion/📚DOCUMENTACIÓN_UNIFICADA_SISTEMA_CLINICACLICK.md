@@ -7031,6 +7031,22 @@ JOBS_HEALTH_CHECK_SCHEDULE="* * * * *"        # Cada minuto (debug)
 JOBS_SYNC_LOGS_RETENTION="7"                  # 7 días retención
 ```
 
+#### Control de Rate‑Limit y Distribución Nocturna
+
+- El cliente Graph/Marketing API lee `X-App-Usage`, `X-Page-Usage`, `X-Ad-Account-Usage` y `X-Business-Use-Case-Usage`.
+- Si el uso ≥ `METASYNC_RATE_LIMIT_THRESHOLD`, se pausa automáticamente hasta el comienzo de la siguiente hora (`METASYNC_WAIT_NEXT_HOUR_ON_LIMIT=true`).
+- Se limitan los picos con `METASYNC_REQUEST_DELAY_MS`, reintentos con backoff y serialización por cuenta publicitaria. Se añaden pausas entre cuentas con `ADS_SYNC_BETWEEN_ACCOUNTS_SLEEP_MS`.
+
+#### Ventanas de Ads y Jobs dedicados
+
+- `adsSync`: ventana reciente configurable (`ADS_SYNC_RECENT_DAYS`, por defecto 7) hasta ayer; primera ejecución por cuenta usa `ADS_SYNC_INITIAL_DAYS` (por defecto 30).
+- `adsBackfill`: pasada semanal con `ADS_SYNC_BACKFILL_DAYS` (por defecto 28) para consolidar atribución.
+- Ambos jobs conviven con `metricsSync` (orgánico), `tokenValidation`, `dataCleanup` y `healthCheck`.
+
+#### IG Reach (nivel cuenta)
+
+- Además de snapshots y métricas por post, se persiste `reach` diario de `/{ig_user_id}/insights?metric=reach&period=day` en `SocialStatsDaily` (`asset_type=instagram_business`).
+
 **3. Integración con Base de Datos**
 ```javascript
 // Modelos utilizados
@@ -8074,6 +8090,23 @@ El éxito de ClinicaClick dependerá no solo de su excelencia técnica, sino tam
 - 7.6 Observable Reactivo para Roles Disponibles
 - 7.7 Beneficios Empresariales del Sistema de Agrupaciones
 
+#### 7.8 Filtro Global por Clínica/Grupo (id | CSV | all)
+
+El selector jerárquico de la barra lateral establece un filtro global consumido por las vistas. La semántica del valor propagado es:
+
+- Clínica individual: `clinica_id = "<id>"`.
+- Grupo de clínicas: `clinica_id = "<id1>,<id2>,...,<idN>"` (CSV) — los endpoints que lo soportan filtran con `IN`.
+- Todas las clínicas: `clinica_id = "all"`.
+
+Persistencia y arranque
+- El valor seleccionado se persiste en `localStorage.selectedClinicId` y el nombre del grupo (si aplica) en `selectedGroupName`.
+- Al cargar, el `ClinicFilterService` rehidrata ambos para que las vistas arranquen ya filtradas.
+
+Comportamiento por vista
+- Pacientes: usa `/api/pacientes?clinica_id=<valor>`; el backend admite CSV y filtra con `Op.in`. Con `all`, llama a `/api/pacientes` (todas según permisos).
+- Clínicas: `/api/clinicas` admite `clinica_id` (id, CSV o `all`). La vista se suscribe al filtro global y recarga el listado al cambiar.
+- Paneles: si `clinica_id` es CSV o `all`, el frontend pide métricas por clínica y agrega (suma) en cliente para mostrar el total del grupo o del conjunto completo de clínicas accesibles. El encabezado muestra `«<NombreGrupo> (Grupo • N)»`, o `«Todas»` si aplica.
+
 ### **8. Selector Jerárquico de Clínicas** {#selector-jerarquico}
 - 8.1 Arquitectura del Selector Jerárquico
 - 8.2 Estructura Visual y Casos de Uso
@@ -8081,6 +8114,12 @@ El éxito de ClinicaClick dependerá no solo de su excelencia técnica, sino tam
 - 8.4 Lógica del Componente TypeScript
 - 8.5 Integración con Sistema de Filtros
 - 8.6 Beneficios de la Implementación
+
+#### 8.7 Propagación Reactiva y Persistencia del Filtro
+
+- El `ClinicFilterService` expone `selectedClinicId$`/`selectedGroupName$` y mantiene el valor actual (rehidratado desde `localStorage`).
+- Vistas suscritas: Pacientes (no muestra nada sin filtro; `all` → todos), Clínicas (`clinica_id` id/CSV/`all`), Paneles (agregación en cliente para id/CSV/`all`).
+- El selector emite `all` explícitamente al elegir “Todas” para que las vistas puedan actuar sin ambigüedad.
 
 ### **9. Funcionalidades del Frontend** {#frontend}
 - 9.1 Arquitectura Angular y Estructura de Componentes
@@ -8138,7 +8177,7 @@ Esta tabla consolida las métricas recogidas, el endpoint de origen, cómo las c
 | Nuevos seguidores en Facebook | GET …/{PAGE_ID}?fields=fan_count | fan_count total | Diferencia fan_count hoy − ayer | SocialStatsDaily | facebook_page | followers_day | Daily (difference); negativos = unfollows (Implementado) |
 | Seguidores totales en Instagram | GET https://graph.facebook.com/{BUSINESS_ID}?fields=followers_count | Total followers IG (lifetime) | Snapshot diario y upsert | SocialStatsDaily | instagram_business | followers | IG Business; posible retraso hasta 48h (Implementado) |
 | Nuevos seguidores en Instagram | GET …/{BUSINESS_ID}/insights?metric=follower_count&period=day&since={start}&until={end} | Followers ganados por día (últimos 30 días) | Guardamos valores diarios; combinable con snapshot para tramos largos | SocialStatsDaily | instagram_business | followers_day | API limita a 30 días; no explicita unfollows (Implementado) |
-| Alcance orgánico en Instagram | GET /{IG_USER_ID}/insights?metric=reach&period=day | Reach diario orgánico de la cuenta | Persistir serie diaria y sumar por periodos | SocialStatsDaily | instagram_business | reach | 48h de retraso; requiere IG Business (Pendiente) |
+| Alcance orgánico en Instagram | GET /{IG_USER_ID}/insights?metric=reach&period=day | Reach diario orgánico de la cuenta | Persistir serie diaria y sumar por periodos | SocialStatsDaily | instagram_business | reach | 48h de retraso; requiere IG Business (Implementado) |
 | Alcance orgánico en Facebook | GET /{PAGE_ID}/insights/page_impressions_organic_unique?since&until | Personas únicas expuestas (orgánico) | Guardar diario; fallback: total_unique − paid_unique si falta métrica orgánica | SocialStatsDaily | facebook_page | reach | Días, semanas y 28d; usamos diario (Implementado con fallback) |
 | Alcance pagado en Instagram (Ads) | GET /v{ver}/act_{ad_account_id}/insights?fields=reach&breakdowns=publisher_platform&time_increment=1 | Reach diario por plataforma | Sumamos reach diario de publisher_platform=instagram | SocialStatsDaily | ad_account | reach_instagram | Diario por ad account (Implementado) |
 | Alcance pagado en Facebook (Ads) | (igual) | Reach diario Facebook | Sumamos reach diario de publisher_platform=facebook | SocialStatsDaily | ad_account | reach_facebook | Diario por ad account (Implementado) |
@@ -8176,7 +8215,8 @@ Esta tabla consolida las métricas recogidas, el endpoint de origen, cómo las c
 
 ### Notas de Implementación Actual
 - Boosted posts: vínculo anuncio ↔ post mediante `creative.effective_instagram_media_id` (IG) y `effective_object_story_id` (FB) en `PostPromotions` (Implementado).
-- Control de rate‑limit: se inspeccionan cabeceras `X-*Usage`; si se supera el umbral se pausa hasta la siguiente hora (configurable) (Implementado).
-- Ventanas Ads: inicial 30 días, diario 7 días, backfill 28 días (configurable) (Implementado).
-- AdCache: no se usa en producción; reducción de llamadas mediante ventanas incrementales + batching (Documentado; no operativo).
-
+- Control de rate‑limit: cabeceras `X-App-Usage`, `X-Page-Usage`, `X-Ad-Account-Usage`, `X-Business-Use-Case-Usage`. Si se supera el umbral se pausa hasta la siguiente hora (configurable) (Implementado).
+- Ventanas Ads: inicial 30 días, diario 7 días, backfill 28 días (configurable). Jobs `adsSync` y `adsBackfill` creados (Implementado).
+- IG Reach: se guarda reach diario a nivel de cuenta en `SocialStatsDaily` (asset_type=instagram_business) vía IG User Insights (Implementado).
+- Selector de clínicas/grupos: el filtro global (Classy) emite `clinica_id` como id, CSV (grupo) o `all`. Pacientes y Clinicas lo consumen para cargar datos (Implementado).
+- Paneles: agrega métricas cuando hay grupo o “Todas” (suma de clínicas accesibles). Placeholder muestra “<Grupo> (Grupo)” o “Todas” (Implementado).

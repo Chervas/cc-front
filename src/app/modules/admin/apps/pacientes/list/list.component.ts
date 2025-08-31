@@ -62,12 +62,18 @@ export class PacientesListComponent implements OnInit, OnDestroy
 
   ngOnInit(): void
   {
-    // Recuperar el filtro guardado y emitirlo al BehaviorSubject
-    const currentFilter = localStorage.getItem('selectedClinicId') || null;
-    this._pacientesService.selectedClinicId$.next(currentFilter);
+    // Inicializar filtro desde almacenamiento si existe
+    const saved = localStorage.getItem('selectedClinicId');
+    if (saved) {
+      this._pacientesService.selectedClinicId$.next(saved);
+    }
 
-    // Cargar pacientes filtrados inicialmente
-    this._pacientesService.getPacientes(currentFilter).subscribe();
+    // Suscribirse al filtro centralizado y cargar pacientes cuando cambie
+    this._pacientesService.selectedClinicId$
+      .pipe(takeUntil(this._unsubscribeAll))
+      .subscribe((filter) => {
+        this._pacientesService.getPacientes(filter).subscribe();
+      });
 
     // Suscribirse a la lista de pacientes
     this.pacientes$ = this._pacientesService.pacientes$;

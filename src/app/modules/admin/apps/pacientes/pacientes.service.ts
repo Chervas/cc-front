@@ -43,12 +43,21 @@ export class PacientesService {
 
   getPacientes(clinicId?: string | null): Observable<Paciente[]> {
     const params: any = {};
-    if (clinicId) {
+    if (clinicId && clinicId !== 'all') {
       params.clinica_id = clinicId;
+      return this._httpClient.get<Paciente[]>(this.baseUrl, { params }).pipe(
+        tap((pacientes) => this._pacientes.next(pacientes))
+      );
+    } else if (clinicId === 'all') {
+      // Todas las clínicas: pedir todos (acceso según rol)
+      return this._httpClient.get<Paciente[]>(this.baseUrl).pipe(
+        tap((pacientes) => this._pacientes.next(pacientes))
+      );
+    } else {
+      // Estado inicial sin selección explícita: no pedir nada
+      this._pacientes.next([]);
+      return this._pacientes.asObservable();
     }
-    return this._httpClient.get<Paciente[]>(this.baseUrl, { params }).pipe(
-      tap((pacientes) => this._pacientes.next(pacientes))
-    );
   }
 
   searchPacientes(query: string): Observable<Paciente[]> {
@@ -103,4 +112,3 @@ export class PacientesService {
     );
   }
 }
-

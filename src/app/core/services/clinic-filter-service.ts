@@ -11,6 +11,8 @@ export class ClinicFilterService {
   
   // Subject para la lista de clínicas filtradas por rol (para desplegables)
   private _filteredClinics = new BehaviorSubject<any[]>([]);
+  // Nombre del grupo seleccionado (opcional)
+  private _selectedGroupName = new BehaviorSubject<string | null>(null);
   
   // Subject para el usuario actual
   private _currentUser = new BehaviorSubject<any>(null);
@@ -18,7 +20,19 @@ export class ClinicFilterService {
   // Subject para el rol seleccionado
   private _selectedRole = new BehaviorSubject<string>('');
 
-  constructor() {}
+  constructor() {
+    // Inicializar desde localStorage si existe
+    try {
+      const saved = localStorage.getItem('selectedClinicId');
+      if (saved) {
+        this._selectedClinicId.next(saved);
+      }
+      const savedGroup = localStorage.getItem('selectedGroupName');
+      if (savedGroup) {
+        this._selectedGroupName.next(savedGroup);
+      }
+    } catch {}
+  }
 
   // ✅ GETTERS PARA OBSERVABLES
   
@@ -36,6 +50,11 @@ export class ClinicFilterService {
    */
   get filteredClinics$(): Observable<any[]> {
     return this._filteredClinics.asObservable();
+  }
+
+  /** Nombre del grupo seleccionado */
+  get selectedGroupName$(): Observable<string | null> {
+    return this._selectedGroupName.asObservable();
   }
 
   /**
@@ -58,6 +77,13 @@ export class ClinicFilterService {
    * Actualizar el filtro de clínica seleccionado
    */
   setSelectedClinicId(clinicId: string | null): void {
+    try {
+      if (clinicId) {
+        localStorage.setItem('selectedClinicId', clinicId);
+      } else {
+        localStorage.removeItem('selectedClinicId');
+      }
+    } catch {}
     this._selectedClinicId.next(clinicId);
   }
 
@@ -66,6 +92,15 @@ export class ClinicFilterService {
    */
   setFilteredClinics(clinics: any[]): void {
     this._filteredClinics.next(clinics);
+  }
+
+  /** Establecer nombre del grupo seleccionado */
+  setSelectedGroupName(name: string | null): void {
+    try {
+      if (name) localStorage.setItem('selectedGroupName', name);
+      else localStorage.removeItem('selectedGroupName');
+    } catch {}
+    this._selectedGroupName.next(name);
   }
 
   /**
@@ -96,6 +131,11 @@ export class ClinicFilterService {
    */
   getCurrentFilteredClinics(): any[] {
     return this._filteredClinics.getValue();
+  }
+
+  /** Obtener nombre de grupo actual */
+  getCurrentSelectedGroupName(): string | null {
+    return this._selectedGroupName.getValue();
   }
 
   /**
@@ -135,4 +175,3 @@ export class ClinicFilterService {
     return params;
   }
 }
-

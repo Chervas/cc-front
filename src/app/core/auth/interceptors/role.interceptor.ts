@@ -15,132 +15,76 @@ import { RoleService } from 'app/core/services/role.service';
 const FUSE_MOCK_ROUTES = {
     '/api/common/navigation': {
         default: [
-            {
-                id: 'panel',
-                title: 'Panel Principal',
-                type: 'basic',
-                icon: 'heroicons_outline:home',
-                link: '/example'
-            },
-            {
-                id: 'pacientes',
-                title: 'PACIENTES',
-                type: 'group',
-                icon: 'heroicons_outline:users',
-                children: [
-                    {
-                        id: 'pacientes.lista',
-                        title: 'Lista de Pacientes',
-                        type: 'basic',
-                        icon: 'heroicons_outline:user-group',
-                        link: '/apps/contacts'
-                    },
-                    {
-                        id: 'pacientes.nuevo',
-                        title: 'Nuevo Paciente',
-                        type: 'basic',
-                        icon: 'heroicons_outline:user-plus',
-                        link: '/pages/activities'
-                    }
-                ]
-            },
-            {
-                id: 'citas',
-                title: 'CITAS',
-                type: 'group',
-                icon: 'heroicons_outline:calendar',
-                children: [
-                    {
-                        id: 'citas.calendario',
-                        title: 'Calendario de Citas',
-                        type: 'basic',
-                        icon: 'heroicons_outline:calendar-days',
-                        link: '/apps/calendar'
-                    },
-                    {
-                        id: 'citas.programar',
-                        title: 'Programar Cita',
-                        type: 'basic',
-                        icon: 'heroicons_outline:plus-circle',
-                        link: '/pages/settings'
-                    }
-                ]
-            },
-            {
-                id: 'clinica',
-                title: 'CLÍNICA',
-                type: 'group',
-                icon: 'heroicons_outline:building-office',
-                children: [
-                    {
-                        id: 'clinica.configuracion',
-                        title: 'Configuración',
-                        type: 'basic',
-                        icon: 'heroicons_outline:cog-6-tooth',
-                        link: '/pages/settings'
-                    },
-                    {
-                        id: 'clinica.personal',
-                        title: 'Personal',
-                        type: 'basic',
-                        icon: 'heroicons_outline:user-group',
-                        link: '/apps/contacts'
-                    }
-                ]
-            },
-            {
-                id: 'reportes',
-                title: 'Reportes',
-                type: 'basic',
-                icon: 'heroicons_outline:chart-bar',
-                link: '/apps/academy'
-            }
-        ],
-        compact: [
-            {
-                id: 'panel',
-                title: 'Panel',
-                type: 'basic',
-                icon: 'heroicons_outline:home',
-                link: '/example'
-            },
+            // Panel principal
+            { id: 'panel-principal', title: 'Panel Principal', type: 'basic', icon: 'heroicons_outline:chart-bar', link: '/panel-principal' },
+
+            // Pacientes
             {
                 id: 'pacientes',
                 title: 'Pacientes',
-                type: 'basic',
-                icon: 'heroicons_outline:users',
-                link: '/apps/contacts'
+                type: 'group',
+                icon: 'heroicons_outline:user-group',
+                children: [
+                    { id: 'pacientes.lista', title: 'Lista de pacientes', type: 'basic', icon: 'heroicons_outline:user-group', link: '/pacientes' },
+                    { id: 'pacientes.calendario', title: 'Calendario de Citas', type: 'basic', icon: 'heroicons_outline:calendar', disabled: true },
+                    { id: 'pacientes.recordatorios', title: 'Recordatorios', type: 'basic', icon: 'heroicons_outline:bell', disabled: true },
+                ]
             },
+
+            // Marketing
             {
-                id: 'citas',
-                title: 'Citas',
-                type: 'basic',
-                icon: 'heroicons_outline:calendar',
-                link: '/apps/calendar'
+                id: 'marketing',
+                title: 'Marketing',
+                type: 'group',
+                icon: 'heroicons_outline:megaphone',
+                children: [
+                    { id: 'marketing.primeras-citas', title: 'Primeras citas', type: 'basic', icon: 'heroicons_outline:clipboard-document-check', disabled: true },
+                    { id: 'marketing.campanas', title: 'Campañas', type: 'basic', icon: 'heroicons_outline:swatch', disabled: true },
+                    { id: 'marketing.redes', title: 'Redes sociales', type: 'basic', icon: 'heroicons_outline:share', disabled: true },
+                    { id: 'marketing.web', title: 'Página web', type: 'basic', icon: 'heroicons_outline:globe-alt', disabled: true },
+                    { id: 'marketing.perfil-google', title: 'Perfil de Empresa en Google', type: 'basic', icon: 'heroicons_outline:map-pin', disabled: true },
+                ]
             },
+
+            // Clínica
             {
                 id: 'clinica',
                 title: 'Clínica',
-                type: 'basic',
-                icon: 'heroicons_outline:building-office',
-                link: '/pages/settings'
+                type: 'group',
+                icon: 'heroicons_outline:building-office-2',
+                children: [
+                    { id: 'clinica.usuarios', title: 'Personal', type: 'basic', icon: 'heroicons_outline:identification', link: '/usuarios' },
+                    { id: 'clinica.tratamientos', title: 'Tratamientos', type: 'basic', icon: 'heroicons_outline:beaker', disabled: true },
+                    { id: 'clinica.clinicas', title: 'Clínicas', type: 'basic', icon: 'heroicons_outline:building-storefront', link: '/clinicas' },
+                    { id: 'clinica.instalaciones', title: 'Instalaciones', type: 'basic', icon: 'heroicons_outline:home-modern', disabled: true },
+                    { id: 'clinica.aseguradoras', title: 'Aseguradoras', type: 'basic', icon: 'heroicons_outline:shield-check', disabled: true },
+                    { id: 'clinica.tareas', title: 'Tareas', type: 'basic', icon: 'heroicons_outline:check-circle', disabled: true },
+                    { id: 'clinica.correo', title: 'Correo electrónico', type: 'basic', icon: 'heroicons_outline:envelope', disabled: true },
+                ]
             },
+
+            // General
             {
-                id: 'reportes',
-                title: 'Reportes',
-                type: 'basic',
-                icon: 'heroicons_outline:chart-bar',
-                link: '/apps/academy'
-            }
+                id: 'general',
+                title: 'General',
+                type: 'group',
+                icon: 'heroicons_outline:cog-6-tooth',
+                children: [
+                    { id: 'general.ajustes', title: 'Ajustes', type: 'basic', icon: 'heroicons_outline:cog-6-tooth', link: '/ajustes' },
+                ]
+            },
         ],
+
+        compact: [
+            { id: 'panel-principal', title: 'Panel Principal', type: 'basic', icon: 'heroicons_outline:chart-bar', link: '/panel-principal' },
+            { id: 'pacientes', title: 'Pacientes', type: 'basic', icon: 'heroicons_outline:user-group', link: '/pacientes' },
+            { id: 'clinica', title: 'Clínica', type: 'basic', icon: 'heroicons_outline:building-office-2', link: '/clinicas' },
+            { id: 'marketing', title: 'Marketing', type: 'basic', icon: 'heroicons_outline:megaphone', link: '/panel-principal' },
+            { id: 'ajustes', title: 'Ajustes', type: 'basic', icon: 'heroicons_outline:cog-6-tooth', link: '/ajustes' },
+        ],
+
         futuristic: [
-            {
-                id: 'panel',
-                title: 'Panel Principal',
-                type: 'basic',
-                icon: 'heroicons_outline:home',
-                link: '/example'
-            }
+            { id: 'panel-principal', title: 'Panel Principal', type: 'basic', icon: 'heroicons_outline:chart-bar', link: '/panel-principal' },
         ]
     },
     '/api/common/messages': [],
