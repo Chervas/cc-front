@@ -7615,7 +7615,7 @@ JOBS_SYNC_LOGS_RETENTION=30  # 30 días en producción
 
  🎉 **CONCLUSIÓN**
 
-El Sistema de Cron Jobs de ClinicaClick representa una implementación robusta, escalable y completamente operativa para la sincronización automática de métricas de redes sociales. Con **4 jobs funcionando al 100%**, manejo avanzado de errores, logging completo, y optimizaciones de rendimiento, el sistema está preparado para manejar múltiples clínicas y grandes volúmenes de datos.
+El Sistema de Cron Jobs de ClinicaClick representa una implementación robusta, escalable y completamente operativa para la sincronización automática de métricas de redes sociales. Con **6 jobs funcionando al 100%** (metricsSync, adsSync, adsBackfill, tokenValidation, dataCleanup, healthCheck), manejo avanzado de errores, logging completo, y optimizaciones de rendimiento, el sistema está preparado para manejar múltiples clínicas y grandes volúmenes de datos.
 
 **Estado Actual:** ✅ **COMPLETAMENTE OPERATIVO**
 **Próximo Paso:** Implementación de paneles de visualización frontend
@@ -8126,4 +8126,57 @@ El éxito de ClinicaClick dependerá no solo de su excelencia técnica, sino tam
 
 ---
 
+---
+
+## 9. Tabla de Métricas (Origen → ETL → Destino)
+
+Esta tabla consolida las métricas recogidas, el endpoint de origen, cómo las calculamos en el ETL, y dónde se almacenan. Entre paréntesis, indicamos el estado actual: (Implementado), (Parcial) o (Pendiente).
+
+| Métrica | API / Endpoint | Qué devuelve | Cómo lo calcularemos | Destino (tabla | asset_type | columna) | Granularidad | Limitaciones / notas |
+|---|---|---|---|---|---|---|
+| Seguidores totales en Facebook | GET https://graph.facebook.com/{PAGE_ID}?fields=fan_count | Total de fans/likes actuales (lifetime) | Snapshot diario y upsert; calculamos variaciones aparte | SocialStatsDaily | facebook_page | followers | Daily snapshot; no histórico en API (Implementado) |
+| Nuevos seguidores en Facebook | GET …/{PAGE_ID}?fields=fan_count | fan_count total | Diferencia fan_count hoy − ayer | SocialStatsDaily | facebook_page | followers_day | Daily (difference); negativos = unfollows (Implementado) |
+| Seguidores totales en Instagram | GET https://graph.facebook.com/{BUSINESS_ID}?fields=followers_count | Total followers IG (lifetime) | Snapshot diario y upsert | SocialStatsDaily | instagram_business | followers | IG Business; posible retraso hasta 48h (Implementado) |
+| Nuevos seguidores en Instagram | GET …/{BUSINESS_ID}/insights?metric=follower_count&period=day&since={start}&until={end} | Followers ganados por día (últimos 30 días) | Guardamos valores diarios; combinable con snapshot para tramos largos | SocialStatsDaily | instagram_business | followers_day | API limita a 30 días; no explicita unfollows (Implementado) |
+| Alcance orgánico en Instagram | GET /{IG_USER_ID}/insights?metric=reach&period=day | Reach diario orgánico de la cuenta | Persistir serie diaria y sumar por periodos | SocialStatsDaily | instagram_business | reach | 48h de retraso; requiere IG Business (Pendiente) |
+| Alcance orgánico en Facebook | GET /{PAGE_ID}/insights/page_impressions_organic_unique?since&until | Personas únicas expuestas (orgánico) | Guardar diario; fallback: total_unique − paid_unique si falta métrica orgánica | SocialStatsDaily | facebook_page | reach | Días, semanas y 28d; usamos diario (Implementado con fallback) |
+| Alcance pagado en Instagram (Ads) | GET /v{ver}/act_{ad_account_id}/insights?fields=reach&breakdowns=publisher_platform&time_increment=1 | Reach diario por plataforma | Sumamos reach diario de publisher_platform=instagram | SocialStatsDaily | ad_account | reach_instagram | Diario por ad account (Implementado) |
+| Alcance pagado en Facebook (Ads) | (igual) | Reach diario Facebook | Sumamos reach diario de publisher_platform=facebook | SocialStatsDaily | ad_account | reach_facebook | Diario por ad account (Implementado) |
+| Alcance total | - | Suma de orgánico + pagado por día | reach_total = reach(orgánico IG+FB) + reach(pagado IG+FB) | SocialStatsDaily | (varios) | reach_total | Doble conteo entre canales; cálculo en ETL/UI (Parcial) |
+| Interacciones totales en Instagram (orgánico) | Agregación de posts | likes + comments + shares + saved | Suma desde SocialPosts por día/asset | SocialStatsDaily | instagram_business | engagement | Cuenta solo orgánico; boosted va en Ads (Implementado) |
+| Interacciones totales en Facebook (orgánico) | Agregación de posts | reactions + comments + shares | Suma desde SocialPosts por día/asset | SocialStatsDaily | facebook_page | engagement | Reacciones incluyen LIKE/LOVE/HAHA/WOW/SAD/ANGRY/CARE (Implementado) |
+| Likes totales en Instagram | GET /{IG_USER_ID}/media?fields=like_count (por post) | Likes por post | Suma de like_count de posts del día | SocialStatsDaily | instagram_business | likes | Solo orgánico (Implementado) |
+| Reacciones totales en Facebook | GET /{post-id}?fields=reactions.summary(total_count) | Total de reacciones por post | Suma de total_count del día | SocialStatsDaily | facebook_page | reactions | Solo orgánico (Implementado) |
+| Métricas por post (Instagram) | GET /{media-id}?fields=like_count,comments_count,media_type,permalink y /{media-id}/insights?metric=saved,shares,views,ig_reels_avg_watch_time | Lifetimes y vistas/guardados/tiempo medio | Guardamos en SocialPosts: reactions_and_likes, comments_count, saved_count, shares_count, views_count, avg_watch_time_ms, media_type, insights_synced_at | SocialPosts | instagram_business | varias | views sustituye a impressions/video_views (Implementado) |
+| Métricas por post (Facebook) | GET /{post-id}?fields=reactions…,comments…,shares y /{video-id}/video_insights?metric=total_video_views | Total reacciones, comentarios, compartidos, vistas video | SocialPosts: reactions_and_likes, comments_count, shares_count, views_count (video), avg_watch_time_ms (si aplica) | SocialPosts | facebook_page | varias | saved_count no orgánico; video metrics solo para vídeo (Implementado) |
+| Gasto en Instagram (Ads) | GET /act_{ad_account_id}/insights?fields=spend&breakdowns=publisher_platform&time_increment=1 | spend diario por plataforma | Sumamos spend de instagram | SocialStatsDaily | ad_account | spend_instagram | Diario por ad account (Implementado) |
+| Gasto en Facebook (Ads) | (igual) | spend diario Facebook | Sumamos spend de facebook | SocialStatsDaily | ad_account | spend_facebook | Diario por ad account (Implementado) |
+| Impresiones pagadas en Instagram (Ads) | GET …/insights?fields=impressions&breakdowns=publisher_platform&time_increment=1 | impresiones por día | Sumamos impresiones de instagram | SocialStatsDaily | ad_account | impressions_instagram | Diario (Implementado) |
+| Impresiones pagadas en Facebook (Ads) | (igual) | impresiones por día | Sumamos impresiones de facebook | SocialStatsDaily | ad_account | impressions_facebook | Diario (Implementado) |
+| Visualizaciones orgánicas IG (posts) | GET /{media-id}/insights?metric=views | views por post | Suma de views_count por día | SocialStatsDaily | instagram_business | views | 48h retraso; aplica a vídeo/reels (Implementado) |
+| Visualizaciones orgánicas FB (vídeo) | GET /{video-id}/video_insights?metric=total_video_views | Vistas de vídeo | Suma por día; no aplica a imagen | SocialStatsDaily | facebook_page | views | Solo vídeo; imagen sin vistas (Implementado) |
+| Publicaciones en Instagram | - | Número de posts publicados | Conteo de SocialPosts con fecha del día | SocialStatsDaily | instagram_business | posts_count | Diario (Implementado) |
+| Publicaciones en Facebook | - | Número de posts publicados | Conteo de SocialPosts con fecha del día | SocialStatsDaily | facebook_page | posts_count | Diario (Implementado) |
+| Interacciones sobre publicaciones IG | - | Suma likes+comments+shares+saved de posts | Suma desde SocialPosts por día | SocialStatsDaily | instagram_business | engagement | Orgánico; Ads en actions (Implementado) |
+| Interacciones sobre publicaciones FB | - | Suma reactions+comments+shares | Suma desde SocialPosts por día | SocialStatsDaily | facebook_page | engagement | Orgánico; Ads en actions (Implementado) |
+| Reacciones en anuncios (likes) | GET /act_{ad_account_id}/insights?fields=actions&action_breakdowns=action_type&time_increment=1 | actions con action_type=post_reaction | Guardar filas en SocialAdsActionsDaily (por ad, día) | SocialAdsActionsDaily | ad | post_reaction | Diario; depende atribución (Implementado) |
+| Comentarios en anuncios | (igual) | action_type=comment | (igual) | SocialAdsActionsDaily | ad | comment | Diario (Implementado) |
+| Compartidos en anuncios | (igual) | action_type=post_share | (igual) | SocialAdsActionsDaily | ad | post_share | Diario (Implementado) |
+| Guardados en anuncios | (igual) | action_type=post_save o onsite_conversion.post_save | (igual) | SocialAdsActionsDaily | ad | post_save | Diario (Implementado) |
+| Seguidores obtenidos por anuncios | (igual) | action_type=follow | (igual) | SocialAdsActionsDaily | ad | follow | Diario; puede no aparecer (Implementado) |
+| Leads en anuncios | (igual) | action_type=lead | (igual) | SocialAdsActionsDaily | ad | lead | Requiere Lead Ads y permisos (Implementado) |
+| Clics en anuncios (link_click) | (igual) | action_type=link_click | (igual) | SocialAdsActionsDaily | ad | link_click | Diario (Implementado) |
+| Vistas de landing (landing_page_view) | (igual) | action_type=landing_page_view | (igual) | SocialAdsActionsDaily | ad | landing_page_view | Diario (Implementado) |
+| CPC | GET …/insights?fields=cpc&time_increment=1 | Coste medio por clic | Guardar en SocialAdsInsightsDaily | SocialAdsInsightsDaily | ad | cpc | Diario (Implementado) |
+| CPM | GET …/insights?fields=cpm&time_increment=1 | Coste por mil | Guardar en SocialAdsInsightsDaily | SocialAdsInsightsDaily | ad | cpm | Diario (Implementado) |
+| CTR | GET …/insights?fields=ctr&time_increment=1 | Ratio clics/impresiones | Guardar en SocialAdsInsightsDaily | SocialAdsInsightsDaily | ad | ctr | Diario (Implementado) |
+| Frecuencia | GET …/insights?fields=frequency&time_increment=1 | Veces promedio visto | Guardar en SocialAdsInsightsDaily | SocialAdsInsightsDaily | ad | frequency | Diario (Implementado) |
+| Conversaciones iniciadas IG | - | No disponible en Graph API | No se calcula | - | - | Meta no expone esta info (N/A) |
+| Conversaciones iniciadas FB | - | No disponible en Graph API | No se calcula | - | - | Requiere Inbox API (N/A) |
+
+### Notas de Implementación Actual
+- Boosted posts: vínculo anuncio ↔ post mediante `creative.effective_instagram_media_id` (IG) y `effective_object_story_id` (FB) en `PostPromotions` (Implementado).
+- Control de rate‑limit: se inspeccionan cabeceras `X-*Usage`; si se supera el umbral se pausa hasta la siguiente hora (configurable) (Implementado).
+- Ventanas Ads: inicial 30 días, diario 7 días, backfill 28 días (configurable) (Implementado).
+- AdCache: no se usa en producción; reducción de llamadas mediante ventanas incrementales + batching (Documentado; no operativo).
 

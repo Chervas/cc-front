@@ -70,6 +70,7 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
     tiktokMetrics: RedesSocialesMetricas['tiktok'] | null = null;
     linkedinMetrics: RedesSocialesMetricas['linkedin'] | null = null;
     hasMetricasData: boolean = false;
+    datosCargados: boolean = false;
 
         @ViewChild('facebookChart') facebookChart!: ChartComponent;
     
@@ -105,6 +106,16 @@ chartInstagramOverview: ApexOptions = {
         zoom: {
             enabled: false,
         },
+        locales: [{
+    name: 'es',
+    options: {
+        months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+        shortMonths: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+        days: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+        shortDays: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+    }
+}],
+defaultLocale: 'es',
     },
     colors: ['#818CF8'], // Color exacto de Fuse
     dataLabels: {
@@ -162,12 +173,12 @@ chartInstagramOverview: ApexOptions = {
             },
         },
         labels: {
-            offsetY: -20, // ✅ CLAVE: Offset exacto de Fuse
+            offsetY: -20, 
             style: {
                 colors: '#CBD5E1', // ✅ Color exacto de Fuse
             },
         },
-        tickAmount: 20, // ✅ CLAVE: Cantidad exacta de Fuse
+        tickAmount: 20, 
         tooltip: {
             enabled: false,
         },
@@ -207,6 +218,16 @@ chartTiktokOverview: ApexOptions = {
         zoom: {
             enabled: false,
         },
+        locales: [{
+    name: 'es',
+    options: {
+        months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+        shortMonths: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+        days: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+        shortDays: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+    }
+}],
+defaultLocale: 'es',
     },
     colors: ['#818CF8'], // Color exacto de Fuse
     dataLabels: {
@@ -309,6 +330,16 @@ chartFacebookOverview: ApexOptions = {
         zoom: {
             enabled: false,
         },
+        locales: [{
+    name: 'es',
+    options: {
+        months: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+        shortMonths: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+        days: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+        shortDays: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+    }
+}],
+defaultLocale: 'es',
     },
     colors: ['#818CF8'], // Color exacto de Fuse
     dataLabels: {
@@ -720,6 +751,8 @@ private _generateMockData(timeRange: string, baseValue: number): { dates: number
 
         this.loadingMetricas = true;
         this.errorMetricas = null;
+        this.datosCargados = false;
+
 
         this._panelesService.getMetricasByClinica(this.selectedClinicaId)
             .pipe(takeUntil(this._unsubscribeAll))
@@ -751,6 +784,7 @@ console.log('🔄 Change detection forzada después de cargar métricas');
 
 // Ejecutar siempre, no depender del ViewChild
 this._updateChartsWithMetricas();
+this.datosCargados = true;
 
 // También intentar después de un delay para el ViewChild
 setTimeout(() => {
@@ -879,6 +913,8 @@ if (!this.metricas && !this.facebookMetrics) {
     console.log('📈 Llamando a updateOverviewCharts()');
     this.updateOverviewCharts();
     console.log('📈 updateOverviewCharts() completado');
+    this.datosCargados = true;
+    this._cdr.markForCheck();
 }
 
 

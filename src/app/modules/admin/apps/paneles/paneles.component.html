@@ -139,7 +139,7 @@
                                             </div>
                                         </div>
                                         <div class="flex h-80 flex-auto flex-col">
-                                            <apx-chart
+                                            <apx-chart *ngIf="datosCargados"
                                                 #instagramOverviewChart
                                                 class="h-full w-full flex-auto"
                                                 [chart]="chartInstagramOverview.chart"
@@ -169,7 +169,7 @@
                                             </div>
                                         </div>
                                         <div class="flex h-80 flex-auto flex-col">
-                                            <apx-chart
+                                            <apx-chart *ngIf="datosCargados"
                                                 #tiktokOverviewChart
                                                 class="h-full w-full flex-auto"
                                                 [chart]="chartTiktokOverview.chart"
@@ -190,7 +190,7 @@
                                     <div class="bg-card dark flex flex-auto flex-col overflow-hidden rounded-2xl shadow">
                                         <div class="ml-6 mr-6 mt-6 flex items-center justify-between">
                                             <div class="flex flex-col">
-                                                <div class="text-xl font-semibold leading-7 tracking-tight text-blue-400">
+                                                 <div class="text-xl font-semibold leading-7 tracking-tight text-cyan-400">
                                                     Facebook
                                                 </div>
                                                 <div class="text-secondary font-medium">
@@ -199,7 +199,7 @@
                                             </div>
                                         </div>
                                         <div class="flex h-80 flex-auto flex-col">
-                                            <apx-chart
+                                            <apx-chart *ngIf="datosCargados"
                                                 #facebookOverviewChart
                                                 class="h-full w-full flex-auto"
                                                 [chart]="chartFacebookOverview.chart"
@@ -321,7 +321,7 @@
 									<div class="text-3xl font-bold">{{ facebookMetrics?.engagement }}%</div>
 									<div class="text-sm text-blue-500">{{ formatNumber(facebookMetrics?.seguidores || 0) }} seguidores</div>
 									<div class="flex flex-auto items-end mt-6">
-										<apx-chart
+										<apx-chart *ngIf="datosCargados"
 										#facebookChart
 										class="flex-auto w-full"
 										[height]="200"
