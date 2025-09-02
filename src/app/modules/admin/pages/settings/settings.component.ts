@@ -104,6 +104,18 @@ export class SettingsComponent implements OnInit, OnDestroy {
                 const accessToken = params.get('accessToken');
                 const metaDenied = params.get('meta_denied');
 
+                // 🚀 Prioridad 1: Si venimos de un flujo que debe devolver al origen (open-mapping), redirigir de inmediato
+                const returnTo = localStorage.getItem('meta_oauth_return_to');
+                if (connected === 'meta' && returnTo === 'open-mapping') {
+                    const target = localStorage.getItem('oauth_return_to_path') || '/paneles';
+                    localStorage.removeItem('meta_oauth_return_to');
+                    localStorage.removeItem('oauth_return_to_path');
+                    localStorage.setItem('open_asset_mapping', '1');
+
+                    this._router.navigateByUrl(target, { replaceUrl: true });
+                    return; // No continuar con el flujo por defecto
+                }
+
                 if (connected === 'meta' && userId && userName && userEmail && accessToken) {
                     // Almacenar los datos en localStorage como en la versión anterior
                     localStorage.setItem('meta_access_token', accessToken);
@@ -125,7 +137,19 @@ export class SettingsComponent implements OnInit, OnDestroy {
 
                     this.selectedPanel = 'connected-accounts';
 
-                    // ✅ Limpiar query params y recargar inmediatamente (sin mostrar snackbar)
+                    // 🚀 Redirección especial si el flujo viene del diálogo de mapeo en Paneles
+                    if (returnTo === 'open-mapping') {
+                        // Navegar de vuelta a la ruta de origen y reabrir el diálogo
+                        const target = localStorage.getItem('oauth_return_to_path') || '/paneles';
+                        localStorage.removeItem('meta_oauth_return_to');
+                        localStorage.removeItem('oauth_return_to_path');
+                        localStorage.setItem('open_asset_mapping', '1');
+
+                        this._router.navigateByUrl(target, { replaceUrl: true });
+                        return; // No recargar en este flujo
+                    }
+
+                    // ✅ Flujo por defecto: limpiar query params y recargar
                     this._router.navigate([], {
                         queryParams: {
                             connected: null,
@@ -287,4 +311,3 @@ export class SettingsComponent implements OnInit, OnDestroy {
         }
     }
 }
-

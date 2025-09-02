@@ -9,6 +9,7 @@ import { environment } from 'environments/environment';
 export class PanelesService {
   private _data: BehaviorSubject<any> = new BehaviorSubject(null);
   private _metricas: BehaviorSubject<any> = new BehaviorSubject(null);
+  private _series: BehaviorSubject<any> = new BehaviorSubject(null);
 
   /**
    * Constructor
@@ -34,6 +35,10 @@ export class PanelesService {
    */
   get metricas$(): Observable<any> {
     return this._metricas.asObservable();
+  }
+
+  get series$(): Observable<any> {
+    return this._series.asObservable();
   }
 
   // --------------------------------------------
@@ -174,6 +179,55 @@ export class PanelesService {
         return result;
       })
     );
+  }
+
+  /**
+   * Obtener series de seguidores (IG/FB) agregadas por backend
+   */
+  getSeriesSeguidores(clinicaFilter: string | number, period: 'this-year'|'last-year'|'all-time' = 'this-year', startDate?: string, endDate?: string): Observable<any> {
+    const range = (startDate && endDate) ? `&startDate=${startDate}&endDate=${endDate}` : '';
+    const url = `${environment.apiUrl}/paneles/series/seguidores?clinicaId=${clinicaFilter}&period=${period}${range}`;
+    return this._httpClient.get(url).pipe(
+      tap((series: any) => {
+        this._series.next(series);
+      })
+    );
+  }
+
+  // Métricas diarias desde SocialStatsDaily (para KPIs/sparklines)
+  getClinicaStats(clinicaId: number, assetType: 'instagram_business'|'facebook_page'|null, startDate: string, endDate: string): Observable<any> {
+    const type = assetType ? `&assetType=${assetType}` : '';
+    const url = `${environment.apiUrl}/metasync/clinica/${clinicaId}/stats?period=day&startDate=${startDate}&endDate=${endDate}${type}`;
+    return this._httpClient.get(url);
+  }
+
+  /**
+   * Obtener estado de vinculaciones por clínica(s)
+   */
+  getVinculaciones(clinicaFilter: string | number): Observable<any> {
+    const url = `${environment.apiUrl}/paneles/vinculaciones?clinicaId=${clinicaFilter}`;
+    return this._httpClient.get(url);
+  }
+
+  // --------------------------------------------
+  // ANALYTICS: Orgánico vs. Pago y Publicaciones
+  // --------------------------------------------
+
+  getOrganicVsPaidByDay(clinicaId: number, assetType: 'instagram_business'|'facebook_page'|'tiktok'|null, startDate: string, endDate: string): Observable<any> {
+    const type = assetType && assetType !== 'tiktok' ? `&assetType=${assetType}` : '';
+    const url = `${environment.apiUrl}/metasync/clinica/${clinicaId}/organic-vs-paid?startDate=${startDate}&endDate=${endDate}${type}`;
+    return this._httpClient.get(url);
+  }
+
+  getClinicaPosts(clinicaId: number, assetType: 'instagram_business'|'facebook_page'|'tiktok'|null, startDate: string, endDate: string, limit = 10, offset = 0): Observable<any> {
+    const params: string[] = [];
+    if (assetType && assetType !== 'tiktok') params.push(`assetType=${assetType}`);
+    if (startDate) params.push(`startDate=${startDate}`);
+    if (endDate) params.push(`endDate=${endDate}`);
+    if (limit) params.push(`limit=${limit}`);
+    if (offset) params.push(`offset=${offset}`);
+    const url = `${environment.apiUrl}/metasync/clinica/${clinicaId}/posts${params.length ? '?' + params.join('&') : ''}`;
+    return this._httpClient.get(url);
   }
 
   /**

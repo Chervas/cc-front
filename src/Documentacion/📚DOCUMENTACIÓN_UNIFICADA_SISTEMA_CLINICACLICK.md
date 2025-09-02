@@ -797,7 +797,7 @@ La configuración de pool de conexiones está optimizada para el patrón de uso 
 META_APP_ID=your-meta-app-id
 META_APP_SECRET=your-meta-app-secret
 META_REDIRECT_URI=https://autenticacion.clinicaclick.com/oauth/meta/callback
-META_SCOPE=pages_show_list,pages_read_engagement,instagram_basic,ads_read
+    META_SCOPE=pages_show_list,pages_read_engagement,instagram_basic,instagram_manage_insights,ads_read
 META_API_VERSION=v23.0
 ```
 
@@ -6975,6 +6975,67 @@ getValidationStats()
 
 ### 7.1 Sistema de Jobs Cron terminado
 
+#### Facebook: Alcance, Impresiones y Views (plan de transición)
+
+- Estado actual (v23): Page Insights sigue sirviendo impresiones y alcance. Meta migrará a "views" como métrica unificada para orgánico a partir del 15‑nov‑2025. Ads sigue con impresiones/reach sin cambios.
+- BD (separación estable para Facebook):
+  - SocialPosts:
+    - impressions_count_fb: INT — impresiones lifetime del post (post_impressions)
+    - views_count_fb: INT — vistas lifetime de vídeo/reel (cuando el objeto vídeo expone insights)
+    - avg_watch_time_ms: INT — tiempo medio de reproducción (ms) en vídeos
+  - SocialStatsDaily:
+    - views_facebook: INT — suma diaria de vistas (vídeos) por asset (orgánico)
+    - impressions_facebook, reach_facebook (Ads) — se mantienen para Marketing API
+- Recolección orgánico (página):
+  - Primero: page_impressions_organic_unique
+  - Fallback: page_impressions_unique − page_impressions_paid_unique
+  - Etiquetado de fecha: usamos end_time − 1 día para asignar al día natural
+- Recolección por publicación (página):
+  - Insights lifetime del post: post_impressions, post_impressions_unique, post_reactions_by_type_total
+  - Vídeo/Reel (VIDEO_ID):
+    - /{video-id}/insights?metric=total_video_views,total_video_avg_time_watched
+    - Fallback: /{video-id}/video_insights?metric=total_video_views,total_video_avg_time_watched
+  - Notas:
+    - Algunos Reels devuelven video_insights vacío ([]) incluso siendo de la propia página; en esos casos no hay vistas/avg disponibles vía Graph y persistimos 0.
+    - Para evitar "(#12) deprecate_post_aggregated_fields_for_attachement", listamos posts sin attachments y pedimos attachments/object_id por POST_ID en llamadas separadas.
+- UI: mostrar métricas sin mezclar
+  - Alcance diario (reach) de página desde SocialStatsDaily.reach
+  - Por post:
+    - Alcance (reach) e impresiones (impressions) desde SocialPostStatsDaily
+    - Vistas de vídeo y tiempo medio: SocialPostStatsDaily.video_views, avg_watch_time (si el vídeo expone insights)
+- Plan 15‑nov‑2025 (orgánico Facebook):
+  - Cambiar consultas a views donde Meta lo habilite para fotos/texto.
+  - Mantener impresiones en histórico (no borrar). El UI puede calcular un "exposures"= views si existe; en su defecto impresiones.
+
+#### Diagnóstico rápido (Facebook)
+
+- Token de página (recomendado para Page/Post/Video Insights):
+  ```sql
+  SELECT LEFT(pageAccessToken,12), LENGTH(pageAccessToken)
+  FROM ClinicMetaAssets
+  WHERE clinicaId = <CLINICA_ID>
+    AND assetType = 'facebook_page'
+    AND metaAssetId = '<PAGE_ID>'
+  LIMIT 1;
+  ```
+- Posts en un día (UTC) — Graph:
+  ```bash
+  # 2025-09-01 00:00:00..23:59:59 UTC
+  since=1756684800; until=1756771199
+  curl --globoff "https://graph.facebook.com/v23.0/<PAGE_ID>/posts?fields=id,created_time,permalink_url,status_type&since=$since&until=$until&limit=100&access_token=$PAGE_TOKEN"
+  ```
+- Detalle de un post y VIDEO_ID:
+  ```bash
+  curl --globoff "https://graph.facebook.com/v23.0/<POST_ID>?fields=object_id,attachments%7Bmedia_type,target%7D,permalink_url,status_type&access_token=$PAGE_TOKEN"
+  ```
+- Métricas del vídeo:
+  ```bash
+  curl "https://graph.facebook.com/v23.0/<VIDEO_ID>/insights?metric=total_video_views,total_video_avg_time_watched&access_token=$PAGE_TOKEN"
+  curl "https://graph.facebook.com/v23.0/<VIDEO_ID>/video_insights?metric=total_video_views,total_video_avg_time_watched&access_token=$PAGE_TOKEN"
+  # Si ambas devuelven [] para un Reel, Graph no expone vistas/avg para ese vídeo con tu token.
+  ```
+
+
 
 *Documentación actualizada: 31 de Julio 2025*
 *Sistema en producción desde: Julio 2025*
@@ -8187,12 +8248,12 @@ Esta tabla consolida las métricas recogidas, el endpoint de origen, cómo las c
 | Likes totales en Instagram | GET /{IG_USER_ID}/media?fields=like_count (por post) | Likes por post | Suma de like_count de posts del día | SocialStatsDaily | instagram_business | likes | Solo orgánico (Implementado) |
 | Reacciones totales en Facebook | GET /{post-id}?fields=reactions.summary(total_count) | Total de reacciones por post | Suma de total_count del día | SocialStatsDaily | facebook_page | reactions | Solo orgánico (Implementado) |
 | Métricas por post (Instagram) | GET /{media-id}?fields=like_count,comments_count,media_type,permalink y /{media-id}/insights?metric=saved,shares,views,ig_reels_avg_watch_time | Lifetimes y vistas/guardados/tiempo medio | Guardamos en SocialPosts: reactions_and_likes, comments_count, saved_count, shares_count, views_count, avg_watch_time_ms, media_type, insights_synced_at | SocialPosts | instagram_business | varias | views sustituye a impressions/video_views (Implementado) |
-| Métricas por post (Facebook) | GET /{post-id}?fields=reactions…,comments…,shares y /{video-id}/video_insights?metric=total_video_views | Total reacciones, comentarios, compartidos, vistas video | SocialPosts: reactions_and_likes, comments_count, shares_count, views_count (video), avg_watch_time_ms (si aplica) | SocialPosts | facebook_page | varias | saved_count no orgánico; video metrics solo para vídeo (Implementado) |
+| Métricas por post (Facebook) | GET /{post-id}?fields=type,status_type,full_picture; GET /{post-id}/insights?metric=post_impressions,post_impressions_unique,post_reactions_by_type_total,post_video_views; GET /{video-id}/(video_)insights?metric=total_video_views,total_video_avg_time_watched | Tipo, thumbnail, impresiones, alcance, reacciones y vistas vídeo | Guardamos: impresiones/alcance en snapshot; post_video_views en snapshot y lifetime; thumbnails desde full_picture o /{video-id}/thumbnails | SocialPosts/SocialPostStatsDaily | facebook_page | type, media_url, impressions_count_fb, views_count_fb, video_views, avg_watch_time | Lifetime + daily | Adjuntos por POST_ID para evitar (#12); algunos Reels no exponen video_insights |
 | Gasto en Instagram (Ads) | GET /act_{ad_account_id}/insights?fields=spend&breakdowns=publisher_platform&time_increment=1 | spend diario por plataforma | Sumamos spend de instagram | SocialStatsDaily | ad_account | spend_instagram | Diario por ad account (Implementado) |
 | Gasto en Facebook (Ads) | (igual) | spend diario Facebook | Sumamos spend de facebook | SocialStatsDaily | ad_account | spend_facebook | Diario por ad account (Implementado) |
 | Impresiones pagadas en Instagram (Ads) | GET …/insights?fields=impressions&breakdowns=publisher_platform&time_increment=1 | impresiones por día | Sumamos impresiones de instagram | SocialStatsDaily | ad_account | impressions_instagram | Diario (Implementado) |
 | Impresiones pagadas en Facebook (Ads) | (igual) | impresiones por día | Sumamos impresiones de facebook | SocialStatsDaily | ad_account | impressions_facebook | Diario (Implementado) |
-| Visualizaciones orgánicas IG (posts) | GET /{media-id}/insights?metric=views | views por post | Suma de views_count por día | SocialStatsDaily | instagram_business | views | 48h retraso; aplica a vídeo/reels (Implementado) |
+| Visualizaciones orgánicas IG (posts) | GET /{media-id}/insights?metric=views; GET /{media-id}?fields=thumbnail_url | views por post + thumbnail | Suma de views_count por día; media_url = thumbnail_url en vídeos/reels | SocialStatsDaily/SocialPosts | instagram_business | views / media_url | 48h retraso; aplica a vídeo/reels (Implementado) |
 | Visualizaciones orgánicas FB (vídeo) | GET /{video-id}/video_insights?metric=total_video_views | Vistas de vídeo | Suma por día; no aplica a imagen | SocialStatsDaily | facebook_page | views | Solo vídeo; imagen sin vistas (Implementado) |
 | Publicaciones en Instagram | - | Número de posts publicados | Conteo de SocialPosts con fecha del día | SocialStatsDaily | instagram_business | posts_count | Diario (Implementado) |
 | Publicaciones en Facebook | - | Número de posts publicados | Conteo de SocialPosts con fecha del día | SocialStatsDaily | facebook_page | posts_count | Diario (Implementado) |
@@ -8220,3 +8281,27 @@ Esta tabla consolida las métricas recogidas, el endpoint de origen, cómo las c
 - IG Reach: se guarda reach diario a nivel de cuenta en `SocialStatsDaily` (asset_type=instagram_business) vía IG User Insights (Implementado).
 - Selector de clínicas/grupos: el filtro global (Classy) emite `clinica_id` como id, CSV (grupo) o `all`. Pacientes y Clinicas lo consumen para cargar datos (Implementado).
 - Paneles: agrega métricas cuando hay grupo o “Todas” (suma de clínicas accesibles). Placeholder muestra “<Grupo> (Grupo)” o “Todas” (Implementado).
+## 9.x. Bloque Analytics (Orgánico vs. Pago) – Endpoints y Tablas
+
+- Endpoints backend añadidos (optimizados, agregación en servidor):
+  - `GET /api/metasync/clinica/:clinicaId/organic-vs-paid?assetType&startDate&endDate`
+    - Devuelve serie diaria agregada por clínica y plataforma opcional: `{ series: [{date, organic, paid, total}], startDate, endDate }`.
+    - Cálculo:
+      - Orgánico: SUM(reach) desde `SocialPostStatsDaily` unido a `SocialPosts` por `post_id`, filtrando `clinica_id` y `asset_type` cuando aplica.
+      - De pago: SUM(reach) desde `SocialAdsInsightsDaily` filtrando las ad accounts vinculadas (`ClinicMetaAssets.assetType='ad_account'` → `metaAssetId = ad_account_id`), y `publisher_platform` según plataforma (instagram/facebook).
+  - `GET /api/metasync/clinica/:clinicaId/posts?assetType&startDate&endDate&limit&offset`
+    - Devuelve publicaciones con su último snapshot de stats y `paid_reach` agregado en el rango.
+    - Cálculo `paid_reach` por publicación:
+      - Se lee `PostPromotions` (vínculo anuncio ↔ post) mediante `ad_id` o creatives (`effective_instagram_media_id` / `effective_object_story_id`).
+      - Se suma `SocialAdsInsightsDaily.reach` para los `ad_id` vinculados y el rango solicitado.
+
+- Tablas involucradas (resumen y relación):
+  - `SocialPosts`: metadatos y métricas lifetime por publicación orgánica (IG/FB). Incluye `reactions_and_likes, comments_count, shares_count, saved_count, views_count, avg_watch_time_ms, media_type`.
+  - `SocialPostStatsDaily`: snapshots/deltas diarios por publicación orgánica. Se usa para series por día y para sumar KPIs de orgánico en rangos.
+  - `PostPromotions`: vínculo explícito entre anuncios (Marketing API) y publicaciones orgánicas (boosted posts). Guarda `ad_account_id, campaign_id, adset_id, ad_id, ad_creative_id` y los punteros `effective_instagram_media_id` (IG) y `effective_object_story_id` (FB).
+  - `SocialAdsInsightsDaily`: métricas diarias de Ads (incluye boosted). Contiene `ad_account_id, level, entity_id (ad_id), date, reach, impressions, clicks, spend` y breakdowns (`publisher_platform`, `platform_position`). Se agrega por día y por `ad_id`.
+  - `ClinicMetaAssets`: mapeo de activos por clínica. Se usa para resolver las `ad_account_id` de una clínica (`assetType='ad_account'`).
+
+- Notas de rendimiento:
+  - Agregaciones se ejecutan en SQL con `SUM(...) GROUP BY date` y filtros por índices existentes (post_id, date, entity_id). No se realizan sumas en el frontend.
+  - Para “Alcance de pago” por publicación no se duplica información: `PostPromotions` almacena el vínculo; `SocialAdsInsightsDaily` almacena el reach. El endpoint suma reach por `ad_id` vinculado en el rango y lo añade al JSON de la publicación.

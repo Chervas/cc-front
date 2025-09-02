@@ -4,6 +4,8 @@
 
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import { ChangeDetectorRef, Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
+import { MatDialogRef } from '@angular/material/dialog';
+import { firstValueFrom } from 'rxjs';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -15,6 +17,7 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { UserService } from 'app/core/user/user.service';
+import { AuthService } from 'app/core/auth/auth.service';
 import { environment } from 'environments/environment';
 
 // Tipos TypeScript
@@ -175,9 +178,11 @@ export class AssetMappingComponent implements OnInit {
     // Servicios inyectados
     private _http = inject(HttpClient);
     private _userService = inject(UserService);
+    private _authService = inject(AuthService);
     private _formBuilder = inject(FormBuilder);
     private _cdr = inject(ChangeDetectorRef);
     private _snackBar = inject(MatSnackBar);
+    private _dialogRef = inject(MatDialogRef<AssetMappingComponent>, { optional: true });
 
     // Estados de carga
     isLoadingAssets = false;
@@ -185,6 +190,10 @@ export class AssetMappingComponent implements OnInit {
     isLoadingMappings = false;
     isSubmittingMapping = false;
     loadingProgress = 0;
+
+    // Estado de conexión Meta
+    isCheckingConnection = false;
+    isMetaConnected = false;
 
     // Datos
     allAssets: MetaAsset[] = [];
@@ -242,7 +251,8 @@ export class AssetMappingComponent implements OnInit {
         console.log('📋 Config recibida:', this.config);
         
         this.initializeForms();
-        this.loadInitialData();
+        // Primero verificar estado de conexión con Meta
+        this.checkMetaConnectionStatus();
     }
 
     /**
@@ -256,7 +266,7 @@ export class AssetMappingComponent implements OnInit {
     }
 
     /**
-     * ✅ CORREGIDO: Cargar datos iniciales SIN mapeos existentes
+     * ✅ CORREGIDO: Cargar datos iniciales SOLO si hay conexión Meta
      */
     private async loadInitialData(): Promise<void> {
         console.log('🔄 Iniciando carga de datos...');
@@ -285,6 +295,71 @@ export class AssetMappingComponent implements OnInit {
             console.log('🏁 Estado de loading actualizado a false');
             this._cdr.detectChanges();
             console.log('✅ Carga de datos completada');
+        }
+    }
+
+    /**
+     * ✅ NUEVO: Comprobar si hay conexión con Meta antes de cargar activos
+     */
+    private checkMetaConnectionStatus(): void {
+        this.isCheckingConnection = true;
+        this.isMetaConnected = false;
+        this._cdr.detectChanges();
+
+        this._http.get<any>('https://autenticacion.clinicaclick.com/oauth/meta/connection-status')
+            .subscribe({
+                next: (resp) => {
+                    this.isMetaConnected = !!resp?.connected;
+                    this.isCheckingConnection = false;
+                    this._cdr.detectChanges();
+                    if (this.isMetaConnected) {
+                        // Cargar datos solo si hay conexión
+                        this.loadInitialData();
+                    }
+                },
+                error: () => {
+                    this.isMetaConnected = false;
+                    this.isCheckingConnection = false;
+                    this._cdr.detectChanges();
+                }
+            });
+    }
+
+    /**
+     * ✅ NUEVO: Iniciar conexión OAuth con Meta (mismo flujo que Settings)
+     */
+    async connectMeta(): Promise<void> {
+        console.log('🔗 [AssetMapping] connectMeta()');
+        try {
+            const current = await firstValueFrom(this._authService.getCurrentUser());
+            const userId = ((current as any)?.id ?? '1').toString();
+
+            this._snackBar.open('📱 Conectando con Meta...', '', { duration: 3000, panelClass: ['snackbar-info'] });
+
+            const clientId = '1807844546609897';
+            const redirectUri = 'https://autenticacion.clinicaclick.com/oauth/meta/callback';
+            // Añadimos instagram_manage_insights para poder leer alcance/insights de medios/cuenta
+            const scope = 'pages_read_engagement,pages_show_list,instagram_basic,instagram_manage_insights,ads_read';
+            const state = userId;
+
+            const authUrl = `https://www.facebook.com/v23.0/dialog/oauth?client_id=${clientId}` +
+                `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+                `&scope=${scope}` +
+                `&response_type=code` +
+                `&state=${state}`;
+
+            // Marcar retorno deseado al origen: guardar ruta actual y pedir reabrir el mapeo
+            try {
+                const currentPath = window.location.pathname || '/paneles';
+                const currentSearch = window.location.search || '';
+                localStorage.setItem('oauth_return_to_path', currentPath + currentSearch);
+            } catch {}
+            localStorage.setItem('meta_oauth_return_to', 'open-mapping');
+
+            window.location.href = authUrl;
+        } catch (e) {
+            console.error('❌ Error iniciando conexión Meta desde AssetMapping:', e);
+            this._snackBar.open('❌ Error iniciando conexión con Meta', 'Cerrar', { duration: 4000, panelClass: ['snackbar-error'] });
         }
     }
 
@@ -763,6 +838,8 @@ export class AssetMappingComponent implements OnInit {
     cancel(): void {
         console.log('❌ Mapeo cancelado por el usuario');
         this.cancelled.emit();
+        // Si está dentro de un MatDialog, cerrarlo
+        this._dialogRef?.close(false);
     }
 
     /**
@@ -852,6 +929,8 @@ export class AssetMappingComponent implements OnInit {
                     mappings: mappings,
                     message: `${successfulSubmissions} mapeos completados exitosamente`
                 });
+                // Si está en un diálogo, cerrarlo
+                this._dialogRef?.close(true);
 
                 // ✅ ELIMINADO: Ya no recargamos mapeos existentes
                 // await this.loadExistingMappings();
@@ -871,6 +950,7 @@ export class AssetMappingComponent implements OnInit {
                     mappings: this.createMappingResult(),
                     message: `Mapeos parcialmente completados: ${this.submissionErrors.join('. ')}`
                 });
+                // No cerrar en parcial por si desea revisar; comentar si se quiere cerrar
 
             } else {
                 console.error('❌ Todos los mapeos fallaron');
@@ -1052,4 +1132,3 @@ export class AssetMappingComponent implements OnInit {
         return index;
     }
 }
-

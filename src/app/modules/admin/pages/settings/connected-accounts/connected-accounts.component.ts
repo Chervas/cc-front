@@ -319,7 +319,8 @@ export class SettingsConnectedAccountsComponent implements OnInit {
         // ✅ CONFIGURACIÓN OAUTH: Parámetros de Meta
         const clientId = '1807844546609897'; // Meta App ID
         const redirectUri = 'https://autenticacion.clinicaclick.com/oauth/meta/callback';
-        const scope = 'pages_read_engagement,pages_show_list,instagram_basic,ads_read';
+        // Añadimos instagram_manage_insights para poder leer alcance/insights de medios/cuenta
+        const scope = 'pages_read_engagement,pages_show_list,instagram_basic,instagram_manage_insights,ads_read';
         const state = userId; // ✅ IMPORTANTE: Enviar userId como state
 
         // ✅ CONSTRUIR URL OAUTH: Directamente a Meta (NO al backend)

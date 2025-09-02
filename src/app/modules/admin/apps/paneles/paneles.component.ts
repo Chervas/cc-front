@@ -14,8 +14,13 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatRippleModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { Router } from '@angular/router';
 import { TranslocoModule } from '@ngneat/transloco';
 import { PanelesService } from './paneles.service';
@@ -45,7 +50,12 @@ import { CommonModule } from '@angular/common';
         MatTableModule,
         NgClass,
         CurrencyPipe,
-        CommonModule
+        CommonModule,
+        MatDialogModule,
+        MatDatepickerModule,
+        MatFormFieldModule,
+        MatInputModule,
+        MatSnackBarModule
     ],
 })
 export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
@@ -56,6 +66,7 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
     chartMonthlyExpenses: ApexOptions = {};
     chartYearlyExpenses: ApexOptions = {};
     isRedesSocialesTabActive: boolean = false;
+    currentTabIndex: number = 0;
     data: any;
     selectedProject: string = 'ACME Corp. Backend App';
     private _unsubscribeAll: Subject<any> = new Subject<any>();
@@ -75,6 +86,23 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
     linkedinMetrics: RedesSocialesMetricas['linkedin'] | null = null;
     hasMetricasData: boolean = false;
     datosCargados: boolean = false;
+    vinculaciones = { instagram: false, facebook: false, tiktok: false, google: false };
+    // ---- Analytics (Orgánico vs Pago) ----
+    analyticsPlatform: 'instagram'|'facebook'|'tiktok' = 'instagram';
+    analyticsStart: Date = new Date(new Date().setDate(new Date().getDate() - 30));
+    analyticsEnd: Date = new Date();
+    chartOrganicPaid: ApexOptions = {
+        chart: { type: 'area', height: 320, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' },
+        dataLabels: { enabled: false },
+        stroke: { curve: 'smooth', width: 2 },
+        xaxis: { type: 'datetime' },
+        yaxis: { labels: { formatter: (v: number) => this.formatNumber(v) } },
+        grid: { borderColor: 'var(--fuse-border)' },
+        colors: ['#64748b','#22c55e','#3b82f6'],
+        series: []
+    };
+    postsListado: any[] = [];
+    postsTotal: number = 0;
 
         @ViewChild('facebookChart') facebookChart!: ChartComponent;
     
@@ -452,6 +480,8 @@ defaultLocale: 'es',
         private _cdr: ChangeDetectorRef,
         private _clinicFilter: ClinicFilterService,
         private _roleService: RoleService,
+        private _dialog: MatDialog,
+        private _snackBar: MatSnackBar,
     ) {}
 
     // --------------------------------------------
@@ -461,7 +491,18 @@ defaultLocale: 'es',
     /**
      * On init
      */
-    ngOnInit(): void {
+ngOnInit(): void {
+        // Restaurar pestaña si está guardada
+        try {
+            const savedIndex = localStorage.getItem('paneles_tab_index');
+            if (savedIndex !== null) {
+                const idx = parseInt(savedIndex, 10);
+                if (!isNaN(idx)) {
+                    this.currentTabIndex = idx;
+                    this.isRedesSocialesTabActive = (idx === 1);
+                }
+            }
+        } catch {}
         // Get the data
         this._panelesService.data$
             .pipe(takeUntil(this._unsubscribeAll))
@@ -565,7 +606,36 @@ defaultLocale: 'es',
         let allClinicas: UsuarioClinicaResponse[] = [];
         this._roleService.clinicas$
             .pipe(takeUntil(this._unsubscribeAll))
-            .subscribe((cs) => { allClinicas = cs || []; });
+            .subscribe((cs) => {
+                allClinicas = cs || [];
+                // Recalcular el display cuando llegan/actualizan las clínicas
+                const currentFilter = this._clinicFilter.getCurrentClinicFilter();
+                if (!currentFilter || currentFilter === 'all') {
+                    this.selectedClinicaDisplay = 'Todas';
+                } else if (currentFilter.includes(',')) {
+                    const count = currentFilter.split(',').length;
+                    const groupName = this._clinicFilter.getCurrentSelectedGroupName();
+                    this.selectedClinicaDisplay = groupName ? `${groupName} (Grupo • ${count})` : `Grupo de clínicas (${count})`;
+                } else {
+                    const id = parseInt(currentFilter, 10);
+                    const c = allClinicas.find(x => x.id === id);
+                    this.selectedClinicaDisplay = c?.name || 'Clínica';
+                }
+
+                // Sincronizar selector global (RoleService) con el filtro guardado
+                const cf = currentFilter;
+                if (cf && !cf.includes(',') && cf !== 'all') {
+                    const id = parseInt(cf, 10);
+                    const selected = this._roleService.getSelectedClinica();
+                    if (!isNaN(id) && (!selected || selected.id !== id)) {
+                        const match = allClinicas.find(x => x.id === id);
+                        if (match) {
+                            this._roleService.setClinica(match);
+                        }
+                    }
+                }
+                this._cdr.markForCheck();
+            });
 
         // Determinar el display en base al filtro global (más robusto que selectedClinica$)
         this._clinicFilter.selectedClinicId$
@@ -602,6 +672,9 @@ defaultLocale: 'es',
                         this.selectedClinicaFilter = ids.join(',');
                         this.selectedClinicaId = ids[0];
                         this.loadMetricas();
+                        this.loadSeries();
+                        this.loadVinculaciones();
+                        this.loadAnalyticsBlock();
                     } else {
                         this.clearCharts();
                     }
@@ -612,6 +685,17 @@ defaultLocale: 'es',
                         this.selectedClinicaId = firstId;
                         this.selectedClinicaFilter = filter;
                         this.loadMetricas();
+                        this.loadSeries();
+                        this.loadVinculaciones();
+
+                        // Sincronizar RoleService con el filtro emitido
+                        const selected = this._roleService.getSelectedClinica();
+                        if (!selected || selected.id !== firstId) {
+                            const match = allClinicas.find(x => x.id === firstId);
+                            if (match) {
+                                this._roleService.setClinica(match);
+                            }
+                        }
                     }
                 }
             });
@@ -623,9 +707,21 @@ defaultLocale: 'es',
             if (!isNaN(firstId)) {
                 this.selectedClinicaId = firstId;
                 this.loadMetricas();
+                this.loadSeries();
+                this.loadVinculaciones();
+                this.loadAnalyticsBlock();
+
+                // Alinear RoleService con el initFilter
+                const selected = this._roleService.getSelectedClinica();
+                if (!selected || selected.id !== firstId) {
+                    const match = allClinicas.find(x => x.id === firstId);
+                    if (match) {
+                        this._roleService.setClinica(match);
+                    }
+                }
             }
         }
-        this.selectedClinicaId = 1;
+        // No forzar selectedClinicaId aquí; se determina por el filtro actual
 
         // Inicializar gráfico con datos mock como Fuse
 this.chartSeguidoresFacebook = {
@@ -700,9 +796,11 @@ this.chartSeguidoresFacebook = {
     /**
      * Maneja el cambio de pestañas
      */
-   onTabChange(index: number): void {
+onTabChange(index: number): void {
     console.log('📊 Cambio de pestaña:', index);
     this.isRedesSocialesTabActive = (index === 1);
+    this.currentTabIndex = index;
+    try { localStorage.setItem('paneles_tab_index', String(index)); } catch {}
     
     if (this.isRedesSocialesTabActive) {
         // Usar Promise para ejecutar después del ciclo actual
@@ -756,6 +854,129 @@ this.chartSeguidoresFacebook = {
                     'fill',
                     `url(${currentURL}${attrVal.slice(attrVal.indexOf('#'))}`
                 );
+            });
+    }
+
+    // =====================
+    // Analytics (orgánico vs pago)
+    // =====================
+    kpiReachTotal: number = 0;
+    kpiEngagementTotal: number = 0;
+    kpiNewFollowers: number = 0;
+    chartKpiReach: ApexOptions = { chart: { type: 'area', height: 64, sparkline: { enabled: true }, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' }, stroke: { curve: 'smooth', width: 2 }, colors: ['#3b82f6'], series: [] };
+    chartKpiEngagement: ApexOptions = { chart: { type: 'area', height: 64, sparkline: { enabled: true }, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' }, stroke: { curve: 'smooth', width: 2 }, colors: ['#22c55e'], series: [] };
+    chartKpiFollowers: ApexOptions = { chart: { type: 'area', height: 64, sparkline: { enabled: true }, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' }, stroke: { curve: 'smooth', width: 2 }, colors: ['#64748b'], series: [] };
+
+    private getSelectedAssetType(): 'instagram_business'|'facebook_page'|null {
+        if (this.analyticsPlatform === 'instagram') return 'instagram_business';
+        if (this.analyticsPlatform === 'facebook') return 'facebook_page';
+        return null; // TikTok aún no implementado
+    }
+
+    onAnalyticsPlatformChange(p: 'instagram'|'facebook'|'tiktok'): void {
+        this.analyticsPlatform = p;
+        this.loadAnalyticsBlock();
+    }
+
+    setQuickRange(range: 'yesterday'|'last7'|'last30'|'thisYear'|'lastYear'|'all'): void {
+        const now = new Date();
+        switch (range) {
+            case 'yesterday':
+                this.analyticsStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+                this.analyticsEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+                break;
+            case 'last7':
+                this.analyticsEnd = now;
+                this.analyticsStart = new Date(now.getTime() - 7*24*60*60*1000);
+                break;
+            case 'last30':
+                this.analyticsEnd = now;
+                this.analyticsStart = new Date(now.getTime() - 30*24*60*60*1000);
+                break;
+            case 'thisYear':
+                this.analyticsStart = new Date(now.getFullYear(), 0, 1);
+                this.analyticsEnd = now;
+                break;
+            case 'lastYear':
+                this.analyticsStart = new Date(now.getFullYear()-1, 0, 1);
+                this.analyticsEnd = new Date(now.getFullYear()-1, 11, 31);
+                break;
+            case 'all':
+                this.analyticsStart = new Date(2000,0,1);
+                this.analyticsEnd = now;
+                break;
+        }
+        this.loadAnalyticsBlock();
+        this.reloadFollowersSeries();
+    }
+
+    private loadAnalyticsBlock(): void {
+        const clinicaId = this.selectedClinicaId;
+        if (!clinicaId) return;
+        const aType = this.getSelectedAssetType();
+        const start = this.analyticsStart.toISOString().split('T')[0];
+        const end = this.analyticsEnd.toISOString().split('T')[0];
+
+        // Serie orgánico/pago
+        this._panelesService.getOrganicVsPaidByDay(clinicaId, aType, start, end)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((resp: any) => {
+                const points = resp?.series || [];
+                const total = points.map((p: any) => ({ x: new Date(p.date).getTime(), y: p.total }));
+                const organic = points.map((p: any) => ({ x: new Date(p.date).getTime(), y: p.organic }));
+                const paid = points.map((p: any) => ({ x: new Date(p.date).getTime(), y: p.paid }));
+                this.chartOrganicPaid = { ...this.chartOrganicPaid, series: [
+                    { name: 'Total', data: total },
+                    { name: 'Orgánicos', data: organic },
+                    { name: 'De pago', data: paid }
+                ] };
+                this._cdr.markForCheck();
+            });
+
+        // KPIs: usar SocialStatsDaily (serie diaria) para sumar y obtener tendencia
+        this._panelesService.getClinicaStats(clinicaId, aType, start, end)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((resp: any) => {
+                const rows = Array.isArray(resp) ? resp : (resp?.stats || []);
+                const sum = (key: string) => rows.reduce((s: number, r: any) => s + (r[key] || 0), 0);
+                this.kpiReachTotal = sum('reach');
+                this.kpiEngagementTotal = sum('engagement');
+                this.kpiNewFollowers = sum('followers_day');
+
+                // Sparklines
+                const toSeries = (key: string) => [{ name: key, data: rows.map((r: any) => ({ x: new Date(r.date).getTime(), y: r[key] || 0 })) }];
+                this.chartKpiReach = { ...this.chartKpiReach, series: toSeries('reach') };
+                this.chartKpiEngagement = { ...this.chartKpiEngagement, series: toSeries('engagement') };
+                this.chartKpiFollowers = { ...this.chartKpiFollowers, series: toSeries('followers_day') };
+                this._cdr.markForCheck();
+            });
+
+        // Tabla publicaciones (últimas 10)
+        this._panelesService.getClinicaPosts(clinicaId, aType, start, end, 10, 0)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((res: any) => {
+                this.postsListado = res?.posts || [];
+                this.postsTotal = res?.total || 0;
+                this._cdr.markForCheck();
+            });
+    }
+
+    // Reusar el rango para series de seguidores IG/FB
+    private reloadFollowersSeries(): void {
+        const filter = this.selectedClinicaFilter ?? this.selectedClinicaId;
+        if (!filter) return;
+        const start = this.analyticsStart.toISOString().split('T')[0];
+        const end = this.analyticsEnd.toISOString().split('T')[0];
+        this._panelesService.getSeriesSeguidores(filter, 'all-time', start, end)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe(series => {
+                try {
+                    const ig = (series?.instagram || []).map((p: any) => ({ x: new Date(p.date).getTime(), y: p.followers }));
+                    const fb = (series?.facebook || []).map((p: any) => ({ x: new Date(p.date).getTime(), y: p.followers }));
+                    this.chartInstagramOverview.series = [{ name: 'Seguidores Instagram', data: ig }];
+                    this.chartFacebookOverview.series = [{ name: 'Seguidores Facebook', data: fb }];
+                    this._cdr.markForCheck();
+                } catch {}
             });
     }
 
@@ -878,6 +1099,8 @@ setTimeout(() => {
      */
     refreshMetricas(): void {
         this.loadMetricas();
+        this.loadSeries();
+        this.loadVinculaciones();
     }
 
     /**
@@ -892,6 +1115,58 @@ setTimeout(() => {
         this.hasMetricasData = false;
         this.datosCargados = false;
         this._cdr.markForCheck();
+    }
+
+    /** Cargar series reales de seguidores (IG/FB) */
+    private loadSeries(): void {
+        const filter = this.selectedClinicaFilter ?? this.selectedClinicaId;
+        if (!filter) return;
+        const period = (this.selectedTimeRange as any) || 'this-year';
+        this._panelesService.getSeriesSeguidores(filter, period)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe(series => {
+                try {
+                    const ig = (series?.instagram || []).map((p: any) => ({ x: new Date(p.date).getTime(), y: p.followers }));
+                    const fb = (series?.facebook || []).map((p: any) => ({ x: new Date(p.date).getTime(), y: p.followers }));
+                    this.chartInstagramOverview.series = [{ name: 'Seguidores Instagram', data: ig }];
+                    this.chartFacebookOverview.series = [{ name: 'Seguidores Facebook', data: fb }];
+                    this._cdr.markForCheck();
+                } catch {}
+            });
+    }
+
+    /** Cargar estado de vinculaciones para mostrar mensajes/CTAs */
+    private loadVinculaciones(): void {
+        const filter = this.selectedClinicaFilter ?? this.selectedClinicaId;
+        if (!filter) return;
+        this._panelesService.getVinculaciones(filter)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe(v => { this.vinculaciones = v || this.vinculaciones; this._cdr.markForCheck(); });
+    }
+
+    /**
+     * Abrir mapeo de activos en un diálogo (standalone)
+     */
+    openAssetMappingDialog(): void {
+        // Carga diferida del componente standalone
+        import('app/modules/admin/pages/settings/shared/asset-mapping.component').then(module => {
+            // Guardar pestaña actual para restaurar tras OAuth/mapeo
+            try { localStorage.setItem('paneles_tab_index', String(this.currentTabIndex)); } catch {}
+            const ref = this._dialog.open(module.AssetMappingComponent, {
+                width: '1024px',
+                maxWidth: '95vw',
+                data: { preselectedClinicId: this.selectedClinicaId },
+                panelClass: 'cc-dialog-asset-mapping'
+            });
+            ref.afterClosed().subscribe((result) => {
+                // Al cerrar, refrescar vinculaciones por si se conectó/mapeó
+                this.loadVinculaciones();
+                this.loadSeries();
+                if (result === true) {
+                    this._snackBar.open('Se están sincronizando los datos. Esta operación puede tardar unos minutos, vuelve después.', 'Cerrar', { duration: 6000 });
+                }
+            });
+        });
     }
 
     /**
@@ -1082,9 +1357,9 @@ if (!this.metricas && !this.facebookMetrics) {
     onTimeRangeChange(value: string): void {
         console.log('📅 Cambio de rango de tiempo:', value);
         this.selectedTimeRange = value;
-        
-        // Actualizar las 3 gráficas superiores
-        this.updateOverviewCharts();
+        // Cargar series reales de IG/FB y mantener TikTok vacío
+        this.loadSeries();
+        this.updateTiktokOverviewChart();
     }
 
     /**
@@ -1116,12 +1391,8 @@ if (!this.metricas && !this.facebookMetrics) {
      */
    updateOverviewCharts(): void {
     console.log('📈 updateOverviewCharts() ejecutado');
-    
-    // Actualizar las 3 gráficas superiores
-    this.updateInstagramOverviewChart();
+    // Solo actualizar TikTok (IG/FB se actualizan con datos reales en loadSeries)
     this.updateTiktokOverviewChart();
-    this.updateFacebookOverviewChart();
-    
     console.log('📈 updateOverviewCharts() completado');
 }
 
@@ -1129,64 +1400,17 @@ if (!this.metricas && !this.facebookMetrics) {
     /**
      * Actualizar gráfica superior de Instagram
      */
-updateInstagramOverviewChart(): void {
-    console.log('📊 Actualizando gráfica Instagram Overview');
-    
-    // Generar datos mock siempre (no depender de metricas.instagram)
-    const data = this._generateMockData(this.selectedTimeRange, 1500);
-    
-    // Actualizar la configuración - Angular se encarga del resto
-    this.chartInstagramOverview = {
-        ...this.chartInstagramOverview,
-        series: [{
-            name: 'Seguidores Instagram',
-            data: data.followers
-        }],
-        xaxis: { 
-        ...this.chartInstagramOverview.xaxis, 
-        categories: data.dates 
-        }
-    };
-    
-  
-}
+updateInstagramOverviewChart(): void { /* series reales se cargan en loadSeries() */ }
 
 updateTiktokOverviewChart(): void {
-    console.log('📊 Actualizando gráfica TikTok Overview');
-    
-    const data = this._generateMockData(this.selectedTimeRange, 800);
-    
+    console.log('📊 Actualizando gráfica TikTok Overview (sin datos)');
     this.chartTiktokOverview = {
         ...this.chartTiktokOverview,
-        series: [{
-            name: 'Seguidores TikTok',
-            data: data.followers
-        }],
-        xaxis: { 
-        ...this.chartTiktokOverview.xaxis, 
-        categories: data.dates 
-        }
+        series: []
     };
 }
 
-updateFacebookOverviewChart(): void {
-    console.log('📊 Actualizando gráfica Facebook Overview');
-    
-    const baseValue = this.metricas?.facebook?.seguidores || 3380;
-    const data = this._generateMockData(this.selectedTimeRange, baseValue);
-    
-    this.chartFacebookOverview = {
-        ...this.chartFacebookOverview,
-        series: [{
-            name: 'Seguidores Facebook',
-            data: data.followers
-        }],
-        xaxis: { 
-        ...this.chartFacebookOverview.xaxis, 
-        categories: data.dates 
-        }
-    };
-}
+updateFacebookOverviewChart(): void { /* series reales se cargan en loadSeries() */ }
     /**
      * Generar datos mock para las gráficas superiores
      */
@@ -1575,5 +1799,15 @@ updateFacebookOverviewChart(): void {
                 },
             },
         };
+
+        // 🚀 Si venimos de OAuth Meta con solicitud de abrir mapeo, abrir el diálogo automáticamente
+        const openMapping = localStorage.getItem('open_asset_mapping');
+        if (openMapping === '1') {
+            localStorage.removeItem('open_asset_mapping');
+            setTimeout(() => this.openAssetMappingDialog(), 300);
+        }
+
+        // Cargar bloque analytics (por defecto: último mes, Instagram)
+        this.loadAnalyticsBlock();
     }
 }

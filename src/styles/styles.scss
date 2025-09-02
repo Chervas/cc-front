@@ -2,3 +2,21 @@
 /*  @ Import/write your custom styles here.
 /*  @ Styles from this file will override 'vendors.scss' and Fuse's base styles.
 /* ----------------------------------------------------------------------------------------------------- */
+
+/* Scrollable Asset Mapping dialog */
+.cc-dialog-asset-mapping {
+  /* Limit overall dialog surface height */
+  .mat-mdc-dialog-container {
+    .mdc-dialog__surface {
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+    }
+  }
+
+  /* Make the component content scroll within the dialog */
+  .asset-mapping-container {
+    max-height: 80vh; /* allow some breathing room for paddings/headers */
+    overflow: auto;
+  }
+}
