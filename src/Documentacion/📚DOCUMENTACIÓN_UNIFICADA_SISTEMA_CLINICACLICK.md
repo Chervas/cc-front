@@ -7002,7 +7002,7 @@ getValidationStats()
   - Alcance diario (reach) de página desde SocialStatsDaily.reach
   - Por post:
     - Alcance (reach) e impresiones (impressions) desde SocialPostStatsDaily
-    - Vistas de vídeo y tiempo medio: SocialPostStatsDaily.video_views, avg_watch_time (si el vídeo expone insights)
+    - Vistas de vídeo y tiempo medio: SocialPostStatsDaily.video_views, avg_watch_time (si el vídeo expone insights). En Facebook, cuando no hay dato, UI muestra "-".
 - Plan 15‑nov‑2025 (orgánico Facebook):
   - Cambiar consultas a views donde Meta lo habilite para fotos/texto.
   - Mantener impresiones en histórico (no borrar). El UI puede calcular un "exposures"= views si existe; en su defecto impresiones.
@@ -8248,7 +8248,7 @@ Esta tabla consolida las métricas recogidas, el endpoint de origen, cómo las c
 | Likes totales en Instagram | GET /{IG_USER_ID}/media?fields=like_count (por post) | Likes por post | Suma de like_count de posts del día | SocialStatsDaily | instagram_business | likes | Solo orgánico (Implementado) |
 | Reacciones totales en Facebook | GET /{post-id}?fields=reactions.summary(total_count) | Total de reacciones por post | Suma de total_count del día | SocialStatsDaily | facebook_page | reactions | Solo orgánico (Implementado) |
 | Métricas por post (Instagram) | GET /{media-id}?fields=like_count,comments_count,media_type,permalink y /{media-id}/insights?metric=saved,shares,views,ig_reels_avg_watch_time | Lifetimes y vistas/guardados/tiempo medio | Guardamos en SocialPosts: reactions_and_likes, comments_count, saved_count, shares_count, views_count, avg_watch_time_ms, media_type, insights_synced_at | SocialPosts | instagram_business | varias | views sustituye a impressions/video_views (Implementado) |
-| Métricas por post (Facebook) | GET /{post-id}?fields=type,status_type,full_picture; GET /{post-id}/insights?metric=post_impressions,post_impressions_unique,post_reactions_by_type_total,post_video_views; GET /{video-id}/(video_)insights?metric=total_video_views,total_video_avg_time_watched | Tipo, thumbnail, impresiones, alcance, reacciones y vistas vídeo | Guardamos: impresiones/alcance en snapshot; post_video_views en snapshot y lifetime; thumbnails desde full_picture o /{video-id}/thumbnails | SocialPosts/SocialPostStatsDaily | facebook_page | type, media_url, impressions_count_fb, views_count_fb, video_views, avg_watch_time | Lifetime + daily | Adjuntos por POST_ID para evitar (#12); algunos Reels no exponen video_insights |
+| Métricas por post (Facebook) | GET /{post-id}?fields=type,status_type,full_picture,picture; GET /{post-id}/insights?metric=post_impressions,post_impressions_unique,post_reactions_by_type_total,post_video_views&period=lifetime; GET /{video-id}/thumbnails; GET /{video-id}/insights?metric=total_video_views,total_video_avg_time_watched (o /{video-id}/video_insights) | Tipo, thumbnail, impresiones, alcance, reacciones, vistas vídeo, tiempo medio | Guardamos: impresiones/alcance (snapshot), post_video_views (snapshot y lifetime cuando aplica), thumbnails desde full_picture/picture/attachments/thumbnails | SocialPosts/SocialPostStatsDaily | facebook_page | type, media_url, impressions_count_fb, views_count_fb, video_views, avg_watch_time | Lifetime + daily | Usar edge /{post-id}/attachments para evitar (#12) |
 | Gasto en Instagram (Ads) | GET /act_{ad_account_id}/insights?fields=spend&breakdowns=publisher_platform&time_increment=1 | spend diario por plataforma | Sumamos spend de instagram | SocialStatsDaily | ad_account | spend_instagram | Diario por ad account (Implementado) |
 | Gasto en Facebook (Ads) | (igual) | spend diario Facebook | Sumamos spend de facebook | SocialStatsDaily | ad_account | spend_facebook | Diario por ad account (Implementado) |
 | Impresiones pagadas en Instagram (Ads) | GET …/insights?fields=impressions&breakdowns=publisher_platform&time_increment=1 | impresiones por día | Sumamos impresiones de instagram | SocialStatsDaily | ad_account | impressions_instagram | Diario (Implementado) |
@@ -8305,3 +8305,20 @@ Esta tabla consolida las métricas recogidas, el endpoint de origen, cómo las c
 - Notas de rendimiento:
   - Agregaciones se ejecutan en SQL con `SUM(...) GROUP BY date` y filtros por índices existentes (post_id, date, entity_id). No se realizan sumas en el frontend.
   - Para “Alcance de pago” por publicación no se duplica información: `PostPromotions` almacena el vínculo; `SocialAdsInsightsDaily` almacena el reach. El endpoint suma reach por `ad_id` vinculado en el rango y lo añade al JSON de la publicación.
+
+---
+
+Actualización Facebook (2025-09)
+
+- Listado de posts:
+  - Rango: `GET /{page-id}/posts?fields=id,message,created_time,permalink_url,status_type&since&until&limit`
+  - Últimos N: `GET /{page-id}/published_posts?fields=id,message,created_time,permalink_url,status_type&limit`
+- Enriquecido por publicación (evita `(#12) deprecate_post_aggregated_fields_for_attachement`):
+  - Adjuntos: `GET /{post-id}/attachments?fields=media_type,media,target,url,subattachments`
+  - Base: `GET /{post-id}?fields=object_id,permalink_url,status_type,type,full_picture,picture`
+  - Vídeo: `GET /{video-id}/thumbnails` y `GET /{video-id}/insights?metric=total_video_views,total_video_avg_time_watched` (fallback `/{video-id}/video_insights`)
+  - Fallback imagen: `GET /{object_id}/picture?redirect=false&type=normal`
+- Orden de thumbnail guardado en `SocialPosts.media_url`:
+  1) `full_picture`, 2) `picture`, 3) `attachments[].media.image.src`, 4) `subattachments[].media.image.src`, 5) `/{object_id}/picture?redirect=false`.
+- Determinación de tipo: `type` → `attachments[].media_type` → heurística (`status_type`/URL reel|video|photo|link).
+- Llamadas batch forzadas a `v23.0` para respuestas completas.

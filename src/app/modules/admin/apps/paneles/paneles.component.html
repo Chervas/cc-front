@@ -1,7 +1,7 @@
 <div class="flex min-w-0 flex-auto flex-col">
 	<!-- Header -->
-	<div class="bg-card">
-		<div class="flex min-w-0 flex-auto flex-col max-w-screen-xl flex-col px-6 sm:px-8">
+    <div class="bg-card">
+        <div class="mx-auto flex w-full max-w-screen-xl flex-col px-6 sm:px-8">
 			<div class="my-8 flex min-w-0 flex-auto flex-col sm:my-12 sm:flex-row sm:items-center">
 				<!-- Avatar and name -->
 				<div class="flex min-w-0 flex-auto items-center">
@@ -19,50 +19,48 @@
 							<mat-icon
 								class="icon-size-5"
 								[svgIcon]="'heroicons_solid:bell'"></mat-icon>
-							<div class="text-secondary ml-1.5 truncate leading-6">
-								Tienes 5 notificaciones y 3 tareas por hacer
-							</div>
-						</div>
-					</div>
-				</div>
-				<!-- Actions -->
-				<div class="mt-6 flex items-center space-x-3 sm:ml-2 sm:mt-0">
-					<button
-						class="bg-accent"
-						mat-flat-button
-						[color]="'accent'">
-						<mat-icon
-							class="icon-size-5"
-							[svgIcon]="'heroicons_solid:cog-8-tooth'"></mat-icon>
-						<span class="ml-2">Configuración</span>
-					</button>
-					<button mat-flat-button [color]="'primary'" (click)="refreshMetricas()">
-					<mat-icon
-						class="icon-size-5"
-						[svgIcon]="'heroicons_solid:arrow-path'"></mat-icon>
-					<span class="ml-2">Actualizar</span>
-					</button>
-				</div>
-			</div>
-		</div>
-	</div>
-	<!-- Main -->
-	<div class="flex-auto">
-		<div class="mx-auto w-full max-w-screen-xl p-6 sm:p-8">
-			<!-- Información de clínica seleccionada -->
-			<div class="mb-8">
-                <div class="flex items-center">
-                    <mat-icon class="text-hint mr-2" [svgIcon]="'heroicons_outline:building-storefront'"></mat-icon>
-                    <span class="text-lg font-medium">{{ selectedClinicaDisplay }}</span>
-                    <span class="ml-2 px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
-                    Activa
-                    </span>
+                        <div class="text-secondary ml-1.5 truncate leading-6">
+                            Tienes 5 notificaciones y 3 tareas por hacer
+                        </div>
+                    </div>
                 </div>
-			</div>
+            </div>
+            <!-- Actions (same row on >=sm) -->
+            <div class="mt-6 flex items-center space-x-3 sm:ml-2 sm:mt-0">
+                <button
+                    class="bg-accent"
+                    mat-flat-button
+                    [color]="'accent'">
+                    <mat-icon
+                        class="icon-size-5"
+                        [svgIcon]="'heroicons_solid:cog-8-tooth'"></mat-icon>
+                    <span class="ml-2">Configuración</span>
+                </button>
+                <button mat-flat-button [color]="'primary'" (click)="refreshMetricas()">
+                <mat-icon
+                    class="icon-size-5"
+                    [svgIcon]="'heroicons_solid:arrow-path'"></mat-icon>
+                <span class="ml-2">Actualizar</span>
+                </button>
+            </div>
+        </div>
+        <!-- Clinic display — simplified like your example (static) -->
+        <div class="flex items-center">
+            <div class="overflow-hidden">
+                <div class="bg-default relative flex cursor-default self-start overflow-hidden rounded-t-xl border border-b-0 pb-1 pl-5 pr-4 pt-3 truncate font-medium leading-6 text-base sm:text-lg"
+                     style="padding-top:0.3rem;border-radius:10px 10px 0 0;bottom:-1px;">
+                    {{ selectedClinicaDisplay }}
+                </div>
+            </div>
+        </div>
+    </div>
+	<!-- Main -->
+	<div class="bg-default -mt-px flex-auto border-t pt-4 sm:pt-6">
+        <div class="mx-auto w-full max-w-screen-xl">
 			<!-- Pestañas principales -->
 			<mat-tab-group
-			class="fuse-mat-dense fuse-mat-rounded w-full"
-			[animationDuration]="'0ms'"
+			class="sm:px-2"
+			[animationDuration]="'0'"
 			mat-stretch-tabs="false"
             (selectedTabChange)="onTabChange($event.index)"
             [selectedIndex]="currentTabIndex">
@@ -70,7 +68,7 @@
 			<!-- Pestaña Resumen -->
 			<mat-tab label="Resumen">
 				<ng-template matTabContent>
-					<div class="grid gap-8 pt-8 sm:gap-16 sm:pt-16">
+                    <div class="grid gap-8 pt-6 sm:gap-8 sm:pt-8">
 						<div class="flex flex-col items-center justify-center p-16 text-center">
 							<mat-icon
 								class="icon-size-16 text-hint mb-4"
@@ -89,7 +87,7 @@
 			<!-- Pestaña Redes Sociales -->
             <mat-tab label="Redes Sociales">
 				<ng-template matTabContent>
-					<div class="grid gap-8 pt-8 sm:gap-16 sm:pt-16">
+                    <div class="grid gap-8 pt-6 sm:gap-8 sm:pt-8">
 						<!-- Título de sección -->
 						<div>
 							<!-- NUEVA SECCIÓN: 3 Gráficas Superiores de Evolución -->
@@ -113,19 +111,19 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="ml-2">
-                                        <!-- Selector de rango global -->
-                                        <div class="ml-2">
-                                            <button mat-stroked-button [matMenuTriggerFor]="menuRangoGlobal">{{ analyticsStart | date:'d/M/yyyy' }} - {{ analyticsEnd | date:'d/M/yyyy' }}</button>
-                                            <mat-menu #menuRangoGlobal="matMenu">
-                                                <button mat-menu-item (click)="setQuickRange('yesterday')">Ayer</button>
-                                                <button mat-menu-item (click)="setQuickRange('last7')">Últimos 7 días</button>
-                                                <button mat-menu-item (click)="setQuickRange('last30')">Último mes</button>
-                                                <button mat-menu-item (click)="setQuickRange('thisYear')">Este año</button>
-                                                <button mat-menu-item (click)="setQuickRange('lastYear')">El año pasado</button>
-                                                <button mat-menu-item (click)="setQuickRange('all')">Desde siempre</button>
-                                            </mat-menu>
-                                        </div>
+                                    <div class="ml-2 flex items-center space-x-3">
+                                        <button mat-stroked-button [matMenuTriggerFor]="menuRangoGlobal">{{ analyticsStart | date:'d/M/yyyy' }} - {{ analyticsEnd | date:'d/M/yyyy' }}</button>
+                                        <mat-menu #menuRangoGlobal="matMenu">
+                                            <button mat-menu-item (click)="setQuickRange('yesterday')">Ayer</button>
+                                            <button mat-menu-item (click)="setQuickRange('last7')">Última semana</button>
+                                            <button mat-menu-item (click)="setQuickRange('last30')">Último mes</button>
+                                            <button mat-menu-item (click)="setQuickRange('thisYear')">Este año</button>
+                                            <button mat-menu-item (click)="setQuickRange('lastYear')">El año pasado</button>
+                                            <button mat-menu-item (click)="setQuickRange('all')">Desde siempre</button>
+                                            <mat-divider></mat-divider>
+                                            <button mat-menu-item (click)="openCustomRangeDialog()">Personalizado…</button>
+                                        </mat-menu>
+                                        <!-- Rango personalizado ahora se selecciona en un diálogo -->
                                     </div>
                                 </div>
 
@@ -245,56 +243,148 @@
                                     <div class="text-secondary">Análisis general</div>
                                 </div>
                                 <!-- Selector de plataforma -->
-                                <mat-button-toggle-group [value]="analyticsPlatform" (change)="onAnalyticsPlatformChange($event.value)" class="space-x-1 border-none">
-                                    <mat-button-toggle class="overflow-hidden rounded-full border-none px-3 font-medium" value="instagram">Instagram</mat-button-toggle>
-                                    <mat-button-toggle class="overflow-hidden rounded-full border-none px-3 font-medium" value="facebook">Facebook</mat-button-toggle>
-                                    <mat-button-toggle class="overflow-hidden rounded-full border-none px-3 font-medium" value="tiktok">TikTok</mat-button-toggle>
+                                <mat-button-toggle-group [value]="analyticsPlatform" (change)="onAnalyticsPlatformChange($event.value)" class="platform-toggle-group space-x-1 border-none">
+                                    <mat-button-toggle class="overflow-hidden rounded-full border-none px-3 font-medium flex items-center" value="instagram">
+                                        <mat-icon class="mr-2" [svgIcon]="'feather:instagram'"></mat-icon>
+                                        <span>Instagram</span>
+                                    </mat-button-toggle>
+                                    <mat-button-toggle class="overflow-hidden rounded-full border-none px-3 font-medium flex items-center" value="facebook">
+                                        <mat-icon class="mr-2" [svgIcon]="'feather:facebook'"></mat-icon>
+                                        <span>Facebook</span>
+                                    </mat-button-toggle>
+                                    <mat-button-toggle class="overflow-hidden rounded-full border-none px-3 font-medium flex items-center" value="tiktok">
+                                        <mat-icon class="mr-2" [svgIcon]="'feather:music'"></mat-icon>
+                                        <span>TikTok</span>
+                                    </mat-button-toggle>
                                 </mat-button-toggle-group>
-                                <!-- Date range (presets) -->
-                                <div class="ml-4">
-                                    <button mat-stroked-button [matMenuTriggerFor]="menuRango">{{ analyticsStart | date:'d/M/yyyy' }} - {{ analyticsEnd | date:'d/M/yyyy' }}</button>
-                                    <mat-menu #menuRango="matMenu">
-                                        <button mat-menu-item (click)="setQuickRange('yesterday')">Ayer</button>
-                                        <button mat-menu-item (click)="setQuickRange('last7')">Últimos 7 días</button>
-                                        <button mat-menu-item (click)="setQuickRange('last30')">Último mes</button>
-                                        <button mat-menu-item (click)="setQuickRange('thisYear')">Este año</button>
-                                        <button mat-menu-item (click)="setQuickRange('lastYear')">El año pasado</button>
-                                        <button mat-menu-item (click)="setQuickRange('all')">Desde siempre</button>
-                                    </mat-menu>
-                                </div>
+                                <!-- (Se usa el date range superior; no duplicar) -->
                             </div>
 
-                            <!-- KPIs estilo Fuse -->
+                            <!-- KPIs estilo Fuse con deltas -->
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                                <div class="bg-card rounded-2xl shadow p-6">
-                                    <div class="text-secondary mb-2">Alcance total</div>
-                                    <div class="text-4xl font-bold mb-2">{{ formatNumber(kpiReachTotal || 0) }}</div>
-                                    <apx-chart [chart]="chartKpiReach.chart" [series]="chartKpiReach.series" [colors]="chartKpiReach.colors" [stroke]="chartKpiReach.stroke"></apx-chart>
+                                <!-- Alcance total -->
+                                <div class="bg-card rounded-2xl shadow overflow-hidden">
+                                    <div class="p-6 pb-2">
+                                        <div class="text-secondary mb-2">Alcance total</div>
+        								<div class="flex items-baseline space-x-3">
+                                            <div class="text-4xl font-bold">{{ formatNumber(kpiReachTotal || 0) }}</div>
+                                            <div class="text-sm font-medium" [ngClass]="{
+                                                'text-green-600': (kpiReachDeltaPct ?? 0) > 0,
+                                                'text-red-600': (kpiReachDeltaPct ?? 0) < 0,
+                                                'text-secondary': (kpiReachDeltaPct ?? 0) === 0 || kpiReachDeltaPct === null
+                                            }">
+                                                <span *ngIf="kpiReachDeltaPct !== null">{{ kpiReachDeltaPct > 0 ? '+' : ''}}{{ kpiReachDeltaPct }}%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="px-0 pb-0">
+                                        <apx-chart [chart]="chartKpiReach.chart" [series]="chartKpiReach.series" [colors]="chartKpiReach.colors" [stroke]="chartKpiReach.stroke"></apx-chart>
+                                    </div>
                                 </div>
-                                <div class="bg-card rounded-2xl shadow p-6">
-                                    <div class="text-secondary mb-2">Interacciones totales</div>
-                                    <div class="text-4xl font-bold mb-2">{{ formatNumber(kpiEngagementTotal || 0) }}</div>
-                                    <apx-chart [chart]="chartKpiEngagement.chart" [series]="chartKpiEngagement.series" [colors]="chartKpiEngagement.colors" [stroke]="chartKpiEngagement.stroke"></apx-chart>
+                                <!-- Interacciones totales -->
+                                <div class="bg-card rounded-2xl shadow overflow-hidden">
+                                    <div class="p-6 pb-2">
+                                        <div class="text-secondary mb-2">Interacciones totales</div>
+        								<div class="flex items-baseline space-x-3">
+                                            <div class="text-4xl font-bold">{{ formatNumber(kpiEngagementTotal || 0) }}</div>
+                                            <div class="text-sm font-medium" [ngClass]="{
+                                                'text-green-600': (kpiEngagementDeltaPct ?? 0) > 0,
+                                                'text-red-600': (kpiEngagementDeltaPct ?? 0) < 0,
+                                                'text-secondary': (kpiEngagementDeltaPct ?? 0) === 0 || kpiEngagementDeltaPct === null
+                                            }">
+                                                <span *ngIf="kpiEngagementDeltaPct !== null">{{ kpiEngagementDeltaPct > 0 ? '+' : ''}}{{ kpiEngagementDeltaPct }}%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="px-0 pb-0">
+                                        <apx-chart [chart]="chartKpiEngagement.chart" [series]="chartKpiEngagement.series" [colors]="chartKpiEngagement.colors" [stroke]="chartKpiEngagement.stroke"></apx-chart>
+                                    </div>
                                 </div>
-                                <div class="bg-card rounded-2xl shadow p-6">
-                                    <div class="text-secondary mb-2">Nuevos seguidores</div>
-                                    <div class="text-4xl font-bold mb-2">{{ formatNumber(kpiNewFollowers || 0) }}</div>
-                                    <apx-chart [chart]="chartKpiFollowers.chart" [series]="chartKpiFollowers.series" [colors]="chartKpiFollowers.colors" [stroke]="chartKpiFollowers.stroke"></apx-chart>
+                                <!-- Nuevos seguidores -->
+                                <div class="bg-card rounded-2xl shadow overflow-hidden">
+                                    <div class="p-6 pb-2">
+                                        <div class="text-secondary mb-2">Nuevos seguidores</div>
+        								<div class="flex items-baseline space-x-3">
+                                            <div class="text-4xl font-bold">{{ formatNumber(kpiNewFollowers || 0) }}</div>
+                                            <div class="text-sm font-medium" [ngClass]="{
+                                                'text-green-600': (kpiNewFollowersDeltaPct ?? 0) > 0,
+                                                'text-red-600': (kpiNewFollowersDeltaPct ?? 0) < 0,
+                                                'text-secondary': (kpiNewFollowersDeltaPct ?? 0) === 0 || kpiNewFollowersDeltaPct === null
+                                            }">
+                                                <span *ngIf="kpiNewFollowersDeltaPct !== null">{{ kpiNewFollowersDeltaPct > 0 ? '+' : ''}}{{ kpiNewFollowersDeltaPct }}%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="px-0 pb-0">
+                                        <apx-chart [chart]="chartKpiFollowers.chart" [series]="chartKpiFollowers.series" [colors]="chartKpiFollowers.colors" [stroke]="chartKpiFollowers.stroke"></apx-chart>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Área: Orgánico vs de pago -->
-                            <div class="bg-card rounded-2xl shadow h-80 mb-8 p-2">
-                                <apx-chart class="h-full w-full flex-auto"
-                                    [chart]="chartOrganicPaid.chart"
-                                    [series]="chartOrganicPaid.series"
-                                    [colors]="chartOrganicPaid.colors"
-                                    [dataLabels]="chartOrganicPaid.dataLabels"
-                                    [grid]="chartOrganicPaid.grid"
-                                    [stroke]="chartOrganicPaid.stroke"
-                                    [xaxis]="chartOrganicPaid.xaxis"
-                                    [yaxis]="chartOrganicPaid.yaxis">
-                                </apx-chart>
+                            <!-- Área: Orgánico vs de pago (estilo Fuse Analytics Visitors vs Page Views) -->
+                            <div class="bg-card rounded-2xl shadow overflow-hidden mb-8">
+                                <div class="p-6 pb-2">
+                                    <div class="text-lg font-semibold">Contenido orgánico vs de pago</div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                                        <!-- Total -->
+                                        <div>
+                                            <div class="text-secondary text-xs">Visualizaciones totales</div>
+                                            <div class="flex items-baseline space-x-2">
+                                                <div class="text-3xl font-bold">{{ formatNumber(organicPaidTotals.total || 0) }}</div>
+                                                <div class="text-sm font-medium" [ngClass]="{
+                                                    'text-green-600': (organicPaidDeltas.total ?? 0) > 0,
+                                                    'text-red-600': (organicPaidDeltas.total ?? 0) < 0,
+                                                    'text-secondary': (organicPaidDeltas.total ?? 0) === 0 || organicPaidDeltas.total === null
+                                                }">
+                                                    <span *ngIf="organicPaidDeltas.total !== null">{{ organicPaidDeltas.total > 0 ? '+' : ''}}{{ organicPaidDeltas.total }}%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- Orgánicas -->
+                                        <div>
+                                            <div class="text-secondary text-xs">Orgánicas</div>
+                                            <div class="flex items-baseline space-x-2">
+                                                <div class="text-3xl font-bold">{{ formatNumber(organicPaidTotals.organic || 0) }}</div>
+                                                <div class="text-sm font-medium" [ngClass]="{
+                                                    'text-green-600': (organicPaidDeltas.organic ?? 0) > 0,
+                                                    'text-red-600': (organicPaidDeltas.organic ?? 0) < 0,
+                                                    'text-secondary': (organicPaidDeltas.organic ?? 0) === 0 || organicPaidDeltas.organic === null
+                                                }">
+                                                    <span *ngIf="organicPaidDeltas.organic !== null">{{ organicPaidDeltas.organic > 0 ? '+' : ''}}{{ organicPaidDeltas.organic }}%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- De pago -->
+                                        <div>
+                                            <div class="text-secondary text-xs">De pago</div>
+                                            <div class="flex items-baseline space-x-2">
+                                                <div class="text-3xl font-bold">{{ formatNumber(organicPaidTotals.paid || 0) }}</div>
+                                                <div class="text-sm font-medium" [ngClass]="{
+                                                    'text-green-600': (organicPaidDeltas.paid ?? 0) > 0,
+                                                    'text-red-600': (organicPaidDeltas.paid ?? 0) < 0,
+                                                    'text-secondary': (organicPaidDeltas.paid ?? 0) === 0 || organicPaidDeltas.paid === null
+                                                }">
+                                                    <span *ngIf="organicPaidDeltas.paid !== null">{{ organicPaidDeltas.paid > 0 ? '+' : ''}}{{ organicPaidDeltas.paid }}%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="h-80">
+                                    <apx-chart class="h-full w-full flex-auto"
+                                        [chart]="chartOrganicPaid.chart"
+                                        [series]="chartOrganicPaid.series"
+                                        [colors]="chartOrganicPaid.colors"
+                                        [dataLabels]="chartOrganicPaid.dataLabels"
+                                        [fill]="chartOrganicPaid.fill"
+                                        [grid]="chartOrganicPaid.grid"
+                                        [legend]="chartOrganicPaid.legend"
+                                        [stroke]="chartOrganicPaid.stroke"
+                                        [tooltip]="chartOrganicPaid.tooltip"
+                                        [xaxis]="chartOrganicPaid.xaxis"
+                                        [yaxis]="chartOrganicPaid.yaxis">
+                                    </apx-chart>
+                                </div>
                             </div>
 
                             <!-- Tabla publicaciones -->
@@ -303,10 +393,10 @@
                                 <mat-icon class="ml-2 text-hint cursor-help" [matTooltip]="'Resumen de métricas por publicación: Alcance = personas únicas que vieron el post; Impresiones = veces que se mostró; Views = reproducciones de vídeo/reel; Tiempo medio = segundos promedio de reproducción; Likes/Reacciones, Comentarios y Compartidos son totales por publicación.'" matTooltipPosition="above" [svgIcon]="'heroicons_outline:question-mark-circle'"></mat-icon>
                             </div>
                             <div class="text-secondary mb-4">Rendimiento del contenido</div>
-                            <div class="bg-card rounded-2xl shadow overflow-hidden">
-                                <table mat-table [dataSource]="postsListado" class="w-full">
+                            <div class="bg-card rounded-2xl shadow overflow-hidden posts-table-wrapper">
+                                <table mat-table [dataSource]="dataSource" matSort class="w-full min-w-[960px]">
                                     <ng-container matColumnDef="titulo">
-                                        <th mat-header-cell *matHeaderCellDef class="px-6 py-4 text-left" [matTooltip]="'Título y miniatura. Enlace al post en la plataforma.'" matTooltipPosition="above">Título</th>
+                                        <th mat-header-cell *matHeaderCellDef mat-sort-header="title" class="px-6 py-4 text-left" [matTooltip]="'Título y miniatura. Enlace al post en la plataforma.'" matTooltipPosition="above">Título</th>
                                         <td mat-cell *matCellDef="let p" class="px-6 py-4">
                                             <div class="flex items-center space-x-3">
                                                 <ng-container *ngIf="p.media_url && !p.media_url.endsWith('.mp4'); else videoThumb">
@@ -325,39 +415,39 @@
                                         </td>
                                     </ng-container>
                                     <ng-container matColumnDef="publicado">
-                                        <th mat-header-cell *matHeaderCellDef class="px-6 py-4 text-left" [matTooltip]="'Fecha y hora de publicación (zona UTC/servidor).'" matTooltipPosition="above">Publicado</th>
+                                        <th mat-header-cell *matHeaderCellDef mat-sort-header="published_at" class="px-6 py-4 text-left" [matTooltip]="'Fecha y hora de publicación (zona UTC/servidor).'" matTooltipPosition="above">Publicado</th>
                                         <td mat-cell *matCellDef="let p" class="px-6 py-4">{{ p.published_at | date:'d/M/yyyy' }}</td>
                                     </ng-container>
                                     <ng-container matColumnDef="tipo">
-                                        <th mat-header-cell *matHeaderCellDef class="px-6 py-4 text-left" [matTooltip]="'Tipo de publicación (foto, video, reel, link, status). En Facebook usamos status_type/type; en Instagram media_type.'" matTooltipPosition="above">Tipo</th>
-                                        <td mat-cell *matCellDef="let p" class="px-6 py-4">{{ p.post_type || '—' }}</td>
+                                        <th mat-header-cell *matHeaderCellDef mat-sort-header="post_type" class="px-6 py-4 text-left" [matTooltip]="'Tipo de publicación (foto, video, reel, link, carousel, status). En Facebook usamos status_type/type; en Instagram media_type.'" matTooltipPosition="above">Tipo</th>
+                                        <td mat-cell *matCellDef="let p" class="px-6 py-4">{{ mapPostType(p.post_type) }}</td>
                                     </ng-container>
                                     <ng-container matColumnDef="likes">
-                                        <th mat-header-cell *matHeaderCellDef class="px-6 py-4 text-left" [matTooltip]="'Suma de likes (IG) o reacciones (FB) totales en la publicación.'" matTooltipPosition="above">Likes/Reacciones</th>
+                                        <th mat-header-cell *matHeaderCellDef mat-sort-header="reactions_and_likes" class="px-6 py-4 text-left" [matTooltip]="'Likes / reacciones totales'" matTooltipPosition="above"><mat-icon [svgIcon]="'feather:thumbs-up'" class="text-secondary"></mat-icon></th>
                                         <td mat-cell *matCellDef="let p" class="px-6 py-4">{{ p.reactions_and_likes || 0 }}</td>
                                     </ng-container>
                                     <ng-container matColumnDef="comments">
-                                        <th mat-header-cell *matHeaderCellDef class="px-6 py-4 text-left" [matTooltip]="'Número total de comentarios en la publicación.'" matTooltipPosition="above">Comentarios</th>
+                                        <th mat-header-cell *matHeaderCellDef mat-sort-header="comments_count" class="px-6 py-4 text-left" [matTooltip]="'Número total de comentarios'" matTooltipPosition="above"><mat-icon [svgIcon]="'feather:message-circle'" class="text-secondary"></mat-icon></th>
                                         <td mat-cell *matCellDef="let p" class="px-6 py-4">{{ p.comments_count || 0 }}</td>
                                     </ng-container>
                                     <ng-container matColumnDef="shares">
-                                        <th mat-header-cell *matHeaderCellDef class="px-6 py-4 text-left" [matTooltip]="'Veces que se compartió la publicación (FB).'" matTooltipPosition="above">Compartidos</th>
+                                        <th mat-header-cell *matHeaderCellDef mat-sort-header="shares" class="px-6 py-4 text-left" [matTooltip]="'Veces que se compartió'" matTooltipPosition="above"><mat-icon [svgIcon]="'feather:share-2'" class="text-secondary"></mat-icon></th>
                                         <td mat-cell *matCellDef="let p" class="px-6 py-4">{{ p.shares_count || 0 }}</td>
                                     </ng-container>
                                     <ng-container matColumnDef="reach">
-                                        <th mat-header-cell *matHeaderCellDef class="px-6 py-4 text-left" [matTooltip]="'Personas únicas que vieron la publicación (reach). FB: post_impressions_unique; IG: reach por post.'" matTooltipPosition="above">Alcance</th>
+                                        <th mat-header-cell *matHeaderCellDef mat-sort-header="reach" class="px-6 py-4 text-left" [matTooltip]="'Personas únicas que vieron la publicación (reach). FB: post_impressions_unique; IG: reach por post.'" matTooltipPosition="above">Alcance</th>
                                         <td mat-cell *matCellDef="let p" class="px-6 py-4">{{ p.stats?.[0]?.reach || 0 }}</td>
                                     </ng-container>
                                     <ng-container matColumnDef="paidReach">
-                                        <th mat-header-cell *matHeaderCellDef class="px-6 py-4 text-left" [matTooltip]="'Alcance atribuido a anuncios vinculados al post (suma de Ads en el rango seleccionado).'" matTooltipPosition="above">Alcance de pago</th>
+                                        <th mat-header-cell *matHeaderCellDef mat-sort-header="paid_reach" class="px-6 py-4 text-left" [matTooltip]="'Alcance atribuido a anuncios vinculados al post (suma de Ads en el rango seleccionado).'" matTooltipPosition="above">Alcance de pago</th>
                                         <td mat-cell *matCellDef="let p" class="px-6 py-4">{{ p.paid_reach || 0 }}</td>
                                     </ng-container>
                                     <ng-container matColumnDef="views">
-                                        <th mat-header-cell *matHeaderCellDef class="px-6 py-4 text-left" [matTooltip]="'Reproducciones de vídeo/reel. IG: views; FB: post_video_views/video_insights.'" matTooltipPosition="above">Views</th>
+                                        <th mat-header-cell *matHeaderCellDef mat-sort-header="views" class="px-6 py-4 text-left" [matTooltip]="'Reproducciones de vídeo/reel. IG: views; FB: post_video_views/video_insights.'" matTooltipPosition="above">Views</th>
                                         <td mat-cell *matCellDef="let p" class="px-6 py-4">{{ (p.stats?.[0]?.video_views ?? p.views_count) || 0 }}</td>
                                     </ng-container>
                                     <ng-container matColumnDef="avg">
-                                        <th mat-header-cell *matHeaderCellDef class="px-6 py-4 text-left" [matTooltip]="'Segundos promedio de reproducción del vídeo/reel (si aplica).'" matTooltipPosition="above">Tiempo medio de reproducción</th>
+                                        <th mat-header-cell *matHeaderCellDef mat-sort-header="avgWatch" class="px-6 py-4 text-left" [matTooltip]="'Segundos promedio de reproducción del vídeo/reel (si aplica).'" matTooltipPosition="above">Tiempo medio de reproducción</th>
                                         <td mat-cell *matCellDef="let p" class="px-6 py-4">{{ (p.stats?.[0]?.avg_watch_time ?? (p.avg_watch_time_ms ? (p.avg_watch_time_ms/1000) : null)) ? ((p.stats?.[0]?.avg_watch_time || (p.avg_watch_time_ms/1000)) | number:'1.0-0') + 's' : '-' }}</td>
                                     </ng-container>
 
@@ -385,6 +475,9 @@
 								Reintentar
 							</button>
 						</div>
+
+                        <!-- Oculto: secciones mock posteriores al listado de publicaciones -->
+                        <ng-container *ngIf="false">
 						
 						<!-- Cards de redes sociales principales -->
 						<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -567,10 +660,11 @@
 								</div>
 							</div>
 						</div>
+                        </ng-container>
 					</div>
 				</ng-template>
 			</mat-tab>
-			
+
 			<!-- Pestaña Web -->
 			<mat-tab label="Web">
 				<ng-template matTabContent>

@@ -22,3 +22,14 @@ paneles {
     }
 }
 
+/* Platform toggle paddings */
+paneles .platform-toggle-group .mat-button-toggle-label-content {
+    padding-left: 16px !important;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Table overflow handling */
+paneles .posts-table-wrapper {
+    overflow-x: auto;
+}

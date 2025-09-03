@@ -14,11 +14,16 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatRippleModule } from '@angular/material/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableDataSource } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule, DateAdapter, NativeDateAdapter, MAT_DATE_LOCALE } from '@angular/material/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { Router } from '@angular/router';
@@ -30,6 +35,8 @@ import { ClinicFilterService } from 'app/core/services/clinic-filter-service';
 import { RoleService, UsuarioClinicaResponse } from 'app/core/services/role.service';
 import { RedesSocialesMetricas } from './paneles.types';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { DateRangeDialogComponent } from './date-range-dialog.component';
 
 
 @Component({
@@ -44,19 +51,28 @@ import { CommonModule } from '@angular/common';
         MatButtonModule,
         MatRippleModule,
         MatMenuModule,
+        MatDividerModule,
         MatTabsModule,
         MatButtonToggleModule,
         NgApexchartsModule,
         MatTableModule,
+        MatSortModule,
+        MatTooltipModule,
         NgClass,
         CurrencyPipe,
         CommonModule,
         MatDialogModule,
+        FormsModule,
         MatDatepickerModule,
+        MatNativeDateModule,
         MatFormFieldModule,
         MatInputModule,
         MatSnackBarModule
     ],
+    providers: [
+        { provide: MAT_DATE_LOCALE, useValue: 'es-ES' },
+        { provide: DateAdapter, useClass: class MondayFirstDateAdapter extends NativeDateAdapter { override getFirstDayOfWeek() { return 1; } } }
+    ]
 })
 export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
     chartGithubIssues: ApexOptions = {};
@@ -92,17 +108,61 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
     analyticsStart: Date = new Date(new Date().setDate(new Date().getDate() - 30));
     analyticsEnd: Date = new Date();
     chartOrganicPaid: ApexOptions = {
-        chart: { type: 'area', height: 320, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' },
+        chart: {
+            type: 'area',
+            height: 340,
+            animations: { enabled: false },
+            toolbar: { show: false },
+            fontFamily: 'inherit',
+            foreColor: 'inherit'
+        },
+        colors: ['#94A3B8', '#94A3B8', '#94A3B8'],
         dataLabels: { enabled: false },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 0.35,
+                opacityFrom: 0.6,
+                opacityTo: 0.05
+            }
+        },
+        grid: {
+            borderColor: 'var(--fuse-border)',
+            padding: { top: 10, bottom: -32, left: 0, right: 0 },
+            position: 'back',
+            xaxis: { lines: { show: true } }
+        },
         stroke: { curve: 'smooth', width: 2 },
-        xaxis: { type: 'datetime' },
-        yaxis: { labels: { formatter: (v: number) => this.formatNumber(v) } },
-        grid: { borderColor: 'var(--fuse-border)' },
-        colors: ['#64748b','#22c55e','#3b82f6'],
+        xaxis: { type: 'datetime', tooltip: { enabled: false }, labels: { style: { colors: '#94A3B8' } } },
+        yaxis: { show: false, labels: { formatter: (v: number) => this.formatNumber(v) } },
+        legend: { show: false },
+        tooltip: {
+            theme: 'dark',
+            x: { format: 'dd MMM yyyy' },
+            y: { formatter: (val: number) => `${this.formatNumber(val)}` }
+        },
         series: []
     };
+    organicPaidTotals = { total: 0, organic: 0, paid: 0 };
+    organicPaidDeltas: { total: number | null; organic: number | null; paid: number | null } = { total: null, organic: null, paid: null };
     postsListado: any[] = [];
     postsTotal: number = 0;
+    // Tabla publicaciones con ordenación
+    displayedPostColumns: string[] = [
+        'titulo',
+        'publicado',
+        'tipo',
+        'likes',
+        'comments',
+        'shares',
+        'alcance',
+        'impresiones',
+        'views',
+        'avgWatch'
+    ];
+    dataSource = new MatTableDataSource<any>([]);
+    @ViewChild(MatSort) sort!: MatSort;
+    showCustomRange: boolean = false;
 
         @ViewChild('facebookChart') facebookChart!: ChartComponent;
     
@@ -119,7 +179,7 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
 // Copiada directamente del repositorio oficial de Fuse
 
 // 📱 INSTAGRAM - Configuración exacta de Fuse Visitors
-chartInstagramOverview: ApexOptions = {
+    chartInstagramOverview: ApexOptions = {
     chart: {
         animations: {
             speed: 400,
@@ -183,12 +243,8 @@ defaultLocale: 'es',
     tooltip: {
         followCursor: true,
         theme: 'dark',
-        x: {
-            format: 'MMM dd, yyyy', // ✅ Formato exacto de Fuse
-        },
-        y: {
-            formatter: (value: number): string => `${value}`,
-        },
+        x: { format: 'dd MMM yyyy' },
+        y: { formatter: (value: number): string => `${this.formatNumber(value)}` },
     },
     xaxis: {
         axisBorder: {
@@ -231,7 +287,7 @@ defaultLocale: 'es',
 };
 
 // 🎵 TIKTOK - Configuración exacta de Fuse Visitors
-chartTiktokOverview: ApexOptions = {
+    chartTiktokOverview: ApexOptions = {
     chart: {
         animations: {
             speed: 400,
@@ -295,12 +351,8 @@ defaultLocale: 'es',
     tooltip: {
         followCursor: true,
         theme: 'dark',
-        x: {
-            format: 'MMM dd, yyyy', // ✅ Formato exacto de Fuse
-        },
-        y: {
-            formatter: (value: number): string => `${value}`,
-        },
+        x: { format: 'dd MMM yyyy' },
+        y: { formatter: (value: number): string => `${this.formatNumber(value)}` },
     },
     xaxis: {
         axisBorder: {
@@ -343,7 +395,7 @@ defaultLocale: 'es',
 };
 
 // 📘 FACEBOOK - Configuración exacta de Fuse Visitors
-chartFacebookOverview: ApexOptions = {
+    chartFacebookOverview: ApexOptions = {
     chart: {
         animations: {
             speed: 400,
@@ -407,12 +459,8 @@ defaultLocale: 'es',
     tooltip: {
         followCursor: true,
         theme: 'dark',
-        x: {
-            format: 'MMM dd, yyyy', // ✅ Formato exacto de Fuse
-        },
-        y: {
-            formatter: (value: number): string => `${value}`,
-        },
+        x: { format: 'dd MMM yyyy' },
+        y: { formatter: (value: number): string => `${this.formatNumber(value)}` },
     },
     xaxis: {
         axisBorder: {
@@ -462,11 +510,11 @@ defaultLocale: 'es',
     // Selector de tiempo para las gráficas superiores
     selectedTimeRange: string = 'this-year';
     
-    // Datos mock para porcentajes de crecimiento
-    growthPercentages = {
-        instagram: 20,
-        tiktok: 25,
-        facebook: 15
+    // Porcentajes de crecimiento (se calcularán dinámicamente con el rango seleccionado)
+    growthPercentages: Record<string, number> = {
+        instagram: 0,
+        tiktok: 0,
+        facebook: 0
     };
 
 
@@ -542,14 +590,15 @@ ngOnInit(): void {
                         width: 2,
                         curve: 'smooth',
                     },
-                    tooltip: {
-                        theme: 'dark',
-                        y: {
-                            formatter: (value) => {
-                                return this.formatNumber(value) + ' seguidores';
-                            },
-                        },
-                    },
+        tooltip: {
+            theme: 'dark',
+            x: { format: 'dd MMM yyyy' },
+            y: {
+                formatter: (value) => {
+                    return this.formatNumber(value) + ' seguidores';
+                },
+            },
+        },
                     xaxis: {
                         type: 'datetime',
                         categories: [],
@@ -687,6 +736,7 @@ ngOnInit(): void {
                         this.loadMetricas();
                         this.loadSeries();
                         this.loadVinculaciones();
+                        this.loadAnalyticsBlock();
 
                         // Sincronizar RoleService con el filtro emitido
                         const selected = this._roleService.getSelectedClinica();
@@ -754,6 +804,7 @@ this.chartSeguidoresFacebook = {
     },
     tooltip: {
         theme: 'dark',
+        x: { format: 'dd MMM yyyy' },
         y: {
             formatter: (value) => {
                 return this.formatNumber(value) + ' seguidores';
@@ -788,8 +839,29 @@ this.chartSeguidoresFacebook = {
      * After view init
      */
     ngAfterViewInit(): void {
-        // No ejecutar inmediatamente porque las pestañas usan lazy loading
-        console.log('🔄 ngAfterViewInit - ViewChild será inicializado cuando se active la pestaña');
+        // Conectar ordenación de la tabla si existe
+        try {
+            this.dataSource.sort = this.sort;
+            this.dataSource.sortingDataAccessor = (item: any, property: string) => {
+                switch (property) {
+                    case 'title': return item?.title || '';
+                    case 'published_at': return new Date(item?.published_at || 0).getTime();
+                    case 'post_type': return item?.post_type || '';
+                    case 'reactions_and_likes': return item?.reactions_and_likes ?? 0;
+                    case 'comments_count': return item?.comments_count ?? 0;
+                    case 'shares': return item?.shares_count ?? 0;
+                    case 'paid_reach': return item?.paid_reach ?? 0;
+                    case 'reach': return item?.stats?.[0]?.reach ?? 0;
+                    case 'views': return (item?.stats?.[0]?.video_views ?? item?.views_count) ?? 0;
+                    case 'avgWatch': {
+                        const s = item?.stats?.[0]?.avg_watch_time;
+                        const ms = item?.avg_watch_time_ms;
+                        return s ?? (ms ? ms / 1000 : 0);
+                    }
+                    default: return item[property];
+                }
+            };
+        } catch {}
     }
 
 
@@ -863,9 +935,12 @@ onTabChange(index: number): void {
     kpiReachTotal: number = 0;
     kpiEngagementTotal: number = 0;
     kpiNewFollowers: number = 0;
-    chartKpiReach: ApexOptions = { chart: { type: 'area', height: 64, sparkline: { enabled: true }, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' }, stroke: { curve: 'smooth', width: 2 }, colors: ['#3b82f6'], series: [] };
-    chartKpiEngagement: ApexOptions = { chart: { type: 'area', height: 64, sparkline: { enabled: true }, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' }, stroke: { curve: 'smooth', width: 2 }, colors: ['#22c55e'], series: [] };
-    chartKpiFollowers: ApexOptions = { chart: { type: 'area', height: 64, sparkline: { enabled: true }, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' }, stroke: { curve: 'smooth', width: 2 }, colors: ['#64748b'], series: [] };
+    kpiReachDeltaPct: number | null = null;
+    kpiEngagementDeltaPct: number | null = null;
+    kpiNewFollowersDeltaPct: number | null = null;
+    chartKpiReach: ApexOptions = { chart: { type: 'area', height: 64, sparkline: { enabled: true }, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' }, xaxis: { type: 'datetime' }, stroke: { curve: 'smooth', width: 2 }, colors: ['#3b82f6'], series: [], tooltip: { theme: 'dark', x: { format: 'dd MMM yyyy' }, y: { formatter: (v: number) => this.formatNumber(v) } } };
+    chartKpiEngagement: ApexOptions = { chart: { type: 'area', height: 64, sparkline: { enabled: true }, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' }, xaxis: { type: 'datetime' }, stroke: { curve: 'smooth', width: 2 }, colors: ['#22c55e'], series: [], tooltip: { theme: 'dark', x: { format: 'dd MMM yyyy' }, y: { formatter: (v: number) => this.formatNumber(v) } } };
+    chartKpiFollowers: ApexOptions = { chart: { type: 'area', height: 64, sparkline: { enabled: true }, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' }, xaxis: { type: 'datetime' }, stroke: { curve: 'smooth', width: 2 }, colors: ['#64748b'], series: [], tooltip: { theme: 'dark', x: { format: 'dd MMM yyyy' }, y: { formatter: (v: number) => this.formatNumber(v) } } };
 
     private getSelectedAssetType(): 'instagram_business'|'facebook_page'|null {
         if (this.analyticsPlatform === 'instagram') return 'instagram_business';
@@ -908,6 +983,7 @@ onTabChange(index: number): void {
         }
         this.loadAnalyticsBlock();
         this.reloadFollowersSeries();
+        this.updateGrowthPercentagesForTopCharts();
     }
 
     private loadAnalyticsBlock(): void {
@@ -916,6 +992,14 @@ onTabChange(index: number): void {
         const aType = this.getSelectedAssetType();
         const start = this.analyticsStart.toISOString().split('T')[0];
         const end = this.analyticsEnd.toISOString().split('T')[0];
+        const msDay = 24 * 60 * 60 * 1000;
+        const startDateObj = new Date(this.analyticsStart.getFullYear(), this.analyticsStart.getMonth(), this.analyticsStart.getDate());
+        const endDateObj = new Date(this.analyticsEnd.getFullYear(), this.analyticsEnd.getMonth(), this.analyticsEnd.getDate());
+        const rangeDays = Math.max(1, Math.round((endDateObj.getTime() - startDateObj.getTime()) / msDay) + 1);
+        const prevEndDate = new Date(startDateObj.getTime() - msDay);
+        const prevStartDate = new Date(prevEndDate.getTime() - (rangeDays - 1) * msDay);
+        const prevStart = this._formatLocalDate(prevStartDate);
+        const prevEnd = this._formatLocalDate(prevEndDate);
 
         // Serie orgánico/pago
         this._panelesService.getOrganicVsPaidByDay(clinicaId, aType, start, end)
@@ -925,11 +1009,38 @@ onTabChange(index: number): void {
                 const total = points.map((p: any) => ({ x: new Date(p.date).getTime(), y: p.total }));
                 const organic = points.map((p: any) => ({ x: new Date(p.date).getTime(), y: p.organic }));
                 const paid = points.map((p: any) => ({ x: new Date(p.date).getTime(), y: p.paid }));
+                // Totales actuales
+                const sum = (arr: any[]) => arr.reduce((s, i) => s + (i?.y || 0), 0);
+                this.organicPaidTotals = {
+                    total: sum(total),
+                    organic: sum(organic),
+                    paid: sum(paid)
+                };
                 this.chartOrganicPaid = { ...this.chartOrganicPaid, series: [
-                    { name: 'Total', data: total },
-                    { name: 'Orgánicos', data: organic },
+                    { name: 'Visualizaciones totales', data: total },
+                    { name: 'Orgánicas', data: organic },
                     { name: 'De pago', data: paid }
                 ] };
+                this._cdr.markForCheck();
+            });
+
+        // Deltas del periodo anterior para cabecera del gráfico
+        this._panelesService.getOrganicVsPaidByDay(clinicaId, aType, prevStart, prevEnd)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((resp: any) => {
+                const points = resp?.series || [];
+                const totalPrev = points.reduce((s: number, p: any) => s + (p.total || 0), 0);
+                const organicPrev = points.reduce((s: number, p: any) => s + (p.organic || 0), 0);
+                const paidPrev = points.reduce((s: number, p: any) => s + (p.paid || 0), 0);
+                const pct = (curr: number, old: number) => {
+                    if (!old) return null;
+                    return Number((((curr - old) / old) * 100).toFixed(1));
+                };
+                this.organicPaidDeltas = {
+                    total: pct(this.organicPaidTotals.total, totalPrev),
+                    organic: pct(this.organicPaidTotals.organic, organicPrev),
+                    paid: pct(this.organicPaidTotals.paid, paidPrev)
+                };
                 this._cdr.markForCheck();
             });
 
@@ -944,10 +1055,26 @@ onTabChange(index: number): void {
                 this.kpiNewFollowers = sum('followers_day');
 
                 // Sparklines
-                const toSeries = (key: string) => [{ name: key, data: rows.map((r: any) => ({ x: new Date(r.date).getTime(), y: r[key] || 0 })) }];
-                this.chartKpiReach = { ...this.chartKpiReach, series: toSeries('reach') };
-                this.chartKpiEngagement = { ...this.chartKpiEngagement, series: toSeries('engagement') };
-                this.chartKpiFollowers = { ...this.chartKpiFollowers, series: toSeries('followers_day') };
+                const toSeries = (key: string, name: string) => [{ name, data: rows.map((r: any) => ({ x: new Date(r.date).getTime(), y: r[key] || 0 })) }];
+                this.chartKpiReach = { ...this.chartKpiReach, series: toSeries('reach', 'Alcance') };
+                this.chartKpiEngagement = { ...this.chartKpiEngagement, series: toSeries('engagement', 'Interacciones') };
+                this.chartKpiFollowers = { ...this.chartKpiFollowers, series: toSeries('followers_day', 'Nuevos seguidores') };
+                this._cdr.markForCheck();
+            });
+
+        // Cálculo de deltas para KPIs (periodo anterior)
+        this._panelesService.getClinicaStats(clinicaId, aType, prevStart, prevEnd)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((prev: any) => {
+                const rowsPrev = Array.isArray(prev) ? prev : (prev?.stats || []);
+                const sumPrev = (key: string) => rowsPrev.reduce((s: number, r: any) => s + (r[key] || 0), 0);
+                const pct = (curr: number, old: number) => {
+                    if (!old) return null; 
+                    return Number((((curr - old) / old) * 100).toFixed(1));
+                };
+                this.kpiReachDeltaPct = pct(this.kpiReachTotal, sumPrev('reach'));
+                this.kpiEngagementDeltaPct = pct(this.kpiEngagementTotal, sumPrev('engagement'));
+                this.kpiNewFollowersDeltaPct = pct(this.kpiNewFollowers, sumPrev('followers_day'));
                 this._cdr.markForCheck();
             });
 
@@ -957,16 +1084,47 @@ onTabChange(index: number): void {
             .subscribe((res: any) => {
                 this.postsListado = res?.posts || [];
                 this.postsTotal = res?.total || 0;
+                this.dataSource.data = this.postsListado;
+                try { this.dataSource.sort = this.sort; } catch {}
                 this._cdr.markForCheck();
             });
+
+        // Actualizar % crecimiento IG/FB para las gráficas superiores
+        this.updateGrowthPercentagesForTopCharts();
+    }
+
+    // Date range picker change handler
+    onRangeDirect(start: Date | null, end: Date | null): void {
+        if (!start || !end) return;
+        this.analyticsStart = start;
+        this.analyticsEnd = end;
+        this.loadAnalyticsBlock();
+        this.reloadFollowersSeries();
+        this.updateGrowthPercentagesForTopCharts();
+    }
+
+    openCustomRangeDialog(): void {
+        const ref = this._dialog.open(DateRangeDialogComponent, { data: { start: this.analyticsStart, end: this.analyticsEnd } });
+        ref.afterClosed().pipe(takeUntil(this._unsubscribeAll)).subscribe((res) => {
+            if (res?.start && res?.end) {
+                this.onRangeDirect(new Date(res.start), new Date(res.end));
+            }
+        });
+    }
+
+    private _formatLocalDate(d: Date): string {
+        const year = d.getFullYear();
+        const month = (d.getMonth() + 1).toString().padStart(2, '0');
+        const day = d.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
 
     // Reusar el rango para series de seguidores IG/FB
     private reloadFollowersSeries(): void {
         const filter = this.selectedClinicaFilter ?? this.selectedClinicaId;
         if (!filter) return;
-        const start = this.analyticsStart.toISOString().split('T')[0];
-        const end = this.analyticsEnd.toISOString().split('T')[0];
+        const start = this._formatLocalDate(this.analyticsStart);
+        const end = this._formatLocalDate(this.analyticsEnd);
         this._panelesService.getSeriesSeguidores(filter, 'all-time', start, end)
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe(series => {
@@ -977,6 +1135,66 @@ onTabChange(index: number): void {
                     this.chartFacebookOverview.series = [{ name: 'Seguidores Facebook', data: fb }];
                     this._cdr.markForCheck();
                 } catch {}
+            });
+    }
+
+    mapPostType(type: string | null | undefined): string {
+        if (!type) return '—';
+        const t = String(type).toLowerCase();
+        if (t.includes('carrousel') || t.includes('carousel')) return 'carousel';
+        if (t.includes('album')) return 'carousel';
+        if (t.includes('reel')) return 'reel';
+        if (t.includes('video')) return 'video';
+        if (t.includes('photo') || t.includes('image')) return 'foto';
+        return t;
+    }
+    // Calcula el % de crecimiento para IG/FB usando followers_day del periodo actual vs anterior
+    private updateGrowthPercentagesForTopCharts(): void {
+        const clinicaId = this.selectedClinicaId;
+        if (!clinicaId) return;
+        const msDay = 24 * 60 * 60 * 1000;
+        const start = this.analyticsStart;
+        const end = this.analyticsEnd;
+        const rangeDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / msDay) + 1);
+        const prevEnd = new Date(start.getTime() - msDay);
+        const prevStart = new Date(prevEnd.getTime() - (rangeDays - 1) * msDay);
+        const fmt = (d: Date) => this._formatLocalDate(d);
+        const sumKey = (rows: any[], key: string) => rows.reduce((s, r) => s + (r[key] || 0), 0);
+        const pct = (curr: number, old: number) => {
+            if (!old) return 0;
+            return Number((((curr - old) / old) * 100).toFixed(1));
+        };
+
+        // Instagram
+        this._panelesService.getClinicaStats(clinicaId, 'instagram_business', fmt(start), fmt(end))
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((curr: any) => {
+                const rows = Array.isArray(curr) ? curr : (curr?.stats || []);
+                const currVal = sumKey(rows, 'followers_day');
+                this._panelesService.getClinicaStats(clinicaId, 'instagram_business', fmt(prevStart), fmt(prevEnd))
+                    .pipe(takeUntil(this._unsubscribeAll))
+                    .subscribe((old: any) => {
+                        const rowsOld = Array.isArray(old) ? old : (old?.stats || []);
+                        const oldVal = sumKey(rowsOld, 'followers_day');
+                        this.growthPercentages.instagram = pct(currVal, oldVal);
+                        this._cdr.markForCheck();
+                    });
+            });
+
+        // Facebook
+        this._panelesService.getClinicaStats(clinicaId, 'facebook_page', fmt(start), fmt(end))
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((curr: any) => {
+                const rows = Array.isArray(curr) ? curr : (curr?.stats || []);
+                const currVal = sumKey(rows, 'followers_day');
+                this._panelesService.getClinicaStats(clinicaId, 'facebook_page', fmt(prevStart), fmt(prevEnd))
+                    .pipe(takeUntil(this._unsubscribeAll))
+                    .subscribe((old: any) => {
+                        const rowsOld = Array.isArray(old) ? old : (old?.stats || []);
+                        const oldVal = sumKey(rowsOld, 'followers_day');
+                        this.growthPercentages.facebook = pct(currVal, oldVal);
+                        this._cdr.markForCheck();
+                    });
             });
     }
 
