@@ -8519,6 +8519,12 @@ Endpoint backend:
 
 - `GET /api/metasync/clinica/:clinicaId/ads/health`
   - Parámetros: `startDate`, `endDate` (YYYY-MM-DD), `platform=meta`.
+  - Umbrales parametrizables por querystring (opcional):
+    - `freq`: Frecuencia máxima para alerta (default por env, ver abajo). Ej: `freq=4`.
+    - `ctr`: CTR mínimo en fracción (Ej: `0.006` = 0,6%). Ej: `ctr=0.005`.
+    - `cpl`: CPL máximo en euros. Ej: `cpl=20`.
+    - `growth`: Crecimiento relativo de CPL vs semana previa (Ej: `0.4` = +40%). Ej: `growth=0.3`.
+  - Ejemplo: `GET …/ads/health?startDate=2025-09-01&endDate=2025-09-10&platform=meta&freq=4&ctr=0.006&cpl=20&growth=0.3`.
   - Respuesta: `{ platform, period, cards: [{ id, title, status, items[] }] }`.
   - Reglas incluidas:
     - `no-leads-48h`: adsets con gasto >0 sin leads en las últimas 48h.
@@ -8529,6 +8535,13 @@ Endpoint backend:
     - `learning-limited`: adsets con `effective_status` LIKE `LEARNING_LIMITED%`.
     - `rejected-ads`: anuncios con `status/effective_status` que contenga `REJECT/DISAPPROV`.
   - Enriquecido: cada `item` incluye `ad_account_id`, `ad_name/adset_name/campaign_name` (según aplique) y `ui_link` directo a Ads Manager.
+
+Defaults de umbrales (variables de entorno backend):
+
+- `ADS_HEALTH_FREQ_MAX=3`
+- `ADS_HEALTH_CTR_MIN=0.005` (0,5%)
+- `ADS_HEALTH_CPL_MAX=15`
+- `ADS_HEALTH_CPL_GROWTH=0.4` (+40%)
 
 Notas de rendimiento:
 
@@ -8543,3 +8556,42 @@ Frontend:
 Gráficos (Redes Sociales):
 
 - “Visualizaciones y alcance de los anuncios”: gradiente/stroke a sangre como en demo Fuse; donuts de posiciones (anillo 72%, stroke 4) con leyenda inferior de puntos de color, valor y porcentaje.
+## Web · Conexión Google (Fase 1)
+
+Backend (OAuth Google):
+- `GET /oauth/google/connect` → devuelve `authUrl` para iniciar OAuth (usa `state=userId`).
+- `GET /oauth/google/callback` → intercambia `code` por tokens, guarda `GoogleConnection` y redirige a `pages/settings?connected=google`.
+  - `GET /oauth/google/connection-status` → `{ connected, userEmail, googleUserId, expiresAt, scopes, expired }`.
+
+Modelos/migraciones:
+- `GoogleConnection` (`userId`, `googleUserId`, `userEmail`, `accessToken`, `refreshToken`, `scopes`, `expiresAt`).
+- Migración: `20250910081500-create-google-connections.js`.
+
+Variables de entorno:
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`
+- `GOOGLE_OAUTH_SCOPES` (default: `webmasters.readonly openid email profile`)
+- `GOOGLE_PSI_API_KEY` (para PageSpeed Insights en fases posteriores)
+
+Flujo UX (igual que Meta):
+1) Botón “Conectar con Google” (Ajustes). Llama a `GET /oauth/google/connect` y abre `authUrl`.
+2) Callback vuelve a Ajustes con `?connected=google`.
+3) En Fase 2 se mostrarán propiedades de Search Console y mapeo a clínicas.
+
+## Web · Propiedades Search Console (Fase 2)
+
+Backend:
+- `GET /oauth/google/assets` → Lista propiedades verificadas del usuario en Search Console.
+  - Respuesta: `{ success, assets: [{ siteUrl, permissionLevel, propertyType }], total }`.
+- `POST /oauth/google/map-assets` → Mapea propiedades a clínicas.
+  - Body: `{ mappings: [{ clinicaId, siteUrl, propertyType?, permissionLevel? }] }`.
+  - Respuesta: `{ success, mapped, assets }`.
+
+Modelo/migración:
+- `ClinicWebAsset` (`clinicaId`, `googleConnectionId`, `siteUrl`, `propertyType`, `permissionLevel`, `verified`, `isActive`).
+- Migración: `20250910094000-create-clinic-web-assets.js`.
+
+Notas y decisiones de diseño:
+- Separación estricta de proveedores: la lógica y UI de Google (Search Console/PSI) no se mezclan con Meta. Componentes, endpoints y modelos son independientes.
+- `propertyType`: detectado por prefijo (`sc-domain:` → `sc-domain`, si no `url-prefix`).
+- Refresco de token: el endpoint `/oauth/google/assets` refresca el access token si está próximo a expirar usando el `refresh_token`.
+- UI: botón “Mapear propiedades” en la tarjeta Google abre un mapeador dedicado (`GoogleAssetMappingComponent`).

@@ -22,6 +22,7 @@ import { User } from 'app/core/user/user.types';
 
 // ✅ IMPORTS CORRECTOS: Desde el directorio shared
 import { AssetMappingComponent } from '../shared/asset-mapping.component';
+import { GoogleAssetMappingComponent } from '../shared/google-asset-mapping.component';
 import { AssetMappingConfig, MappingResult } from '../shared/asset-mapping.types';
 
 interface ConnectedAccount {
@@ -67,7 +68,8 @@ interface MetaMapping {
         MatSnackBarModule,
         NgFor,
         NgIf,
-        AssetMappingComponent // ✅ Componente del directorio shared
+        AssetMappingComponent,
+        GoogleAssetMappingComponent // ✅ Nuevo mapeo Google
     ],
 })
 export class SettingsConnectedAccountsComponent implements OnInit {
@@ -75,6 +77,7 @@ export class SettingsConnectedAccountsComponent implements OnInit {
 
     // Estado del mapeo de activos
     showAssetMapping = false;
+    showGoogleMapping = false;
     
     // ✅ NUEVO: Propiedades para mapeos existentes
     metaMappings: MetaMapping[] = [];
@@ -89,6 +92,8 @@ export class SettingsConnectedAccountsComponent implements OnInit {
         title: 'Mapear Activos de Meta',
         subtitle: 'Asigna tus páginas, cuentas de Instagram y cuentas publicitarias a clínicas específicas'
     };
+    googleMappingTitle = 'Mapear propiedades de Search Console';
+    googleMappingSubtitle = 'Asigna sitios verificados a tus clínicas';
 
     accounts: ConnectedAccount[] = [
         {
@@ -116,6 +121,7 @@ export class SettingsConnectedAccountsComponent implements OnInit {
             connected: false,
             color: 'text-red-600',
             permissions: [
+                'Search Console',
                 'Acceso a Analytics',
                 'Google Ads',
                 'Google Maps',
@@ -157,6 +163,7 @@ export class SettingsConnectedAccountsComponent implements OnInit {
         });
 
         this._checkMetaConnectionStatus();
+        this._checkGoogleConnectionStatus();
     }
 
     // ✅ Función trackByFn requerida por el HTML
@@ -270,7 +277,7 @@ export class SettingsConnectedAccountsComponent implements OnInit {
                 this._connectMeta();
                 break;
             case 'google':
-                console.log('Conectar Google (no implementado)');
+                this._connectGoogle();
                 break;
             case 'tiktok':
                 console.log('Conectar TikTok (no implementado)');
@@ -341,6 +348,118 @@ export class SettingsConnectedAccountsComponent implements OnInit {
     }
 
     /**
+     * ✅ NUEVO: Estado de conexión Google
+     */
+    private _checkGoogleConnectionStatus(): void {
+        this._httpClient.get<any>('https://autenticacion.clinicaclick.com/oauth/google/connection-status').subscribe(
+            (res) => {
+                const googleAcc = this.accounts.find(a => a.id === 'google');
+                if (!googleAcc) return;
+                googleAcc.connected = !!res?.connected;
+                if (res?.connected) {
+                    googleAcc.userEmail = res.userEmail || '';
+                    googleAcc.userName = res.userName || '';
+                    this._loadGoogleMappings();
+                }
+                this._changeDetectorRef.markForCheck();
+            },
+            () => {
+                const googleAcc = this.accounts.find(a => a.id === 'google');
+                if (googleAcc) googleAcc.connected = false;
+                this._changeDetectorRef.markForCheck();
+            }
+        );
+    }
+
+    googleMappings: any[] = [];
+    isLoadingGoogleMappings = false;
+    private _loadGoogleMappings(): void {
+        this.isLoadingGoogleMappings = true;
+        this._httpClient.get<any>('https://autenticacion.clinicaclick.com/oauth/google/mappings').subscribe(
+            (resp) => {
+                this.googleMappings = resp?.mappings || [];
+                this.isLoadingGoogleMappings = false;
+                this._changeDetectorRef.markForCheck();
+            },
+            () => { this.googleMappings = []; this.isLoadingGoogleMappings = false; this._changeDetectorRef.markForCheck(); }
+        );
+    }
+
+    private _disconnectGoogle(): void {
+        const dialogRef = this._fuseConfirmationService.open({
+            title: 'Desconectar Google',
+            message: '¿Seguro que quieres desconectar tu cuenta de Google? Se eliminarán los mapeos de Search Console.',
+            icon: { show: true, name: 'heroicons_outline:exclamation-triangle', color: 'warn' },
+            actions: { confirm: { show: true, label: 'Desconectar', color: 'warn' }, cancel: { show: true, label: 'Cancelar' } },
+            dismissible: true
+        });
+        dialogRef.afterClosed().subscribe((result) => {
+            if (result === 'confirmed') {
+                this._fuseLoadingService.show();
+                this._httpClient.delete('https://autenticacion.clinicaclick.com/oauth/google/disconnect').subscribe(
+                    () => {
+                        const acc = this.accounts.find(a => a.id === 'google');
+                        if (acc) { acc.connected = false; acc.userEmail = undefined as any; acc.userName = undefined as any; }
+                        this.googleMappings = [];
+                        this._fuseLoadingService.hide();
+                        this._snackBar.open('✅ Google desconectado', '', { duration: 4000, panelClass: ['snackbar-success'] });
+                        this._changeDetectorRef.markForCheck();
+                    },
+                    (err) => {
+                        this._fuseLoadingService.hide();
+                        this._snackBar.open('❌ Error al desconectar Google', '', { duration: 4000, panelClass: ['snackbar-error'] });
+                        console.error(err);
+                    }
+                );
+            }
+        });
+    }
+
+    /**
+     * ✅ NUEVO: Conectar Google (Search Console OAuth)
+     */
+    private _connectGoogle(): void {
+        this._fuseLoadingService.show();
+        this._snackBar.open('📎 Conectando con Google…', '', { duration: 2500 });
+
+        this._httpClient.get<any>('https://autenticacion.clinicaclick.com/oauth/google/connect').subscribe(
+            (resp) => {
+                this._fuseLoadingService.hide();
+                const authUrl = resp?.authUrl;
+                if (!authUrl) {
+                    this._snackBar.open('❌ No se pudo generar la URL de conexión de Google', '', { duration: 4000, panelClass: ['snackbar-error'] });
+                    return;
+                }
+                // Redirigir a Google OAuth
+                window.location.href = authUrl;
+            },
+            (err) => {
+                this._fuseLoadingService.hide();
+                console.error('❌ Error generando authUrl Google:', err);
+                this._snackBar.open('❌ Error al conectar con Google', '', { duration: 5000, panelClass: ['snackbar-error'] });
+            }
+        );
+    }
+
+    /**
+     * ✅ Clase dinámica para los badges de permisos
+     */
+    getPermissionClass(account: ConnectedAccount, permission: string): any {
+        const base = 'px-3 py-1 rounded-full text-xs border';
+        // Google: marcar Search Console como conectado
+        if (account.id === 'google' && account.connected && /search console/i.test(permission)) {
+            return {
+                [base]: true,
+                'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800': true
+            };
+        }
+        return {
+            [base]: true,
+            'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800': true
+        };
+    }
+
+    /**
      * Disconnect account
      */
     disconnectAccount(accountId: string): void {
@@ -352,7 +471,7 @@ export class SettingsConnectedAccountsComponent implements OnInit {
                 this._disconnectMeta();
                 break;
             case 'google':
-                console.log('Desconectar Google (no implementado)');
+                this._disconnectGoogle();
                 break;
             case 'tiktok':
                 console.log('Desconectar TikTok (no implementado)');
@@ -450,6 +569,11 @@ export class SettingsConnectedAccountsComponent implements OnInit {
         this._changeDetectorRef.markForCheck();
     }
 
+    openGoogleMapping(): void {
+        this.showGoogleMapping = true;
+        this._changeDetectorRef.markForCheck();
+    }
+
     /**
      * Manejar resultado del mapeo
      */
@@ -479,6 +603,23 @@ export class SettingsConnectedAccountsComponent implements OnInit {
     onMappingCancelled(): void {
         console.log('Mapeo cancelado por el usuario');
         this.showAssetMapping = false;
+        this._changeDetectorRef.markForCheck();
+    }
+
+    onGoogleMappingComplete(ev: { success: boolean; mapped: number }): void {
+        this.showGoogleMapping = false;
+        if (ev?.success) {
+            this._snackBar.open(`✅ Mapeados ${ev.mapped} sitio(s)`, '', { duration: 4000, panelClass: ['snackbar-success'] });
+            // Refrescar mapeos sin recargar la página
+            this._loadGoogleMappings();
+        } else {
+            this._snackBar.open('❌ Error mapeando sitios', '', { duration: 4000, panelClass: ['snackbar-error'] });
+        }
+        this._changeDetectorRef.markForCheck();
+    }
+
+    onGoogleMappingCancelled(): void {
+        this.showGoogleMapping = false;
         this._changeDetectorRef.markForCheck();
     }
 }

@@ -1,0 +1,111 @@
+<div class="asset-mapping-container">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h3 class="text-2xl font-bold text-primary mb-2">{{ title }}</h3>
+      <p class="text-secondary">{{ subtitle }}</p>
+    </div>
+    <button mat-icon-button (click)="cancel()"><mat-icon [svgIcon]="'heroicons_outline:x-mark'"></mat-icon></button>
+  </div>
+
+  @if (isCheckingConnection) {
+    <div class="flex items-center justify-center py-10">
+      <mat-progress-spinner diameter="40" mode="indeterminate"></mat-progress-spinner>
+      <span class="ml-3 text-secondary">Verificando conexión con Google…</span>
+    </div>
+  }
+
+  @if (!isCheckingConnection && !isConnected) {
+    <div class="p-6 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40">
+      <div class="text-lg font-semibold mb-1">Conecta Google en la tarjeta superior para continuar</div>
+      <div class="text-secondary">Vuelve aquí tras conceder permisos.</div>
+    </div>
+  }
+
+  @if (!isCheckingConnection && isConnected) {
+    <mat-stepper [linear]="true">
+      <mat-step [stepControl]="assetForm" label="Seleccionar sitios">
+        <form [formGroup]="assetForm">
+          <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+              <span class="font-medium">Total de sitios verificados</span>
+              <span class="text-primary font-bold">{{ assets.length }}</span>
+            </div>
+          </div>
+
+          @if (isLoadingAssets) {
+            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+          } @else {
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              @for (a of assets; track a.id) {
+                <div class="border rounded p-3">
+                  <div class="flex items-start justify-between">
+                    <div class="min-w-0">
+                      <div class="font-medium truncate">{{ a.name }}</div>
+                      <div class="text-xs text-secondary">{{ a.propertyType }} · {{ a.permissionLevel }}</div>
+                    </div>
+                    <mat-checkbox (change)="toggleAsset(a.id, $event.checked)"></mat-checkbox>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <div class="mt-4 flex justify-end">
+            <button type="button" mat-flat-button color="primary" [disabled]="selectedAssetIds.length===0" matStepperNext>Continuar</button>
+          </div>
+        </form>
+      </mat-step>
+
+      <mat-step [stepControl]="clinicForm" label="Seleccionar clínicas">
+        <form [formGroup]="clinicForm">
+          @if (isLoadingClinics) { <mat-progress-bar mode="indeterminate"></mat-progress-bar> }
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+            @for (c of clinics; track c.id) {
+              <div class="border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" [ngClass]="{'opacity-60': !c.hasWebsite}">
+                <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+                    @if (c.url_avatar) {
+                      <img [src]="c.url_avatar" class="w-full h-full object-cover" />
+                    } @else { <span class="text-sm font-semibold">{{ (c.nombre || '').slice(0,2).toUpperCase() }}</span> }
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium truncate">{{ c.nombre }}</div>
+                    <div class="text-xs text-secondary truncate" [matTooltip]="c.url_web || '—'">{{ c.url_web || '—' }}</div>
+                  </div>
+                  <mat-checkbox [disabled]="!c.hasWebsite" (change)="toggleClinic(c.id, $event.checked)" matTooltip="{{ c.hasWebsite ? '' : 'Esta clínica no se ha asociado con ninguna web' }}"></mat-checkbox>
+                </div>
+              </div>
+            }
+          </div>
+          <div class="mt-4 flex justify-between">
+            <button type="button" mat-stroked-button color="primary" matStepperPrevious>Atrás</button>
+            <button type="button" mat-flat-button color="primary" [disabled]="selectedClinicIds.length===0" matStepperNext>Continuar</button>
+          </div>
+        </form>
+      </mat-step>
+
+      <mat-step label="Confirmar y guardar">
+        <div class="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div class="flex items-center mb-2">
+            <mat-icon class="text-primary mr-2" [svgIcon]="'heroicons_outline:check-circle'"></mat-icon>
+            <div class="font-medium">Resumen</div>
+          </div>
+          <div class="text-sm text-secondary mb-2">{{ selectedAssetIds.length }} sitio(s) → {{ selectedClinicIds.length }} clínica(s)</div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <div class="text-xs uppercase text-secondary mb-1">Sitios</div>
+              @for (sid of selectedAssetIds; track sid) { <div class="text-sm truncate">{{ sid }}</div> }
+            </div>
+            <div>
+              <div class="text-xs uppercase text-secondary mb-1">Clínicas</div>
+              @for (cid of selectedClinicIds; track cid) { <div class="text-sm truncate">{{ clinicNameById(cid) }}</div> }
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end">
+          <button mat-flat-button color="primary" [disabled]="isSubmitting" (click)="submit()">Guardar mapeo</button>
+        </div>
+      </mat-step>
+    </mat-stepper>
+  }
+</div>

@@ -648,53 +648,7 @@
                                 </div>
                             </div>
 
-                            <!-- Publicidad: Salud de las campañas (Meta Ads) -->
-                            <div class="mt-10">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div>
-                                        <div class="text-2xl font-semibold tracking-tight">Salud de las campañas</div>
-                                        <div class="text-secondary">Verifica si tu campaña funciona bien</div>
-                                    </div>
-                                    <mat-button-toggle-group [value]="adsPlatform" (change)="adsPlatform = $event.value; loadAdsHealth();">
-                                        <mat-button-toggle value="meta">Meta Ads</mat-button-toggle>
-                                        <mat-button-toggle value="google" disabled>Google Ads</mat-button-toggle>
-                                        <mat-button-toggle value="tiktok" disabled>TikTok Ads</mat-button-toggle>
-                                    </mat-button-toggle-group>
-                                </div>
-
-                                <!-- Grid de tarjetas estilo Fuse (Previous statement) -->
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div *ngFor="let card of adsHealth?.cards" class="bg-card rounded-2xl shadow overflow-hidden">
-                                        <div class="p-6">
-                                            <div class="flex items-start justify-between mb-2">
-                                                <div class="text-lg font-semibold">{{ card.title }}</div>
-                                                <mat-icon [svgIcon]="card.status==='ok' ? 'heroicons_outline:check-badge' : 'heroicons_outline:exclamation-triangle'" [ngClass]="card.status==='ok' ? 'text-green-500' : 'text-red-500'"></mat-icon>
-                                            </div>
-                                            <div [ngClass]="card.status==='ok' ? 'text-green-600' : (card.status==='warning' ? 'text-amber-600' : 'text-red-600')" class="font-medium mb-4">
-                                                {{ card.status==='ok' ? 'Correcto' : (card.status==='warning' ? 'Requiere atención' : 'Requiere revisión') }}
-                                            </div>
-                                            <div class="text-sm text-secondary grid grid-cols-4 gap-2 font-medium">
-                                                <div>Clínica</div>
-                                                <div>Campaña</div>
-                                                <div>Grupo de anuncios</div>
-                                                <div *ngIf="card.id==='frequency-gt-3'">Frecuencia</div>
-                                                <div *ngIf="card.id==='cpl-over-15'">CPL</div>
-                                            </div>
-                                            <div class="mt-2 space-y-1">
-                                                <div *ngFor="let it of (card.items || []).slice(0,6)" class="text-sm flex items-center justify-between">
-                                                    <div class="grid grid-cols-4 gap-2 w-full">
-                                                        <div>{{ selectedClinicaDisplay }}</div>
-                                                        <div>{{ it.campaign_name || it.ad_name || '—' }}</div>
-                                                        <div>{{ it.adset_name || '—' }}</div>
-                                                        <div *ngIf="card.id==='frequency-gt-3'">{{ (it.avg_freq || 0) | number:'1.1-1' }}</div>
-                                                        <div *ngIf="card.id==='cpl-over-15'">{{ (it.cpl || 0) | currency:'EUR': 'symbol-narrow':'1.0-0' }}</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            
 
                             <!-- FB: Se sustituye 'Desglose del alcance' por el breakdown combinado anterior -->
 

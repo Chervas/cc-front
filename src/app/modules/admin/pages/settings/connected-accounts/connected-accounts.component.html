@@ -74,12 +74,87 @@
                         <div class="text-sm text-secondary mb-2">Permisos y capacidades:</div>
                         <div class="flex flex-wrap gap-2">
                             @for (permission of account.permissions; track permission) {
-                                <div class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-full text-xs border border-blue-200 dark:border-blue-800">
-                                    {{ permission }}
-                                </div>
+                                <div [ngClass]="getPermissionClass(account, permission)">{{ permission }}</div>
                             }
                         </div>
                     </div>
+
+                    <!-- Connected User Info (Google) -->
+                    @if (account.connected && account.id === 'google' && (account.userEmail || account.userName)) {
+                        <div class="mb-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                            <div class="flex items-center">
+                                <mat-icon class="text-green-600 dark:text-green-400 mr-3" [svgIcon]="'heroicons_outline:check-circle'"></mat-icon>
+                                <div>
+                                    <div class="font-medium text-green-900 dark:text-green-100">
+                                        Conectado como: {{ account.userName || account.userEmail }}
+                                    </div>
+                                    <div class="text-sm text-green-700 dark:text-green-300">
+                                        {{ account.userEmail }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Activos mapeados (Google) -->
+                    @if (account.id === 'google' && account.connected && !showGoogleMapping) {
+                        <div class="mt-4 mb-2" *ngIf="isLoadingGoogleMappings">
+                            <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+                        </div>
+                        @if (!isLoadingGoogleMappings && googleMappings.length > 0) {
+                            <div class="mb-4 p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg border border-gray-200 dark:border-gray-800">
+                                <div class="text-sm font-semibold mb-3">Activos Mapeados</div>
+                                @for (mapping of googleMappings; track mapping.clinica.id) {
+                                    <div class="mb-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                                        <div class="flex items-center mb-2">
+                                            <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center mr-2">
+                                                @if (mapping.clinica.avatar_url) {
+                                                    <img [src]="mapping.clinica.avatar_url" class="w-full h-full object-cover" />
+                                                } @else { <span class="text-xs font-semibold">{{ (mapping.clinica.nombre||'').slice(0,2).toUpperCase() }}</span> }
+                                            </div>
+                                            <div class="font-medium">{{ mapping.clinica.nombre }}</div>
+                                            <div class="ml-2 text-xs text-secondary">{{ mapping.assets.search_console.length }} propiedades</div>
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                            <div class="p-2 rounded border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20">
+                                                <div class="flex items-center mb-1">
+                                                    <mat-icon class="text-green-600 mr-1" [svgIcon]="'heroicons_outline:globe-alt'"></mat-icon>
+                                                    <span class="text-sm font-medium">Search Console</span>
+                                                </div>
+                                                @for (a of mapping.assets.search_console; track a.siteUrl) {
+                                                    <div class="text-xs text-secondary truncate">{{ a.siteUrl }}</div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+
+                    <!-- Account Actions Google -->
+                    @if (account.connected && account.id === 'google' && !showGoogleMapping) {
+                        <div class="border-t pt-4 mt-4">
+                            <div class="flex justify-center">
+                                <button mat-flat-button color="primary" (click)="openGoogleMapping()">
+                                    <mat-icon class="mr-2" [svgIcon]="'heroicons_outline:squares-2x2'"></mat-icon>
+                                    @if (googleMappings.length > 0) { Volver a mapear } @else { Mapear propiedades }
+                                </button>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Google Asset Mapping Component -->
+                    @if (account.id === 'google' && account.connected && showGoogleMapping) {
+                        <div class="border-t pt-4 mt-4">
+                            <app-google-asset-mapping
+                                [title]="googleMappingTitle"
+                                [subtitle]="googleMappingSubtitle"
+                                (mappingComplete)="onGoogleMappingComplete($event)"
+                                (cancelled)="onGoogleMappingCancelled()">
+                            </app-google-asset-mapping>
+                        </div>
+                    }
 
                     <!-- Connected User Info (solo para Meta cuando está conectada) -->
                     @if (account.connected && account.id === 'meta' && account.userName) {
