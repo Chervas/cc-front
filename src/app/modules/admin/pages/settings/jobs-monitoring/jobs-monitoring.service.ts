@@ -70,6 +70,13 @@ export interface JobConfiguration {
   };
 }
 
+export interface MetaUsageStatus {
+  usagePct: number;
+  nextAllowedAt: number;
+  now: number;
+  waiting: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -87,6 +94,30 @@ export class JobsMonitoringService {
   constructor(private http: HttpClient) {
     // Iniciar polling automático cada 30 segundos
     this.startAutoRefresh();
+  }
+
+  /**
+   * Uso actual de la API de Meta (para gauge)
+   */
+  getMetaUsageStatus(): Observable<MetaUsageStatus | null> {
+    return this.http.get<MetaUsageStatus>(`${this.baseUrl}/usage/meta`, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(error => this.handleError(error))
+    );
+  }
+
+  /**
+   * Tail del log de una ejecución (o log general por env)
+   */
+  tailSyncLog(id: number | null, lines: number = 400, important: boolean = true): Observable<{filePath: string; lines: number; items: {level: string; line: string}[]} | null> {
+    const lid = id ?? 0;
+    const qs = `lines=${lines}${important ? '&filter=important' : ''}`;
+    return this.http.get<any>(`${this.baseUrl}/sync-logs/${lid}/tail?${qs}`, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(error => this.handleError(error))
+    );
   }
 
   /**
@@ -254,6 +285,21 @@ export class JobsMonitoringService {
         setTimeout(() => this.refreshSystemStatus(), 1000);
         return response;
       }),
+      catchError(error => this.handleError(error))
+    );
+  }
+
+  /**
+   * Lanzar sincronización por clínica (rango)
+   */
+  runClinicSync(clinicaId: number, startDate?: string, endDate?: string): Observable<any> {
+    const body: any = {};
+    if (startDate) body.startDate = startDate;
+    if (endDate) body.endDate = endDate;
+    return this.http.post(`https://crm.clinicaclick.com/api/metasync/clinica/${clinicaId}/sync`, body, {
+      headers: this.getHeaders()
+    }).pipe(
+      map(resp => resp),
       catchError(error => this.handleError(error))
     );
   }
@@ -445,4 +491,3 @@ export class JobsMonitoringService {
     };
   }
 }
-

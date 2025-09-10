@@ -30,7 +30,7 @@ import { Router } from '@angular/router';
 import { TranslocoModule } from '@ngneat/transloco';
 import { PanelesService } from './paneles.service';
 import { ApexOptions, NgApexchartsModule, ChartComponent } from 'ng-apexcharts';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, takeUntil, forkJoin } from 'rxjs';
 import { ClinicFilterService } from 'app/core/services/clinic-filter-service';
 import { RoleService, UsuarioClinicaResponse } from 'app/core/services/role.service';
 import { RedesSocialesMetricas } from './paneles.types';
@@ -71,7 +71,18 @@ import { DateRangeDialogComponent } from './date-range-dialog.component';
     ],
     providers: [
         { provide: MAT_DATE_LOCALE, useValue: 'es-ES' },
-        { provide: DateAdapter, useClass: class MondayFirstDateAdapter extends NativeDateAdapter { override getFirstDayOfWeek() { return 1; } } }
+        { provide: DateAdapter, useClass: class EsDateAdapter extends NativeDateAdapter {
+            override getFirstDayOfWeek() { return 1; }
+            override parse(value: any): Date | null {
+                if (typeof value === 'string') {
+                    const v = value.trim();
+                    const m = v.match(/^([0-3]?\d)\/([0-1]?\d)\/(\d{4})$/);
+                    if (m) { const d = +m[1], mo = +m[2], y = +m[3]; const dt = new Date(y, mo - 1, d); return isNaN(dt.getTime()) ? null : dt; }
+                }
+                return super.parse(value);
+            }
+            override format(date: Date, displayFormat: Object): string { const dd = ('0'+date.getDate()).slice(-2); const mm = ('0'+(date.getMonth()+1)).slice(-2); const yyyy = date.getFullYear(); return `${dd}/${mm}/${yyyy}`; }
+        } }
     ]
 })
 export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
@@ -114,7 +125,17 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
             animations: { enabled: false },
             toolbar: { show: false },
             fontFamily: 'inherit',
-            foreColor: 'inherit'
+            foreColor: 'inherit',
+            locales: [{
+                name: 'es',
+                options: {
+                    months: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
+                    shortMonths: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
+                    days: ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'],
+                    shortDays: ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
+                }
+            }],
+            defaultLocale: 'es'
         },
         colors: ['#94A3B8', '#94A3B8', '#94A3B8'],
         dataLabels: { enabled: false },
@@ -128,14 +149,14 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
         },
         grid: {
             borderColor: 'var(--fuse-border)',
-            padding: { top: 10, bottom: -32, left: 0, right: 0 },
+            padding: { top: 10, bottom: 0, left: 0, right: 0 },
             position: 'back',
             xaxis: { lines: { show: true } }
         },
         stroke: { curve: 'smooth', width: 2 },
         xaxis: { type: 'datetime', tooltip: { enabled: false }, labels: { style: { colors: '#94A3B8' } } },
         yaxis: { show: false, labels: { formatter: (v: number) => this.formatNumber(v) } },
-        legend: { show: false },
+        legend: { show: true, position: 'top', horizontalAlign: 'left', floating: true, offsetY: 8 },
         tooltip: {
             theme: 'dark',
             x: { format: 'dd MMM yyyy' },
@@ -145,8 +166,165 @@ export class PanelesComponent implements OnInit, AfterViewInit, OnDestroy {
     };
     organicPaidTotals = { total: 0, organic: 0, paid: 0 };
     organicPaidDeltas: { total: number | null; organic: number | null; paid: number | null } = { total: null, organic: null, paid: null };
+
+    // Visualizaciones: gráfico y KPI
+    chartViewsOrganicPaid: ApexOptions = {
+        chart: { type: 'area', height: 340, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit', locales: [{
+            name: 'es', options: {
+                months: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
+                shortMonths: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],
+                days: ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'],
+                shortDays: ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
+            }
+        }], defaultLocale: 'es' },
+        colors: ['#818CF8', '#22C55E'],
+        dataLabels: { enabled: false },
+        fill: { type: 'gradient', gradient: { shadeIntensity: 0.35, opacityFrom: 0.6, opacityTo: 0.05 } },
+        grid: { borderColor: 'var(--fuse-border)', padding: { top: 10, bottom: 0, left: 0, right: 0 }, position: 'back', xaxis: { lines: { show: true } } },
+        stroke: { curve: 'smooth', width: 2 },
+        xaxis: { type: 'datetime', tooltip: { enabled: false }, labels: { style: { colors: '#94A3B8' } } },
+        yaxis: { show: false, labels: { formatter: (v: number) => this.formatNumber(v) } },
+        legend: { show: false },
+        tooltip: { theme: 'dark', x: { format: 'dd MMM yyyy' }, y: { formatter: (val: number) => `${this.formatNumber(val)}` } },
+        series: []
+    };
+    // Combinado temporal: visualizaciones vs alcance (pago)
+    chartPaidTimesCombined: ApexOptions = {
+        chart: {
+            type: 'area', height: 340, animations: { enabled: false }, toolbar: { show: false },
+            fontFamily: 'inherit', foreColor: 'inherit', width: '100%'
+        },
+        // Paleta y gradiente similares al demo Fuse Visitors vs. Page Views
+        colors: ['#8098FF', '#86E3C3'],
+        dataLabels: { enabled: false },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 0.2,
+                opacityFrom: 0.45,
+                opacityTo: 0.08,
+                inverseColors: false,
+                // colorStops «clona» el comportamiento de stops en esta versión de tipos
+                colorStops: [
+                    [
+                        { offset: 0, color: '#8098FF', opacity: 0.45 },
+                        { offset: 100, color: '#8098FF', opacity: 0.08 }
+                    ],
+                    [
+                        { offset: 0, color: '#86E3C3', opacity: 0.45 },
+                        { offset: 100, color: '#86E3C3', opacity: 0.08 }
+                    ]
+                ]
+            }
+        },
+        grid: {
+            borderColor: 'var(--fuse-border)',
+            padding: { top: 10, bottom: -80, left: 0, right: 0 },
+            position: 'back', xaxis: { lines: { show: true } }
+        },
+        stroke: { curve: 'smooth', width: 2.5 },
+        xaxis: { type: 'datetime', tooltip: { enabled: false }, labels: { style: { colors: '#94A3B8' } } },
+        yaxis: { show: false, labels: { formatter: (v: number) => this.formatNumber(v) } },
+        legend: { show: false },
+        tooltip: { theme: 'dark', x: { format: 'dd MMM yyyy' }, y: { formatter: (val: number) => `${this.formatNumber(val)}` } },
+        series: []
+    };
+    viewsOrganicPaidTotals = { total: 0, organic: 0, paid: 0 };
+    viewsOrganicPaidDeltas: { total: number | null; organic: number | null; paid: number | null } = { total: null, organic: null, paid: null };
+    // KPI Visitas al perfil
+    kpiProfileVisitsTotal: number = 0;
+    kpiProfileVisitsDeltaPct: number | null = null;
+    chartKpiProfileVisits: ApexOptions = {
+        chart: { type: 'area', height: 80, animations: { enabled: false }, toolbar: { show: false }, sparkline: { enabled: true }, fontFamily: 'inherit', foreColor: 'inherit' },
+        colors: ['#06B6D4'],
+        dataLabels: { enabled: false },
+        fill: { type: 'gradient', gradient: { shadeIntensity: 0.35, opacityFrom: 0.6, opacityTo: 0.05 } },
+        stroke: { curve: 'smooth', width: 2 },
+        tooltip: { theme: 'dark', x: { format: 'dd MMM yyyy' } },
+        series: []
+    };
+    chartKpiPosts: ApexOptions = {
+        chart: { type: 'area', height: 80, animations: { enabled: false }, toolbar: { show: false }, sparkline: { enabled: true }, fontFamily: 'inherit', foreColor: 'inherit' },
+        colors: ['#8B5CF6'],
+        dataLabels: { enabled: false },
+        fill: { type: 'gradient', gradient: { shadeIntensity: 0.35, opacityFrom: 0.6, opacityTo: 0.05 } },
+        stroke: { curve: 'smooth', width: 2 },
+        tooltip: { theme: 'dark', x: { format: 'dd MMM yyyy' } },
+        series: []
+    };
+    chartKpiStories: ApexOptions = {
+        chart: { type: 'area', height: 80, animations: { enabled: false }, toolbar: { show: false }, sparkline: { enabled: true }, fontFamily: 'inherit', foreColor: 'inherit' },
+        colors: ['#F59E0B'],
+        dataLabels: { enabled: false },
+        fill: { type: 'gradient', gradient: { shadeIntensity: 0.35, opacityFrom: 0.6, opacityTo: 0.05 } },
+        stroke: { curve: 'smooth', width: 2 },
+        tooltip: { theme: 'dark', x: { format: 'dd MMM yyyy' } },
+        series: []
+    };
+    // Nuevos gráficos de breakdown por posiciones (pago)
+    chartPaidViewsBreakdown: ApexOptions = {
+        chart: { type: 'bar', height: 320, toolbar: { show: false }, animations: { enabled: false }, fontFamily: 'inherit', foreColor: 'inherit' },
+        plotOptions: { bar: { horizontal: true, barHeight: '60%', borderRadius: 4 } },
+        grid: { borderColor: 'var(--fuse-border)', padding: { left: 0, right: 0 } },
+        dataLabels: { enabled: false },
+        legend: { show: false },
+        xaxis: { categories: [], labels: { formatter: (value: string) => this.formatNumber(Number(value)) } },
+        tooltip: { theme: 'dark' },
+        colors: ['#60A5FA'],
+        series: []
+    };
+    chartPaidReachBreakdown: ApexOptions = {
+        chart: { type: 'bar', height: 320, toolbar: { show: false }, animations: { enabled: false }, fontFamily: 'inherit', foreColor: 'inherit' },
+        plotOptions: { bar: { horizontal: true, barHeight: '60%', borderRadius: 4 } },
+        grid: { borderColor: 'var(--fuse-border)', padding: { left: 0, right: 0 } },
+        dataLabels: { enabled: false },
+        legend: { show: false },
+        xaxis: { categories: [], labels: { formatter: (value: string) => this.formatNumber(Number(value)) } },
+        tooltip: { theme: 'dark' },
+        colors: ['#34D399'],
+        series: []
+    };
+    // Donuts (estilo New vs. Returning)
+    chartPaidViewsDonut: ApexOptions = {
+        chart: { type: 'donut', height: 280, toolbar: { show: false }, animations: { enabled: false }, fontFamily: 'inherit', foreColor: 'inherit' },
+        legend: { show: false },
+        dataLabels: { enabled: false },
+        stroke: { show: true, width: 4, colors: ['#ffffff'] },
+        plotOptions: { pie: { donut: { size: '72%' } } },
+        labels: [],
+        colors: ['#60A5FA', '#93C5FD', '#BFDBFE', '#A7F3D0', '#FDE68A'],
+        series: []
+    };
+    chartPaidReachDonut: ApexOptions = {
+        chart: { type: 'donut', height: 280, toolbar: { show: false }, animations: { enabled: false }, fontFamily: 'inherit', foreColor: 'inherit' },
+        legend: { show: false },
+        dataLabels: { enabled: false },
+        stroke: { show: true, width: 4, colors: ['#ffffff'] },
+        plotOptions: { pie: { donut: { size: '72%' } } },
+        labels: [],
+        colors: ['#34D399', '#6EE7B7', '#A7F3D0', '#93C5FD', '#FDE68A'],
+        series: []
+    };
+    donutViewsLegend: { label: string; value: number; pct: number; color: string }[] = [];
+    donutReachLegend: { label: string; value: number; pct: number; color: string }[] = [];
+    // Combinado: views + reach por posición
+    chartPaidPositionsCombined: ApexOptions = {
+        chart: { type: 'bar', height: 340, toolbar: { show: false }, animations: { enabled: false }, fontFamily: 'inherit', foreColor: 'inherit' },
+        plotOptions: { bar: { horizontal: true, barHeight: '60%', borderRadius: 4 } },
+        grid: { borderColor: 'var(--fuse-border)', padding: { left: 0, right: 0 } },
+        dataLabels: { enabled: false },
+        xaxis: { categories: [], labels: { formatter: (value: string) => this.formatNumber(Number(value)) } },
+        legend: { show: true, position: 'top', horizontalAlign: 'left', floating: true, offsetY: 8 },
+        tooltip: { theme: 'dark' },
+        colors: ['#60A5FA', '#34D399'],
+        series: []
+    };
     postsListado: any[] = [];
     postsTotal: number = 0;
+
+    // Salud de campañas (ads health)
+    adsPlatform: 'meta'|'google'|'tiktok' = 'meta';
+    adsHealth: any = { cards: [] };
     // Tabla publicaciones con ordenación
     displayedPostColumns: string[] = [
         'titulo',
@@ -516,6 +694,7 @@ defaultLocale: 'es',
         tiktok: 0,
         facebook: 0
     };
+    newFollowers: { instagram: number; facebook: number; tiktok: number } = { instagram: 0, facebook: 0, tiktok: 0 };
 
 
 
@@ -724,6 +903,7 @@ ngOnInit(): void {
                         this.loadSeries();
                         this.loadVinculaciones();
                         this.loadAnalyticsBlock();
+                        this.loadAdsHealth();
                     } else {
                         this.clearCharts();
                     }
@@ -737,6 +917,7 @@ ngOnInit(): void {
                         this.loadSeries();
                         this.loadVinculaciones();
                         this.loadAnalyticsBlock();
+                        this.loadAdsHealth();
 
                         // Sincronizar RoleService con el filtro emitido
                         const selected = this._roleService.getSelectedClinica();
@@ -933,13 +1114,23 @@ onTabChange(index: number): void {
     // Analytics (orgánico vs pago)
     // =====================
     kpiReachTotal: number = 0;
+    kpiViewsTotal: number = 0;
     kpiEngagementTotal: number = 0;
     kpiNewFollowers: number = 0;
+    kpiPostsTotal: number = 0;
+    kpiPostsDeltaPct: number | null = null;
+    kpiStoriesTotal: number = 0;
+    kpiStoriesDeltaPct: number | null = null;
+    analyticsRangeLabel: string = '';
+    // Señal cuando usamos aproximación (sin views reales de IG)
+    viewsApproxUsed: boolean = false;
     kpiReachDeltaPct: number | null = null;
+    kpiViewsDeltaPct: number | null = null;
     kpiEngagementDeltaPct: number | null = null;
     kpiNewFollowersDeltaPct: number | null = null;
     chartKpiReach: ApexOptions = { chart: { type: 'area', height: 64, sparkline: { enabled: true }, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' }, xaxis: { type: 'datetime' }, stroke: { curve: 'smooth', width: 2 }, colors: ['#3b82f6'], series: [], tooltip: { theme: 'dark', x: { format: 'dd MMM yyyy' }, y: { formatter: (v: number) => this.formatNumber(v) } } };
-    chartKpiEngagement: ApexOptions = { chart: { type: 'area', height: 64, sparkline: { enabled: true }, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' }, xaxis: { type: 'datetime' }, stroke: { curve: 'smooth', width: 2 }, colors: ['#22c55e'], series: [], tooltip: { theme: 'dark', x: { format: 'dd MMM yyyy' }, y: { formatter: (v: number) => this.formatNumber(v) } } };
+    chartKpiViews: ApexOptions = { chart: { type: 'area', height: 64, sparkline: { enabled: true }, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' }, xaxis: { type: 'datetime' }, stroke: { curve: 'smooth', width: 2 }, colors: ['#8b5cf6'], series: [], tooltip: { theme: 'dark', x: { format: 'dd MMM yyyy' }, y: { formatter: (v: number) => this.formatNumber(v) } } };
+    chartKpiEngagement: ApexOptions = { chart: { type: 'area', height: 64, sparkline: { enabled: true }, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' }, grid: { padding: { top: 0, bottom: -40, left: 0, right: 0 } }, xaxis: { type: 'datetime' }, stroke: { curve: 'smooth', width: 2 }, colors: ['#22c55e'], series: [], tooltip: { theme: 'dark', x: { format: 'dd MMM yyyy' }, y: { formatter: (v: number) => this.formatNumber(v) } } };
     chartKpiFollowers: ApexOptions = { chart: { type: 'area', height: 64, sparkline: { enabled: true }, animations: { enabled: false }, toolbar: { show: false }, fontFamily: 'inherit', foreColor: 'inherit' }, xaxis: { type: 'datetime' }, stroke: { curve: 'smooth', width: 2 }, colors: ['#64748b'], series: [], tooltip: { theme: 'dark', x: { format: 'dd MMM yyyy' }, y: { formatter: (v: number) => this.formatNumber(v) } } };
 
     private getSelectedAssetType(): 'instagram_business'|'facebook_page'|null {
@@ -990,18 +1181,20 @@ onTabChange(index: number): void {
         const clinicaId = this.selectedClinicaId;
         if (!clinicaId) return;
         const aType = this.getSelectedAssetType();
-        const start = this.analyticsStart.toISOString().split('T')[0];
-        const end = this.analyticsEnd.toISOString().split('T')[0];
+        // Usar fecha local (evita desfase por UTC en 'Ayer')
+        const start = this._formatLocalDate(this.analyticsStart);
+        const end = this._formatLocalDate(this.analyticsEnd);
         const msDay = 24 * 60 * 60 * 1000;
         const startDateObj = new Date(this.analyticsStart.getFullYear(), this.analyticsStart.getMonth(), this.analyticsStart.getDate());
         const endDateObj = new Date(this.analyticsEnd.getFullYear(), this.analyticsEnd.getMonth(), this.analyticsEnd.getDate());
         const rangeDays = Math.max(1, Math.round((endDateObj.getTime() - startDateObj.getTime()) / msDay) + 1);
+        this.analyticsRangeLabel = `${rangeDays} ${rangeDays === 1 ? 'día' : 'días'}`;
         const prevEndDate = new Date(startDateObj.getTime() - msDay);
         const prevStartDate = new Date(prevEndDate.getTime() - (rangeDays - 1) * msDay);
         const prevStart = this._formatLocalDate(prevStartDate);
         const prevEnd = this._formatLocalDate(prevEndDate);
 
-        // Serie orgánico/pago
+        // Serie orgánico/pago (reach)
         this._panelesService.getOrganicVsPaidByDay(clinicaId, aType, start, end)
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe((resp: any) => {
@@ -1016,15 +1209,17 @@ onTabChange(index: number): void {
                     organic: sum(organic),
                     paid: sum(paid)
                 };
-                this.chartOrganicPaid = { ...this.chartOrganicPaid, series: [
-                    { name: 'Visualizaciones totales', data: total },
-                    { name: 'Orgánicas', data: organic },
-                    { name: 'De pago', data: paid }
-                ] };
+                // Serie del gráfico: SOLO de pago (nuevo requerimiento)
+                this.chartOrganicPaid = { ...this.chartOrganicPaid, series: [ { name: 'De pago', data: paid } ] };
+
+                // KPI superior = Alcance total (orgánico + pago)
+                this.kpiReachTotal = this.organicPaidTotals.total;
+                // Sparkline del KPI con la serie total
+                this.chartKpiReach = { ...this.chartKpiReach, series: [ { name: 'Alcance total', data: total } ] };
                 this._cdr.markForCheck();
             });
 
-        // Deltas del periodo anterior para cabecera del gráfico
+        // Deltas del periodo anterior para cabecera del gráfico (reach)
         this._panelesService.getOrganicVsPaidByDay(clinicaId, aType, prevStart, prevEnd)
             .pipe(takeUntil(this._unsubscribeAll))
             .subscribe((resp: any) => {
@@ -1041,6 +1236,100 @@ onTabChange(index: number): void {
                     organic: pct(this.organicPaidTotals.organic, organicPrev),
                     paid: pct(this.organicPaidTotals.paid, paidPrev)
                 };
+                // Delta del KPI de alcance (usar el delta total del desglose)
+                this.kpiReachDeltaPct = this.organicPaidDeltas.total;
+                this._cdr.markForCheck();
+            });
+
+        // Serie orgánico/pago (views)
+        this._panelesService.getViewsOrganicVsPaidByDay(clinicaId, aType, start, end)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((resp: any) => {
+                const points = resp?.series || [];
+                const total = points.map((p: any) => ({ x: new Date(p.date).getTime(), y: p.total }));
+                const organic = points.map((p: any) => ({ x: new Date(p.date).getTime(), y: p.organic }));
+                const paid = points.map((p: any) => ({ x: new Date(p.date).getTime(), y: p.paid }));
+                const sum = (arr: any[]) => arr.reduce((s, i) => s + (i?.y || 0), 0);
+                this.viewsOrganicPaidTotals = { total: sum(total), organic: sum(organic), paid: sum(paid) };
+                this.chartViewsOrganicPaid = { ...this.chartViewsOrganicPaid, series: [ { name: 'De pago', data: paid } ] };
+                // KPI: Visualizaciones totales
+                this.kpiViewsTotal = this.viewsOrganicPaidTotals.total;
+                this.chartKpiViews = { ...this.chartKpiViews, series: [ { name: 'Visualizaciones totales', data: total } ] };
+                this._cdr.markForCheck();
+            });
+
+        // Desgloses por posición (pago) para la plataforma seleccionada
+        const platform = aType === 'instagram_business' ? 'instagram' : (aType === 'facebook_page' ? 'facebook' : undefined);
+        if (platform) {
+            forkJoin([
+                this._panelesService.getPaidViewsBreakdown(clinicaId, start, end, platform as any, aType),
+                this._panelesService.getPaidReachBreakdown(clinicaId, start, end, platform as any, aType)
+            ]).pipe(takeUntil(this._unsubscribeAll)).subscribe(([viewsResp, reachResp]) => {
+                const vPlat = (viewsResp?.byPlatform || []).find((p: any) => p.platform === platform);
+                const rPlat = (reachResp?.byPlatform || []).find((p: any) => p.platform === platform);
+                const vPositions = vPlat?.positions || [];
+                const rPositions = rPlat?.positions || [];
+                const mapV: Record<string, number> = {};
+                const mapR: Record<string, number> = {};
+                vPositions.forEach((p: any) => { mapV[p.position || 'unknown'] = p.impressions || 0; });
+                rPositions.forEach((p: any) => { mapR[p.position || 'unknown'] = p.reach || 0; });
+                const friendly = (pos: string) => {
+                    const p = (pos || '').toLowerCase();
+                    if (p.includes('reel')) return 'reels';
+                    if (p.includes('stories')) return 'stories';
+                    if (p === 'feed') return 'feed';
+                    if (p.includes('explore')) return 'explore';
+                    return pos || 'unknown';
+                };
+                const categoriesRaw = Array.from(new Set([...Object.keys(mapV), ...Object.keys(mapR)]));
+                categoriesRaw.sort((a, b) => (mapV[b] || 0) - (mapV[a] || 0) || (mapR[b] || 0) - (mapR[a] || 0));
+                const labels = categoriesRaw.map(friendly);
+                const viewsData = categoriesRaw.map(c => mapV[c] || 0);
+                const reachData = categoriesRaw.map(c => mapR[c] || 0);
+                // Configurar donuts + leyendas
+                this.chartPaidViewsDonut = { ...this.chartPaidViewsDonut, labels, series: viewsData };
+                const sumV = viewsData.reduce((s, n) => s + n, 0) || 1;
+                const colorsV = (this.chartPaidViewsDonut.colors as string[]) || [];
+                this.donutViewsLegend = labels.map((l, i) => ({ label: l, value: viewsData[i] || 0, pct: Math.round(((viewsData[i] || 0) / sumV) * 100), color: colorsV[i % colorsV.length] }));
+                this.chartPaidReachDonut = { ...this.chartPaidReachDonut, labels, series: reachData };
+                const sumR = reachData.reduce((s, n) => s + n, 0) || 1;
+                const colorsR = (this.chartPaidReachDonut.colors as string[]) || [];
+                this.donutReachLegend = labels.map((l, i) => ({ label: l, value: reachData[i] || 0, pct: Math.round(((reachData[i] || 0) / sumR) * 100), color: colorsR[i % colorsR.length] }));
+                this._cdr.markForCheck();
+            });
+            // Combinado temporal: views (paid) vs reach (paid)
+            forkJoin([
+                this._panelesService.getViewsOrganicVsPaidByDay(clinicaId, aType, start, end),
+                this._panelesService.getOrganicVsPaidByDay(clinicaId, aType, start, end)
+            ]).pipe(takeUntil(this._unsubscribeAll)).subscribe(([vResp, rResp]) => {
+                const vPts = (vResp?.series || []).map((p: any) => ({ x: new Date(p.date).getTime(), y: p.paid || 0 }));
+                const rPts = (rResp?.series || []).map((p: any) => ({ x: new Date(p.date).getTime(), y: p.paid || 0 }));
+                this.chartPaidTimesCombined = {
+                    ...this.chartPaidTimesCombined,
+                    series: [
+                        { name: 'Visualizaciones de pago', data: vPts },
+                        { name: 'Alcance de pago', data: rPts }
+                    ]
+                };
+                this._cdr.markForCheck();
+            });
+        }
+
+        // Deltas del periodo anterior para views
+        this._panelesService.getViewsOrganicVsPaidByDay(clinicaId, aType, prevStart, prevEnd)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((resp: any) => {
+                const points = resp?.series || [];
+                const totalPrev = points.reduce((s: number, p: any) => s + (p.total || 0), 0);
+                const organicPrev = points.reduce((s: number, p: any) => s + (p.organic || 0), 0);
+                const paidPrev = points.reduce((s: number, p: any) => s + (p.paid || 0), 0);
+                const pct = (curr: number, old: number) => { if (!old) return null; return Number((((curr - old) / old) * 100).toFixed(1)); };
+                this.viewsOrganicPaidDeltas = {
+                    total: pct(this.viewsOrganicPaidTotals.total, totalPrev),
+                    organic: pct(this.viewsOrganicPaidTotals.organic, organicPrev),
+                    paid: pct(this.viewsOrganicPaidTotals.paid, paidPrev)
+                };
+                this.kpiViewsDeltaPct = this.viewsOrganicPaidDeltas.total;
                 this._cdr.markForCheck();
             });
 
@@ -1050,15 +1339,24 @@ onTabChange(index: number): void {
             .subscribe((resp: any) => {
                 const rows = Array.isArray(resp) ? resp : (resp?.stats || []);
                 const sum = (key: string) => rows.reduce((s: number, r: any) => s + (r[key] || 0), 0);
-                this.kpiReachTotal = sum('reach');
                 this.kpiEngagementTotal = sum('engagement');
-                this.kpiNewFollowers = sum('followers_day');
-
+                
                 // Sparklines
                 const toSeries = (key: string, name: string) => [{ name, data: rows.map((r: any) => ({ x: new Date(r.date).getTime(), y: r[key] || 0 })) }];
-                this.chartKpiReach = { ...this.chartKpiReach, series: toSeries('reach', 'Alcance') };
                 this.chartKpiEngagement = { ...this.chartKpiEngagement, series: toSeries('engagement', 'Interacciones') };
-                this.chartKpiFollowers = { ...this.chartKpiFollowers, series: toSeries('followers_day', 'Nuevos seguidores') };
+
+                // Visitas al perfil
+                this.kpiProfileVisitsTotal = sum('profile_visits');
+                this.chartKpiProfileVisits = { ...this.chartKpiProfileVisits, series: toSeries('profile_visits', 'Visitas al perfil') };
+                // Nuevos KPI sparklines
+                this.chartKpiPosts = { ...this.chartKpiPosts, series: toSeries('posts_count', 'Publicaciones') };
+                this.chartKpiStories = { ...this.chartKpiStories, series: toSeries('stories_count', 'Historias') };
+                // Marca de aproximación de views: si no hay views pero sí impresiones
+                this.viewsApproxUsed = rows.some((r: any) => (r.views || 0) === 0 && (r.impressions || 0) > 0);
+                // Nº de publicaciones / historias (si está disponible)
+                const sumSafe = (key: string) => rows.reduce((s: number, r: any) => s + (r[key] || 0), 0);
+                this.kpiPostsTotal = sumSafe('posts_count');
+                this.kpiStoriesTotal = sumSafe('stories_count');
                 this._cdr.markForCheck();
             });
 
@@ -1072,9 +1370,10 @@ onTabChange(index: number): void {
                     if (!old) return null; 
                     return Number((((curr - old) / old) * 100).toFixed(1));
                 };
-                this.kpiReachDeltaPct = pct(this.kpiReachTotal, sumPrev('reach'));
                 this.kpiEngagementDeltaPct = pct(this.kpiEngagementTotal, sumPrev('engagement'));
-                this.kpiNewFollowersDeltaPct = pct(this.kpiNewFollowers, sumPrev('followers_day'));
+                this.kpiProfileVisitsDeltaPct = pct(this.kpiProfileVisitsTotal, sumPrev('profile_visits'));
+                this.kpiPostsDeltaPct = pct(this.kpiPostsTotal, sumPrev('posts_count'));
+                this.kpiStoriesDeltaPct = pct(this.kpiStoriesTotal, sumPrev('stories_count'));
                 this._cdr.markForCheck();
             });
 
@@ -1091,6 +1390,17 @@ onTabChange(index: number): void {
 
         // Actualizar % crecimiento IG/FB para las gráficas superiores
         this.updateGrowthPercentagesForTopCharts();
+    }
+
+    // Cargar salud de campañas (Meta Ads)
+    private loadAdsHealth(): void {
+        const clinicaId = this.selectedClinicaId;
+        if (!clinicaId) return;
+        const start = this._formatLocalDate(this.analyticsStart);
+        const end = this._formatLocalDate(this.analyticsEnd);
+        this._panelesService.getAdsHealth(clinicaId, start, end, this.adsPlatform)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((resp:any) => { this.adsHealth = resp || { cards: [] }; this._cdr.markForCheck(); });
     }
 
     // Date range picker change handler
@@ -1171,6 +1481,8 @@ onTabChange(index: number): void {
             .subscribe((curr: any) => {
                 const rows = Array.isArray(curr) ? curr : (curr?.stats || []);
                 const currVal = sumKey(rows, 'followers_day');
+                // Guardar nuevos seguidores IG del periodo
+                this.newFollowers.instagram = currVal;
                 this._panelesService.getClinicaStats(clinicaId, 'instagram_business', fmt(prevStart), fmt(prevEnd))
                     .pipe(takeUntil(this._unsubscribeAll))
                     .subscribe((old: any) => {
@@ -1187,6 +1499,7 @@ onTabChange(index: number): void {
             .subscribe((curr: any) => {
                 const rows = Array.isArray(curr) ? curr : (curr?.stats || []);
                 const currVal = sumKey(rows, 'followers_day');
+                this.newFollowers.facebook = currVal;
                 this._panelesService.getClinicaStats(clinicaId, 'facebook_page', fmt(prevStart), fmt(prevEnd))
                     .pipe(takeUntil(this._unsubscribeAll))
                     .subscribe((old: any) => {

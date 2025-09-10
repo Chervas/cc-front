@@ -108,6 +108,12 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
     jobsLogs: JobLog[] = [];
     jobsStatistics: JobStatistics | null = null;
     jobsConfiguration: JobConfiguration | null = null;
+    // Uso Meta
+    metaUsagePct: number = 0;
+    metaWaiting: boolean = false;
+    // Tail del log
+    tailItems: { level: string; line: string }[] = [];
+    tailFilePath: string = '';
 
     // Filtros
     selectedJobType = '';
@@ -116,7 +122,7 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
     endDate: Date | null = null;
 
     // Tabla de logs
-    logsDisplayedColumns: string[] = ['jobType', 'status', 'startedAt', 'duration', 'recordsProcessed', 'actions'];
+    logsDisplayedColumns: string[] = ['jobType', 'status', 'startedAt', 'duration', 'progress', 'recordsProcessed', 'actions'];
     filteredJobsLogs = new MatTableDataSource<JobLog>([]);
 
     constructor(
@@ -145,6 +151,8 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
         this.loadJobsLogs();
         this.loadJobsStatistics();
         this.loadJobsConfiguration();
+        this.loadMetaUsage();
+        this.loadRunningProgress();
     }
 
     loadSystemStatus(): void {
@@ -206,6 +214,25 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
                     console.error('Error loading jobs configuration:', error);
                     this.error = 'Error al cargar la configuración';
                 }
+            });
+    }
+
+    loadMetaUsage(): void {
+        this.jobsService.getMetaUsageStatus()
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((s) => {
+                if (!s) return;
+                this.metaUsagePct = s.usagePct || 0;
+                this.metaWaiting = !!s.waiting;
+            });
+    }
+
+    // Cargar progreso de jobs en ejecución (si el endpoint soporta filtros)
+    loadRunningProgress(): void {
+        this.jobsService.getJobsLogs({ status: 'running', limit: 5 } as any)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((resp: any) => {
+                // No se usa directamente aquí; el template mostrará recentLogs de systemStatus y tail bajo demanda
             });
     }
 
@@ -302,6 +329,18 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
             });
     }
 
+    // Ver tail del log (por id o general si no hay id)
+    viewLog(log?: any): void {
+        const id = (log && (log.id || log.logId)) ? Number(log.id || log.logId) : 0;
+        this.jobsService.tailSyncLog(id, 400, true)
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((resp) => {
+                if (!resp) { this.showErrorMessage('No se pudo leer el log'); return; }
+                this.tailItems = resp.items || [];
+                this.tailFilePath = resp.filePath || '';
+            });
+    }
+
     // ===== MÉTODOS DE FILTRADO =====
 
     applyFilters(): void {
@@ -319,18 +358,18 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
 
         // Filtro por fecha de inicio
         if (this.startDate) {
-            const startDateStr = this.startDate.toISOString().split('T')[0];
+            const startDateStr = this._formatLocalDate(this.startDate);
             filteredData = filteredData.filter(log => {
-                const logDate = new Date(log.startedAt).toISOString().split('T')[0];
+                const logDate = this._formatLocalDate(new Date(log.startedAt));
                 return logDate >= startDateStr;
             });
         }
 
         // Filtro por fecha de fin
         if (this.endDate) {
-            const endDateStr = this.endDate.toISOString().split('T')[0];
+            const endDateStr = this._formatLocalDate(this.endDate);
             filteredData = filteredData.filter(log => {
-                const logDate = new Date(log.startedAt).toISOString().split('T')[0];
+                const logDate = this._formatLocalDate(new Date(log.startedAt));
                 return logDate <= endDateStr;
             });
         }
@@ -353,10 +392,16 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
     }
 
     onStartDateChange(): void {
+        if (this.startDate && !(this.startDate instanceof Date)) {
+            this.startDate = new Date(this.startDate);
+        }
         this.applyFilters();
     }
 
     onEndDateChange(): void {
+        if (this.endDate && !(this.endDate instanceof Date)) {
+            this.endDate = new Date(this.endDate);
+        }
         this.applyFilters();
     }
 
@@ -367,6 +412,42 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
         this.startDate = null;
         this.endDate = null;
         this.applyFilters();
+    }
+
+    // Lanzar por clínica
+    clinicIdToRun: number | null = null;
+    clinicStartDate: Date | null = null;
+    clinicEndDate: Date | null = null;
+    runClinic(): void {
+        if (!this.clinicIdToRun) { this.showErrorMessage('Indica una clínica'); return; }
+        const fmt = (d: Date | null) => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : undefined;
+        this.jobsService.runClinicSync(this.clinicIdToRun, fmt(this.clinicStartDate), fmt(this.clinicEndDate))
+            .pipe(takeUntil(this._unsubscribeAll))
+            .subscribe((resp) => {
+                if (!resp) { this.showErrorMessage('No se pudo lanzar la sincronización'); return; }
+                this.showSuccessMessage('Sincronización lanzada');
+                this.loadSystemStatus();
+                this.viewLog();
+            });
+    }
+
+    // Progreso/semaforo
+    getProgress(log: JobLog): number {
+        const sr: any = (log && (log as any).statusReport) || {};
+        if (sr.totalAssets && sr.processedAssets != null) {
+            return Math.min(100, Math.round((sr.processedAssets / sr.totalAssets) * 100));
+        }
+        if (sr.accounts && sr.processed != null) {
+            return Math.min(100, Math.round((sr.processed / sr.accounts) * 100));
+        }
+        return 0;
+    }
+    getSemaforoClass(log: JobLog): string {
+        const sr: any = (log && (log as any).statusReport) || {};
+        if (log.status === 'failed') return 'bg-red-100 text-red-800';
+        if (sr.waiting) return 'bg-amber-100 text-amber-800';
+        if (log.status === 'running') return 'bg-green-100 text-green-800';
+        return 'bg-gray-100 text-gray-800';
     }
 
     // ===== MÉTODOS DE UTILIDAD =====
@@ -385,6 +466,13 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
         }
     }
 
+    private _formatLocalDate(d: Date): string {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
     getJobStatusClass(status: string): string {
         switch (status) {
             case 'completed':
@@ -397,9 +485,20 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
     }
 
     getJobTypeIcon(jobType: string): string {
-        switch (jobType) {
+        const key = (jobType || '').toLowerCase();
+        switch (key) {
             case 'health_check':
                 return 'favorite';
+            case 'metrics_sync':
+            case 'metricssync':
+            case 'automated_metrics_sync':
+                return 'bar_chart';
+            case 'ads_sync':
+            case 'adssync':
+                return 'speakerphone';
+            case 'ads_backfill':
+            case 'adsbackfill':
+                return 'refresh';
             case 'automated_metrics_sync':
                 return 'bar_chart';
             case 'token_validation':
@@ -412,11 +511,20 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
     }
 
     getJobTypeTooltip(jobType: string): string {
-        switch (jobType) {
+        const key = (jobType || '').toLowerCase();
+        switch (key) {
             case 'health_check':
                 return 'Verifica el estado de salud del sistema, incluyendo conexión a base de datos, API de Meta y otros servicios críticos. Se ejecuta cada hora para detectar problemas temprano.';
+            case 'metrics_sync':
+            case 'metricssync':
             case 'automated_metrics_sync':
-                return 'Sincroniza automáticamente las métricas de redes sociales desde Facebook e Instagram. Se ejecuta diariamente para mantener los datos actualizados sin intervención manual.';
+                return 'Sincroniza IG/FB Insights: seguidores, reach/views por cuenta (día Meta), posts y agregados diarios. Reintenta métricas con retraso.';
+            case 'ads_sync':
+            case 'adssync':
+                return 'Sincroniza Ads (entidades, insights diarios y actions) en ventana reciente. Chunking y upsert idempotente.';
+            case 'ads_backfill':
+            case 'adsbackfill':
+                return 'Backfill histórico de Ads: re‑lee Insights/Actions por rango para consolidar gaps/atribución. Recomendado si hubo cambios de mapeo o cortes.';
             case 'token_validation':
                 return 'Valida los tokens de acceso de Meta API para asegurar que siguen siendo válidos. Se ejecuta cada 6 horas para renovar tokens próximos a expirar.';
             case 'data_cleanup':
@@ -447,6 +555,7 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
             if (!this.isLoading) {
                 this.loadSystemStatus();
                 this.loadJobsLogs();
+                this.loadMetaUsage();
             }
         }, 30000);
     }
@@ -465,4 +574,3 @@ export class JobsMonitoringComponent implements OnInit, OnDestroy {
         });
     }
 }
-

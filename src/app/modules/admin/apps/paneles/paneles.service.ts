@@ -146,8 +146,8 @@ export class PanelesService {
 
     return this.getMetricasByClinica(
       clinicaId,
-      startDate.toISOString().split('T')[0],
-      endDate.toISOString().split('T')[0]
+      this._formatLocalDate(startDate),
+      this._formatLocalDate(endDate)
     );
   }
 
@@ -161,8 +161,8 @@ export class PanelesService {
 
     return this.getMetricasByClinica(
       clinicaId,
-      startDate.toISOString().split('T')[0],
-      endDate.toISOString().split('T')[0]
+      this._formatLocalDate(startDate),
+      this._formatLocalDate(endDate)
     ).pipe(
       map((response: any) => {
         const metricas = response?.data ?? response;
@@ -216,6 +216,41 @@ export class PanelesService {
   getOrganicVsPaidByDay(clinicaId: number, assetType: 'instagram_business'|'facebook_page'|'tiktok'|null, startDate: string, endDate: string): Observable<any> {
     const type = assetType && assetType !== 'tiktok' ? `&assetType=${assetType}` : '';
     const url = `${environment.apiUrl}/metasync/clinica/${clinicaId}/organic-vs-paid?startDate=${startDate}&endDate=${endDate}${type}`;
+    return this._httpClient.get(url);
+  }
+
+  // Visualizaciones: Orgánico vs de Pago (diario)
+  getViewsOrganicVsPaidByDay(clinicaId: number, assetType: 'instagram_business'|'facebook_page'|'tiktok'|null, startDate: string, endDate: string): Observable<any> {
+    const type = assetType && assetType !== 'tiktok' ? `&assetType=${assetType}` : '';
+    const url = `${environment.apiUrl}/metasync/clinica/${clinicaId}/views-organic-vs-paid?startDate=${startDate}&endDate=${endDate}${type}`;
+    return this._httpClient.get(url);
+  }
+
+  // Desglose de pago: visualizaciones (impresiones) por plataforma/posición
+  getPaidViewsBreakdown(clinicaId: number, startDate: string, endDate: string, platform?: 'instagram'|'facebook', assetType?: 'instagram_business'|'facebook_page'): Observable<any> {
+    const params: string[] = [`startDate=${startDate}`, `endDate=${endDate}`];
+    if (platform) params.push(`platform=${platform}`);
+    if (assetType) params.push(`assetType=${assetType}`);
+    const url = `${environment.apiUrl}/metasync/clinica/${clinicaId}/ads/paid-views-breakdown?${params.join('&')}`;
+    return this._httpClient.get(url);
+  }
+
+  // Desglose de pago: alcance por plataforma/posición
+  getPaidReachBreakdown(clinicaId: number, startDate: string, endDate: string, platform?: 'instagram'|'facebook', assetType?: 'instagram_business'|'facebook_page'): Observable<any> {
+    const params: string[] = [`startDate=${startDate}`, `endDate=${endDate}`];
+    if (platform) params.push(`platform=${platform}`);
+    if (assetType) params.push(`assetType=${assetType}`);
+    const url = `${environment.apiUrl}/metasync/clinica/${clinicaId}/ads/paid-reach-breakdown?${params.join('&')}`;
+    return this._httpClient.get(url);
+  }
+
+  // Ads health (Meta Ads inicialmente)
+  getAdsHealth(clinicaId: number, startDate?: string, endDate?: string, platform: 'meta'|'google'|'tiktok' = 'meta'): Observable<any> {
+    const params: string[] = [];
+    if (startDate) params.push(`startDate=${startDate}`);
+    if (endDate) params.push(`endDate=${endDate}`);
+    if (platform) params.push(`platform=${platform}`);
+    const url = `${environment.apiUrl}/metasync/clinica/${clinicaId}/ads/health${params.length ? '?' + params.join('&') : ''}`;
     return this._httpClient.get(url);
   }
 
@@ -315,5 +350,15 @@ export class PanelesService {
         ]
       }
     };
+  }
+
+  // --------------------------------------------
+  // @ Helpers
+  // --------------------------------------------
+  private _formatLocalDate(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   }
 }

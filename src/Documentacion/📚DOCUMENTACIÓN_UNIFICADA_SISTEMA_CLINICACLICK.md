@@ -48,6 +48,82 @@
 22. Arquitectura del Sistema
 completar
 
+### 23. Métricas Meta (FB/IG) – Definiciones, Fechas y Desgloses
+
+- Alcance total diario (cuenta):
+  - IG: insights de cuenta `reach` → se guarda como `reach_total` y `reach` en `SocialStatsDaily`.
+  - FB: `page_impressions_unique` → se guarda como `reach_total` en `SocialStatsDaily`.
+- Visualizaciones totales (cuenta):
+  - IG: `content_views` o `views` (con `metric_type=total_value`), fallback `impressions`.
+  - FB: `page_impressions` (o `views` a partir de 2025‑11‑15).
+- Ventanas y fechas (alineación con Meta):
+  - Para un día D, se consulta a Meta con ventana inclusiva D→(D+1) para capturar el bucket diario con `end_time = D+1`.
+  - IG: se guarda en el mismo día del `end_time` (00:00 local). FB: se guarda en D (equivalente a `end_time − 1 día`) para alinear cronológicamente con la consulta.
+- Followers IG:
+  - `follower_count` (insights) solo admite últimos 30 días y excluye el día en curso. Se usa `followers_count` del perfil para el total actual; no se rellena histórico fuera de ventana.
+
+Correcciones aplicadas (2025‑09‑09)
+- “Alcance total” y “Visualizaciones totales” ahora usan SIEMPRE el total que devuelve Meta (COALESCE(reach_total, reach) y COALESCE(views, impressions) según plataforma). El total NO es la suma de orgánico + pago.
+- En series “Orgánico vs Pago” el pago se restringe a la plataforma seleccionada (IG o FB); si no se filtra, se suma IG+FB.
+- El orgánico estimado se calcula como total − pago (sin negativos).
+
+### 24. Desgloses (Pago) – Nuevos endpoints
+
+Se sustituyen los desgloses anteriores (que intentaban deduplicar orgánico vs pago) por desgloses exclusivamente de pago basados en Ads Insights. No se realiza la resta “total − pago” porque Meta no garantiza deduplicación entre fuentes.
+
+- Visualizaciones de pago (impresiones):
+  - Endpoint: `GET /api/metasync/clinica/:clinicaId/ads/paid-views-breakdown?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`
+  - Datos: `impressions`, `spend`, `cpm`, desglosados por `publisher_platform` (instagram, facebook) y `platform_position` (feed, story, reels, explore, video_feeds, marketplace, etc.).
+- Alcance de pago:
+  - Endpoint: `GET /api/metasync/clinica/:clinicaId/ads/paid-reach-breakdown?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`
+  - Datos: `reach`, `spend`, desglosados por `publisher_platform` y `platform_position`.
+- Filtrado por plataformas:
+  - Por defecto se incluyen solo `instagram` y `facebook`. Con `includeAllPlatforms=true` se devuelven también otras superficies (audience_network, messenger, etc.).
+
+Ambos endpoints agregan a partir de `SocialAdsInsightsDaily` (nivel `ad`) y usan las cuentas publicitarias mapeadas en `ClinicMetaAssets` (`assetType='ad_account'`).
+
+25. Cambios de base de datos: Ads por posición
+
+- Problema resuelto: el índice único anterior en `SocialAdsInsightsDaily` (`level, entity_id, date`) impedía almacenar múltiples filas por anuncio y día, perdiendo el desglose por `platform_position` (feed, stories, reels, etc.).
+- Solución: nuevo índice único incluye la posición y la plataforma.
+
+Migración
+- Archivo: `backendclinicaclick/migrations/20250909133000-alter-socialadsinsightsdaily-index.js`
+- Qué hace:
+  - Elimina `uniq_ads_insights_entity_date` (si existe)
+  - Crea `uniq_ads_insights_entity_date_platform_position` sobre `(level, entity_id, date, publisher_platform, platform_position)`
+
+Comandos
+- Ejecutar migración (desde la raíz):
+  - `npx sequelize-cli db:migrate --cwd backendclinicaclick`
+- Revertir si hiciera falta:
+  - `npx sequelize-cli db:migrate:undo --cwd backendclinicaclick`
+
+Post‑migración
+- Re‑sincroniza los insights de Ads para el rango que quieras mostrar con posiciones (ej. un día):
+  - `curl -X POST 'https://crm.clinicaclick.com/api/metasync/asset/ACTIVO_AD_ACCOUNT/sync' \\
+     -H 'Authorization: Bearer <TOKEN>' \\
+     -H 'Content-Type: application/json' \\
+     -d '{"startDate":"YYYY-MM-DD","endDate":"YYYY-MM-DD"}'`
+- Los endpoints de breakdown ignoran automáticamente `unknown` si existen posiciones reales en el rango.
+
+26. Validación y equivalencia con la UI de Meta
+- IG (cuenta) – “Alcance total” diario (ej. 2025‑09‑05):
+  - Meta: `GET /{ig_user_id}/insights?metric=reach&period=day&since=2025-09-05&until=2025-09-06`
+  - Panel: pestaña Instagram, rango 05/09/2025 → 05/09/2025 → KPI “Alcance total” muestra el mismo número.
+- Ads (pago) – breakdown por plataforma/posición (ej. 2025‑09‑05):
+  - Meta: `GET /act_{ad_account_id}/insights?level=ad&time_increment=1&fields=reach,impressions,spend&breakdowns=publisher_platform,platform_position&time_range={since:...,until:...}`
+  - Panel: bloques “Superficies de pago por posición (Views/Reach)” muestran las posiciones (reels, stories, video_feeds, etc.) de la plataforma seleccionada.
+
+27. Nuevos KPIs: Visitas al perfil e Interacciones
+- IG visitas al perfil: `profile_views` (metric_type=total_value). Se guarda en `SocialStatsDaily.profile_visits` para rangos de un día.
+- FB visitas a la página: `page_views_total` (serie diaria). Se guarda en `SocialStatsDaily.profile_visits`.
+- IG interacciones totales: `total_interactions` (metric_type=total_value). Sustituye el cálculo previo por suma de posts: se guarda en `SocialStatsDaily.engagement` (solo para rangos de un día).
+- UI: KPI “Visitas al perfil” y “Interacciones totales” utilizan estos valores.
+
+Nota: Algunas métricas de IG con `metric_type=total_value` no ofrecen serie por día; por coherencia se guardan cuando se sincroniza un día exacto.
+
+
 ---
 
 ## 🎯 **RESUMEN EJECUTIVO** {#resumen-ejecutivo}
@@ -8322,3 +8398,148 @@ Actualización Facebook (2025-09)
   1) `full_picture`, 2) `picture`, 3) `attachments[].media.image.src`, 4) `subattachments[].media.image.src`, 5) `/{object_id}/picture?redirect=false`.
 - Determinación de tipo: `type` → `attachments[].media_type` → heurística (`status_type`/URL reel|video|photo|link).
 - Llamadas batch forzadas a `v23.0` para respuestas completas.
+## Decisiones de métricas: Alcance y Visualizaciones (IG/FB)
+
+- Fuente de alcance orgánico: Prioridad a métricas oficiales diarias de Meta.
+  - Facebook: `page_impressions_organic_unique` (fallback: `page_impressions_unique − page_impressions_paid_unique`).
+  - Instagram: `/{ig_user_id}/insights?metric=reach&period=day`.
+  - Persistencia: `SocialStatsDaily.reach` por día y `asset_type`.
+
+- Alcance de pago: Procede de la API de Ads.
+  - Origen: `SocialAdsInsightsDaily.reach` (nivel `ad`, agregado por día y plataforma `publisher_platform`).
+  - Visualización: “De pago” en los desgloses y `kpi` total (orgánico + pago). No hay deduplicación entre orgánico y pago.
+
+- Visualizaciones (views) orgánicas: Agregamos por día a partir de publicaciones (vídeo/reel).
+  - Origen por post:
+    - Facebook: `post_video_views` y, si no está disponible por cambios de la Graph v23, fallback a `/{video-id}/video_insights?metric=total_video_views,total_video_avg_time_watched`.
+    - Instagram: `video_view_count` del media.
+  - Agregado diario: Calculamos “views por día” como delta respecto del día anterior sobre `SocialPostStatsDaily.video_views` (valor acumulado por post), y lo sumamos por día en `SocialStatsDaily.views`.
+
+- Visualizaciones (views) de pago: API de Ads.
+  - Origen: `SocialAdsInsightsDaily.video_plays` por día y plataforma.
+  - Justificación: Meta no ofrece una métrica de “visualizaciones totales” por cuenta equiparable al reach. Por consistencia, usamos `video_plays` para pago.
+
+- Notas y limitaciones:
+  - Las visualizaciones orgánicas se estabilizan conforme se sincronizan posts nuevos; las muy antiguas pueden carecer de series históricas detalladas por día.
+  - Diferencias reach vs views son esperables (reach = cuentas únicas; views = reproducciones y pueden ser >> reach).
+  - Facebook Graph API v23: algunos endpoints/propiedades de vídeo cambiaron; por eso añadimos fallbacks a `video_insights`.
+- Variables de entorno (Ads y Jobs)
+
+  - `ADS_ENTITIES_LIMIT` (por defecto 50): Tamaño de página al listar anuncios (`/{ad_account}/ads`). Si Meta devuelve 500, el sistema baja a 25 y reintenta esa página.
+  - `ADS_CHUNK_DAYS` (por defecto 3): Número de días por “trozo” al pedir Insights/Actions. Los rangos largos se dividen en ventanas de `N` días para evitar 500 y rate limit.
+  - `ADS_PAGE_LIMIT` (por defecto 100): Límite de filas por página para Insights/Actions. Si Meta devuelve 500 en una página, se reduce a 50 y se reintenta.
+  - `ADS_SYNC_INITIAL_DAYS` (por defecto 30): Ventana inicial de sincronización de Ads cuando no hay ejecuciones previas del job.
+  - `ADS_SYNC_RECENT_DAYS` (por defecto 7): Ventana en ejecuciones periódicas del job de Ads.
+  - `ADS_SYNC_BACKFILL_DAYS` (por defecto 28): Ventana del job de backfill semanal de Ads.
+  - `ADS_SYNC_BETWEEN_ACCOUNTS_SLEEP_MS` (por defecto 60000): Pausa entre cuentas publicitarias para repartir carga.
+  - `METASYNC_REQUEST_DELAY_MS` (por defecto 300ms): Demora entre peticiones a la Graph API.
+  - `METASYNC_RATE_LIMIT_THRESHOLD` (por defecto 90): Umbral de uso para anticipar rate limit.
+  - `METASYNC_MAX_RETRIES` (por defecto 3): Reintentos en errores transitorios.
+  - `METASYNC_WAIT_NEXT_HOUR_ON_LIMIT` (por defecto true): En code 4 (rate limit), esperar a la siguiente hora.
+  - Dónde se usan:
+    - Listado de Ads + creatives: `backendclinicaclick/src/controllers/metasync.controller.js` (límite y retry en 500). Se guardan `effective_instagram_media_id`, `effective_object_story_id` y `instagram_permalink_url` para enlazar anuncios y posts.
+    - Insights/Actions: chunk por días y paginación: `metasync.controller.js`. Las acciones se guardan en `SocialAdsActionsDaily` con `publisher_platform` cuando está disponible; si no, el endpoint resuelve la plataforma por JOIN contra `SocialAdsInsightsDaily`.
+    - Jobs y ventanas por defecto: `backendclinicaclick/src/jobs/metasync.jobs.js`.
+## Redes Sociales · Alcance y Visualizaciones (Actualización Sep 2025)
+
+- Totales 1:1 desde Meta:
+  - Instagram:
+    - Alcance: `reach` diario (IG Insights), etiquetado por el día de `end_time` (alineado con la UI de Meta).
+    - Visualizaciones: `views` con `metric_type=total_value` diario (cuando Meta lo expone). Si Meta devuelve vacío en una fecha, el total puede ser 0/ND.
+  - Facebook:
+    - Alcance total único: `page_impressions_unique` diario, etiquetado por el día de `end_time` (sin desplazar -1 día).
+    - Visualizaciones totales: `page_impressions` (hasta 15‑nov‑2025) y `views` a partir de esa fecha.
+
+- De pago (Ads):
+  - Visualizaciones de pago = impresiones de Ads (`impressions`). Modo “Meta‑like por contenido” activado: IG y FB suman IG+FB de los anuncios que promueven contenido de esa red (vía PostPromotions/effective_*), con fallback a IG+FB sin mapeo si la cobertura del día < 70%. AN/Messenger excluidos.
+  - Alcance de pago = `reach` de Ads. Modo “Meta‑like por superficie” activado: IG y FB suman IG+FB (excluye AN/Messenger) por día; el total de la pestaña sigue siendo el de Meta (cuenta), y `orgánico = total − de_pago`.
+
+### Variables de entorno relevantes (MetaSync)
+
+- `ADS_CHUNK_DAYS` (por defecto `3`): tamaño de ventana (días) para paginar Insights de Ads.
+- `ADS_PAGE_LIMIT` (por defecto `100`): límite de filas por página en llamadas a Ads.
+- `METASYNC_POSTS_FALLBACK_LIMIT` (por defecto `30`): número de publicaciones recientes a traer además del rango.
+- `METASYNC_REQUEST_DELAY_MS` (por defecto `300`): retardo suave entre llamadas al Graph para no “picar” límites.
+- `METASYNC_RATE_LIMIT_THRESHOLD` (por defecto `90`): porcentaje de uso a partir del cual se aplica backoff.
+- `METASYNC_MAX_RETRIES` (por defecto `3`): reintentos de llamadas fallidas no RL.
+- `METASYNC_WAIT_NEXT_HOUR_ON_LIMIT` (por defecto `true`): en rate limit, esperar hasta la siguiente hora.
+
+### Monitorización de Jobs (API)
+
+- `GET /api/metasync/jobs/usage/meta` → carga actual de la API de Meta
+  - Respuesta: `{ usagePct, nextAllowedAt, now, waiting }`. Pintar gauge (verde <60%, ámbar 60–80%, rojo >80%).
+- `GET /api/metasync/jobs/sync-logs/:id/tail?lines=500` → tail del log asociado
+  - Usa `SyncLogs.status_report.log_path` si existe; si no, `PM2_LOG_PATH`/`APP_LOG_PATH` del `.env`.
+  - Devuelve `items` con nivel inferido (info/warn/error) para colorear en la UI.
+
+### Progreso y semáforo de Jobs
+
+- Durante ejecuciones, `SyncLogs.status_report` se actualiza con:
+  - Métricas: `{ totalAssets, processedAssets, usagePct, waiting }`.
+  - Ads: `{ accounts, processed, totals:{entities,insightsRows,actionsRows,linkedPromotions}, usagePct, waiting }`.
+- UI recomendada:
+  - Barra de progreso = `processed/total`.
+  - Semáforo: verde (ok), ámbar (espera por rate‑limit), rojo (fallido/no ejecutado).
+
+### Tooltips sugeridos (Jobs)
+
+- `metrics_sync`: Sincroniza IG/FB Insights (seguidores, reach/views por cuenta, posts y agregados diarios). Reintenta métricas con retraso.
+- `ads_sync`: Sincroniza Ads (entidades, insights diarios y actions). Ventana reciente, con chunking y upsert idempotente.
+- `ads_backfill`: Backfill histórico de Ads para el rango indicado; re‑lee insights/actions de las cuentas mapeadas y consolida gaps.
+- `token_validation`: Valida tokens y permisos (instagram_manage_insights, ads_read, pages_read_engagement…).
+- `health_check`: Comprueba salud de BD y disponibilidad de Meta API.
+- `data_cleanup`: Rotación/limpieza de datos temporales/logs.
+
+### Lanzar por clínica
+
+- `POST /api/metasync/clinica/:clinicaId/sync` con body `{ startDate, endDate }` lanza la sincronización completa de la clínica (metrics + ads si así se define en el panel). Útil para re‑ingestas dirigidas sin remapear.
+
+- Orgánico estimado: `orgánico = max(total_meta − de_pago, 0)`.
+
+- Tooltips en el panel: indican que el total proviene de Meta y los “de pago” de Ads; el orgánico es una estimación y puede no coincidir al 100% con UI de Meta.
+
+- Casos “sin dato”: Meta puede devolver arrays vacíos para métricas nuevas (ej. `views` IG) en ciertas fechas; el panel muestra el total 0/ND y mantiene el desglose de Ads como referencia.
+
+### Alineación de días con la UI de Meta
+
+- Antes: algunos totales se guardaban con `end_time - 1 día`. Ahora se guardan por el día de `end_time` (bucket-day de Meta), por lo que el 29 de Meta es el 29 en el panel.
+- Para corregir historizados, re-sincroniza el rango afectado (p. ej., última semana) para reetiquetar las fechas conforme al nuevo criterio.
+### Mapeo por contenido (Views)
+
+- Objetivo: aproximar “De anuncios” que muestra la UI de Meta agrupando por contenido de la red (IG o FB), no por la superficie donde se mostró.
+- Fuente de mapeo: `PostPromotions` (ad_id ↔ post_id) y `effective_instagram_media_id`/`effective_object_story_id` en la ingesta de Ads.
+- Regla por día y red:
+  1) Seleccionar `ad_id` que promueven contenido de la red (post de IG o FB de la clínica).
+  2) Sumar impresiones de Ads (`impressions`) en IG+FB para esos `ad_id` (AN/Messenger excluidos).
+  3) Fallback si cobertura mapeada < 70% del volumen total del día: usar IG+FB por superficie (sin mapeo) para no dejar huecos.
+- Nota: la UI de Meta usa canalización propietaria; este método es reproducible y documentado, pero puede diferir en ciertos días.
+## Publicidad · Salud de las campañas (Meta Ads)
+
+Endpoint backend:
+
+- `GET /api/metasync/clinica/:clinicaId/ads/health`
+  - Parámetros: `startDate`, `endDate` (YYYY-MM-DD), `platform=meta`.
+  - Respuesta: `{ platform, period, cards: [{ id, title, status, items[] }] }`.
+  - Reglas incluidas:
+    - `no-leads-48h`: adsets con gasto >0 sin leads en las últimas 48h.
+    - `frequency-gt-3`: anuncios con frecuencia media > 3 en el rango.
+    - `cpl-growth`: CPL actual ≥ 40% respecto a la semana previa (adset).
+    - `cpl-over-15`: CPL > 15€ (adset).
+    - `low-ctr`: CTR < 0,5% (anuncio, min 100 impresiones).
+    - `learning-limited`: adsets con `effective_status` LIKE `LEARNING_LIMITED%`.
+    - `rejected-ads`: anuncios con `status/effective_status` que contenga `REJECT/DISAPPROV`.
+  - Enriquecido: cada `item` incluye `ad_account_id`, `ad_name/adset_name/campaign_name` (según aplique) y `ui_link` directo a Ads Manager.
+
+Notas de rendimiento:
+
+- Añadido índice `idx_ads_entities_parent_id` en `SocialAdsEntities.parent_id` para acelerar joins jerárquicos (ad→adset→campaign).
+
+Frontend:
+
+- Pestaña “Publicidad” del panel principal: sección “Salud de las campañas”.
+- Tarjetas: estilo Fuse “Previous statement”. Se muestra cabecera de columnas y filas sólo si hay `items` (cuando `status`≠`ok`).
+- Filtro superior de plataforma (Meta activo; Google/TikTok deshabilitados). Respeta el selector de clínica/rango globales.
+
+Gráficos (Redes Sociales):
+
+- “Visualizaciones y alcance de los anuncios”: gradiente/stroke a sangre como en demo Fuse; donuts de posiciones (anillo 72%, stroke 4) con leyenda inferior de puntos de color, valor y porcentaje.

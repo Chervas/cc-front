@@ -154,6 +154,27 @@
 
         </div>
 
+        <!-- Gauge uso API Meta -->
+        <div class="mb-8">
+            <mat-card class="p-6">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-lg font-semibold">Carga API Meta</div>
+                    <div class="text-sm text-secondary" *ngIf="metaWaiting">en espera por rate‑limit</div>
+                </div>
+                <div class="w-full h-3 bg-gray-200 rounded">
+                    <div class="h-3 rounded"
+                         [ngStyle]="{ width: (metaUsagePct||0) + '%'}"
+                         [ngClass]="{
+                            'bg-green-500': (metaUsagePct||0) < 60,
+                            'bg-amber-500': (metaUsagePct||0) >= 60 && (metaUsagePct||0) < 80,
+                            'bg-red-500': (metaUsagePct||0) >= 80
+                         }">
+                    </div>
+                </div>
+                <div class="mt-2 text-sm">{{ metaUsagePct | number:'1.0-0' }}% de uso</div>
+            </mat-card>
+        </div>
+
         <!-- Controles del sistema -->
         <mat-card class="mb-8">
             <mat-card-header>
@@ -201,6 +222,40 @@
             </mat-card-content>
         </mat-card>
 
+        <!-- Lanzar por clínica -->
+        <mat-card class="mb-8">
+            <mat-card-header>
+                <mat-card-title>Lanzar por clínica</mat-card-title>
+                <mat-card-subtitle>Sincronización dirigida por clínica y rango</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content class="pt-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <mat-form-field>
+                        <mat-label>ID Clínica</mat-label>
+                        <input matInput type="number" [(ngModel)]="clinicIdToRun" placeholder="19" />
+                    </mat-form-field>
+                    <mat-form-field>
+                        <mat-label>Fecha Inicio</mat-label>
+                        <input matInput [matDatepicker]="cStartPicker" [(ngModel)]="clinicStartDate">
+                        <mat-datepicker-toggle matSuffix [for]="cStartPicker"></mat-datepicker-toggle>
+                        <mat-datepicker #cStartPicker></mat-datepicker>
+                    </mat-form-field>
+                    <mat-form-field>
+                        <mat-label>Fecha Fin</mat-label>
+                        <input matInput [matDatepicker]="cEndPicker" [(ngModel)]="clinicEndDate">
+                        <mat-datepicker-toggle matSuffix [for]="cEndPicker"></mat-datepicker-toggle>
+                        <mat-datepicker #cEndPicker></mat-datepicker>
+                    </mat-form-field>
+                    <div class="flex items-end">
+                        <button mat-raised-button color="primary" (click)="runClinic()">
+                            <mat-icon [svgIcon]="'heroicons_outline:play'"></mat-icon>
+                            <span class="ml-2">Lanzar</span>
+                        </button>
+                    </div>
+                </div>
+            </mat-card-content>
+        </mat-card>
+
         <!-- Jobs individuales -->
         <mat-card class="mb-8" *ngIf="systemStatus?.jobs">
             <mat-card-header>
@@ -237,6 +292,34 @@
                             </button>
                         </div>
                     </div>
+                </div>
+            </mat-card-content>
+        </mat-card>
+
+        <!-- Logs importantes (pestaña dedicada) -->
+        <mat-card class="mb-8">
+            <mat-card-header>
+                <mat-card-title>Logs del proceso (importantes)</mat-card-title>
+                <mat-card-subtitle>{{ tailFilePath || 'PM2_LOG_PATH' }}</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content>
+                <div class="flex items-center justify-between mb-3">
+                    <div class="text-sm text-secondary">Se muestran sólo avisos, acciones y errores (se omiten SELECT periódicos)</div>
+                    <button mat-stroked-button color="primary" (click)="viewLog()">
+                        <mat-icon [svgIcon]="'heroicons_outline:arrow-path'"></mat-icon>
+                        <span class="ml-2">Refrescar</span>
+                    </button>
+                </div>
+                <div class="max-h-96 overflow-auto rounded border">
+                    <pre class="text-xs p-4 bg-gray-900 text-gray-100">
+<ng-container *ngFor="let it of tailItems">
+<span [ngClass]="{
+  'text-red-400': it.level === 'error',
+  'text-amber-300': it.level === 'warn',
+  'text-gray-200': it.level === 'info'
+}">{{ it.line }}</span>
+</ng-container>
+                    </pre>
                 </div>
             </mat-card-content>
         </mat-card>
@@ -313,9 +396,21 @@
                                     <ng-container matColumnDef="status">
                                         <th mat-header-cell *matHeaderCellDef>Estado</th>
                                         <td mat-cell *matCellDef="let log">
-                                            <mat-chip [ngClass]="getJobStatusClass(log.status)">
+                                            <mat-chip [ngClass]="getSemaforoClass(log)"
+                                                      [matTooltip]="log.status === 'running' && (log?.statusReport?.waiting) ? 'Esperando por rate‑limit' : ''">
                                                 {{ log.status }}
                                             </mat-chip>
+                                        </td>
+                                    </ng-container>
+
+                                    <!-- Columna Progreso -->
+                                    <ng-container matColumnDef="progress">
+                                        <th mat-header-cell *matHeaderCellDef>Progreso</th>
+                                        <td mat-cell *matCellDef="let log">
+                                            <div class="w-32 h-2 bg-gray-200 rounded">
+                                                <div class="h-2 rounded bg-primary" [ngStyle]="{ width: getProgress(log) + '%' }"></div>
+                                            </div>
+                                            <div class="text-xs text-secondary mt-1">{{ getProgress(log) }}%</div>
                                         </td>
                                     </ng-container>
 
@@ -369,6 +464,30 @@
                                 showFirstLastButtons>
                             </mat-paginator>
 
+                        </div>
+                    </mat-tab>
+
+                    <!-- Tab de Log del Proceso (importantes) -->
+                    <mat-tab label="Log del Proceso">
+                        <div class="p-6">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="text-sm text-secondary">Se muestran sólo avisos, acciones y errores</div>
+                                <button mat-stroked-button color="primary" (click)="viewLog()">
+                                    <mat-icon [svgIcon]="'heroicons_outline:arrow-path'"></mat-icon>
+                                    <span class="ml-2">Refrescar</span>
+                                </button>
+                            </div>
+                            <div class="max-h-96 overflow-auto rounded border">
+                                <pre class="text-xs p-4 bg-gray-900 text-gray-100">
+<ng-container *ngFor="let it of tailItems">
+<span [ngClass]="{
+  'text-red-400': it.level === 'error',
+  'text-amber-300': it.level === 'warn',
+  'text-gray-200': it.level === 'info'
+}">{{ it.line }}</span>
+</ng-container>
+                                </pre>
+                            </div>
                         </div>
                     </mat-tab>
 
